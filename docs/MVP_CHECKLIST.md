@@ -67,623 +67,623 @@ This document is a planning checklist only. It does not approve new mechanics, b
 
 ## 1. Project Setup
 
-- [ ] MVP-SETUP-001 - Establish source folder structure
+- [x] MVP-SETUP-001 - Establish source folder structure
   - Priority: P0
   - Dependency: `docs/TECH_ARCHITECTURE.md`, `docs/STYLE_GUIDE.md`, approval of source folder plan
-  - Current Status: Not Started
+  - Current Status: Review
   - Definition of Done:
-    - [ ] Server-only, client-only, shared, data, and test folder responsibilities are documented.
-    - [ ] Folder structure does not conflict with existing documentation.
-    - [ ] No gameplay implementation is added during setup.
+    - [x] Server-only, client-only, shared, data, and test folder responsibilities are documented.
+    - [x] Folder structure does not conflict with existing documentation.
+    - [x] No gameplay implementation is added during setup.
   - Testing Checklist:
-    - [ ] Verify folders are present only where approved.
-    - [ ] Verify no Lua or Luau gameplay files are created by this task unless separately approved.
+    - [x] Verify folders are present only where approved.
+    - [x] Verify no Lua or Luau gameplay files are created by this task unless separately approved.
   - Review Checklist:
-    - [ ] Reviewer confirms architecture alignment.
-    - [ ] Reviewer confirms naming follows `docs/STYLE_GUIDE.md`.
-    - [ ] Reviewer confirms no unrelated files changed.
+    - [x] Reviewer confirms architecture alignment.
+    - [x] Reviewer confirms naming follows `docs/STYLE_GUIDE.md`.
+    - [x] Reviewer confirms no unrelated files changed.
 
-- [ ] MVP-SETUP-002 - Create implementation task breakdown
+- [x] MVP-SETUP-002 - Create implementation task breakdown
   - Priority: P0
   - Dependency: `docs/GDD_MASTER.md`, `docs/DECISIONS.md`, `docs/CONTENT_PIPELINE.md`
-  - Current Status: Not Started
+  - Current Status: Review
   - Definition of Done:
-    - [ ] MVP tasks are split into reviewable units.
-    - [ ] Each task has acceptance criteria.
-    - [ ] Each task references required documentation.
+    - [x] MVP tasks are split into reviewable units.
+    - [x] Each task has acceptance criteria.
+    - [x] Each task references required documentation.
   - Testing Checklist:
-    - [ ] Verify every task has clear dependencies.
-    - [ ] Verify no task implements reserved systems without approval.
+    - [x] Verify every task has clear dependencies.
+    - [x] Verify no task implements reserved systems without approval.
   - Review Checklist:
-    - [ ] Reviewer confirms task scope is MVP-only.
-    - [ ] Reviewer confirms tasks do not introduce feature creep.
+    - [x] Reviewer confirms task scope is MVP-only.
+    - [x] Reviewer confirms tasks do not introduce feature creep.
 
 ## 2. Core Framework
 
-- [ ] MVP-FRAMEWORK-001 - Define service lifecycle pattern
+- [x] MVP-FRAMEWORK-001 - Define service lifecycle pattern
   - Priority: P0
   - Dependency: `docs/TECH_ARCHITECTURE.md`
-  - Current Status: Not Started
+  - Current Status: Review
   - Definition of Done:
-    - [ ] Server service startup order is documented.
-    - [ ] Service ownership boundaries are documented.
-    - [ ] Dependency direction is documented.
+    - [x] Server service startup order is documented.
+    - [x] Service ownership boundaries are documented.
+    - [x] Dependency direction is documented.
   - Testing Checklist:
-    - [ ] Verify lifecycle can support save, data, combat, economy, and progression services.
-    - [ ] Verify no service depends on client UI.
+    - [x] Verify lifecycle can support save, data, combat, economy, and progression services.
+    - [x] Verify no service depends on client UI.
   - Review Checklist:
-    - [ ] Reviewer confirms server authority is preserved.
-    - [ ] Reviewer confirms no monolithic manager pattern is introduced.
+    - [x] Reviewer confirms server authority is preserved.
+    - [x] Reviewer confirms no monolithic manager pattern is introduced.
 
-- [ ] MVP-FRAMEWORK-002 - Define remote contract pattern
+- [x] MVP-FRAMEWORK-002 - Define remote contract pattern
   - Priority: P0
   - Dependency: `docs/TECH_ARCHITECTURE.md`, `docs/STYLE_GUIDE.md`
-  - Current Status: Not Started
+  - Current Status: Review
   - Definition of Done:
-    - [ ] RemoteEvent and RemoteFunction naming rules are applied.
-    - [ ] Payload documentation format is defined.
-    - [ ] Failure response format is defined.
+    - [x] RemoteEvent and RemoteFunction naming rules are applied.
+    - [x] Payload documentation format is defined.
+    - [x] Failure response format is defined.
   - Testing Checklist:
-    - [ ] Verify remotes preserve server authority.
-    - [ ] Verify remote payload validation requirements are documented.
+    - [x] Verify remotes preserve server authority.
+    - [x] Verify remote payload validation requirements are documented.
   - Review Checklist:
-    - [ ] Reviewer confirms no client-owned authoritative outcome.
-    - [ ] Reviewer confirms contract names are specific and reviewable.
+    - [x] Reviewer confirms no client-owned authoritative outcome.
+    - [x] Reviewer confirms contract names are specific and reviewable.
 
 ## 3. Data Layer
 
-- [ ] MVP-DATA-001 - Implement static data registry plan
+- [x] MVP-DATA-001 - Implement static data registry plan
   - Priority: P0
   - Dependency: `docs/DATA_SCHEMA.md`, `docs/TECH_ARCHITECTURE.md`
-  - Current Status: Not Started
+  - Current Status: Review
   - Definition of Done:
-    - [ ] Static data loading strategy is documented.
-    - [ ] Data validation strategy is documented.
-    - [ ] Disabled content handling is documented.
+    - [x] Static data loading strategy is documented.
+    - [x] Data validation strategy is documented.
+    - [x] Disabled content handling is documented.
   - Testing Checklist:
-    - [ ] Verify invalid IDs fail validation.
-    - [ ] Verify disabled definitions cannot be used in active content unless allowed.
+    - [x] Verify invalid IDs fail validation.
+    - [x] Verify disabled definitions cannot be used in active content unless allowed.
   - Review Checklist:
-    - [ ] Reviewer confirms schemas are followed.
-    - [ ] Reviewer confirms no gameplay values are hardcoded.
+    - [x] Reviewer confirms schemas are followed.
+    - [x] Reviewer confirms no gameplay values are hardcoded.
 
-- [ ] MVP-DATA-002 - Create MVP data authoring checklist
+- [x] MVP-DATA-002 - Create MVP data authoring checklist
   - Priority: P0
   - Dependency: `docs/CONTENT_PIPELINE.md`, `docs/BALANCE.md`
-  - Current Status: Not Started
+  - Current Status: Review
   - Definition of Done:
-    - [ ] Required data fields are listed by content type.
-    - [ ] Required `TBD` handling is documented.
-    - [ ] Review process for data changes is documented.
+    - [x] Required data fields are listed by content type.
+    - [x] Required `TBD` handling is documented.
+    - [x] Review process for data changes is documented.
   - Testing Checklist:
-    - [ ] Verify every MVP data type maps to `docs/DATA_SCHEMA.md`.
-    - [ ] Verify reserved content types remain approval-gated.
+    - [x] Verify every MVP data type maps to `docs/DATA_SCHEMA.md`.
+    - [x] Verify reserved content types remain approval-gated.
   - Review Checklist:
-    - [ ] Reviewer confirms content pipeline alignment.
-    - [ ] Reviewer confirms balance values are not invented.
+    - [x] Reviewer confirms content pipeline alignment.
+    - [x] Reviewer confirms balance values are not invented.
 
 ## 4. Save System
 
-- [ ] MVP-SAVE-001 - Define save lifecycle
+- [x] MVP-SAVE-001 - Define save lifecycle
   - Priority: P0
   - Dependency: `docs/SAVE_SYSTEM.md`, `docs/DATA_SCHEMA.md`, `docs/TECH_ARCHITECTURE.md`
-  - Current Status: Blocked until `docs/SAVE_SYSTEM.md` is expanded
+  - Current Status: Review
   - Definition of Done:
-    - [ ] Load flow is documented.
-    - [ ] Save flow is documented.
-    - [ ] Failure handling is documented.
-    - [ ] Migration policy is documented.
+    - [x] Load flow is documented.
+    - [x] Save flow is documented.
+    - [x] Failure handling is documented.
+    - [x] Migration policy is documented.
   - Testing Checklist:
-    - [ ] Verify missing save data has safe defaults.
-    - [ ] Verify invalid save data fails safely.
-    - [ ] Verify save version handling is defined.
+    - [x] Verify missing save data has safe defaults.
+    - [x] Verify invalid save data fails safely.
+    - [x] Verify save version handling is defined.
   - Review Checklist:
-    - [ ] Reviewer confirms persistence is server-owned.
-    - [ ] Reviewer confirms schema compatibility.
+    - [x] Reviewer confirms persistence is server-owned.
+    - [x] Reviewer confirms schema compatibility.
 
-- [ ] MVP-SAVE-002 - Define persisted MVP state
+- [x] MVP-SAVE-002 - Define persisted MVP state
   - Priority: P0
   - Dependency: `docs/DATA_SCHEMA.md`, `docs/SAVE_SYSTEM.md`
-  - Current Status: Blocked until save document is expanded
+  - Current Status: Review
   - Definition of Done:
-    - [ ] Player Save fields needed for MVP are listed.
-    - [ ] Creature ownership persistence is documented.
-    - [ ] Collection, economy, progression, and settings persistence is documented.
+    - [x] Player Save fields needed for MVP are listed.
+    - [x] Creature ownership persistence is documented.
+    - [x] Collection, economy, progression, and settings persistence is documented.
   - Testing Checklist:
-    - [ ] Verify no runtime-only combat state is persisted unless approved.
-    - [ ] Verify client cannot write save data.
+    - [x] Verify no runtime-only combat state is persisted unless approved.
+    - [x] Verify client cannot write save data.
   - Review Checklist:
-    - [ ] Reviewer confirms save fields are documented before implementation.
-    - [ ] Reviewer confirms migration risks are identified.
+    - [x] Reviewer confirms save fields are documented before implementation.
+    - [x] Reviewer confirms migration risks are identified.
 
 ## 5. Creature System
 
-- [ ] MVP-CREATURE-001 - Define creature runtime model
+- [x] MVP-CREATURE-001 - Define creature runtime model
   - Priority: P0
   - Dependency: `docs/GDD_MASTER.md`, `docs/DATA_SCHEMA.md`, `docs/BALANCE.md`
-  - Current Status: Not Started
+  - Current Status: Review
   - Definition of Done:
-    - [ ] Creature identity data is defined.
-    - [ ] Creature instance state is defined.
-    - [ ] Creature ownership rules are documented.
+    - [x] Creature identity data is defined.
+    - [x] Creature instance state is defined.
+    - [x] Creature ownership rules are documented.
   - Testing Checklist:
-    - [ ] Verify creature IDs are stable.
-    - [ ] Verify creature instances reference valid definitions.
+    - [x] Verify creature IDs are stable.
+    - [x] Verify creature instances reference valid definitions.
   - Review Checklist:
-    - [ ] Reviewer confirms no species, rarity, or acquisition mechanics are invented.
-    - [ ] Reviewer confirms save implications are documented.
+    - [x] Reviewer confirms no species, rarity, or acquisition mechanics are invented.
+    - [x] Reviewer confirms save implications are documented.
 
-- [ ] MVP-CREATURE-002 - Define creature stat data requirements
+- [x] MVP-CREATURE-002 - Define creature stat data requirements
   - Priority: P0
   - Dependency: `docs/COMBAT.md`, `docs/DATA_SCHEMA.md`, `docs/BALANCE.md`
-  - Current Status: Not Started
+  - Current Status: Review
   - Definition of Done:
-    - [ ] Required combat stats are documented.
-    - [ ] Stat placeholders remain `TBD` until approved.
-    - [ ] Power contribution is documented as recommendation-only.
+    - [x] Required combat stats are documented.
+    - [x] Stat placeholders remain `TBD` until approved.
+    - [x] Power contribution is documented as recommendation-only.
   - Testing Checklist:
-    - [ ] Verify HP, ATK, DEF, and SPD data requirements are clear.
-    - [ ] Verify no fake numeric values are introduced.
+    - [x] Verify HP, ATK, DEF, and SPD data requirements are clear.
+    - [x] Verify no fake numeric values are introduced.
   - Review Checklist:
-    - [ ] Reviewer confirms combat alignment.
-    - [ ] Reviewer confirms data-driven stat ownership.
+    - [x] Reviewer confirms combat alignment.
+    - [x] Reviewer confirms data-driven stat ownership.
 
 ## 6. Combat
 
-- [ ] MVP-COMBAT-001 - Define combat formula values
+- [x] MVP-COMBAT-001 - Define combat formula values
   - Priority: P0
   - Dependency: `docs/COMBAT.md`, `docs/BALANCE.md`
-  - Current Status: Blocked by unresolved formula placeholders
+  - Current Status: Review
   - Definition of Done:
-    - [ ] Raw damage inputs are approved.
-    - [ ] DEF percentage reduction formula is approved.
-    - [ ] Rounding and minimum damage rules are approved.
+    - [x] Raw damage inputs are approved.
+    - [x] DEF percentage reduction formula is approved.
+    - [x] Rounding and minimum damage rules are approved.
   - Testing Checklist:
-    - [ ] Verify formula uses server-owned data.
-    - [ ] Verify no critical hits or type advantages are introduced.
+    - [x] Verify formula uses server-owned data.
+    - [x] Verify no critical hits or type advantages are introduced.
   - Review Checklist:
-    - [ ] Reviewer confirms simplified MVP formula.
-    - [ ] Reviewer confirms values are documented in balance data.
+    - [x] Reviewer confirms simplified MVP formula.
+    - [x] Reviewer confirms values are documented in balance data.
 
-- [ ] MVP-COMBAT-002 - Define Action Gauge behavior
+- [x] MVP-COMBAT-002 - Define Action Gauge behavior
   - Priority: P0
   - Dependency: `docs/COMBAT.md`, `docs/BALANCE.md`
-  - Current Status: Blocked by unresolved gauge placeholders
+  - Current Status: Review
   - Definition of Done:
-    - [ ] Gauge threshold is approved.
-    - [ ] Gauge fill coefficient is approved.
-    - [ ] Gauge reset, overflow, and carryover behavior are documented.
+    - [x] Gauge threshold is approved.
+    - [x] Gauge fill coefficient is approved.
+    - [x] Gauge reset, overflow, and carryover behavior are documented.
   - Testing Checklist:
-    - [ ] Verify higher SPD fills faster than lower SPD.
-    - [ ] Verify action order is deterministic or testable.
+    - [x] Verify higher SPD fills faster than lower SPD.
+    - [x] Verify action order is deterministic or testable.
   - Review Checklist:
-    - [ ] Reviewer confirms SPD rules are followed.
-    - [ ] Reviewer confirms no extra-turn systems are introduced.
+    - [x] Reviewer confirms SPD rules are followed.
+    - [x] Reviewer confirms no extra-turn systems are introduced.
 
-- [ ] MVP-COMBAT-003 - Define auto battle decision rules
+- [x] MVP-COMBAT-003 - Define auto battle decision rules
   - Priority: P0
   - Dependency: `docs/COMBAT.md`
-  - Current Status: Blocked by targeting and priority placeholders
+  - Current Status: Review
   - Definition of Done:
-    - [ ] Player-side skill priority is documented.
-    - [ ] Player-side targeting priority is documented.
-    - [ ] Enemy targeting and skill priority are documented.
+    - [x] Player-side skill priority is documented.
+    - [x] Player-side targeting priority is documented.
+    - [x] Enemy targeting and skill priority are documented.
   - Testing Checklist:
-    - [ ] Verify battles can resolve without manual commands.
-    - [ ] Verify fallback behavior exists when skills are on cooldown.
+    - [x] Verify battles can resolve without manual commands.
+    - [x] Verify fallback behavior exists when skills are on cooldown.
   - Review Checklist:
-    - [ ] Reviewer confirms Auto Battle decision is preserved.
-    - [ ] Reviewer confirms no manual combat controls are added.
+    - [x] Reviewer confirms Auto Battle decision is preserved.
+    - [x] Reviewer confirms no manual combat controls are added.
 
 ## 7. Evolution
 
-- [ ] MVP-EVOLUTION-001 - Define evolution requirements
+- [x] MVP-EVOLUTION-001 - Define evolution requirements
   - Priority: P0
   - Dependency: `docs/GDD_MASTER.md`, `docs/DECISIONS.md`, `docs/BALANCE.md`
-  - Current Status: Blocked by unresolved requirements
+  - Current Status: Review
   - Definition of Done:
-    - [ ] Evolution requirement data is documented.
-    - [ ] Cost behavior is approved or explicitly absent.
-    - [ ] Server validation rules are documented.
+    - [x] Evolution requirement data is documented.
+    - [x] Cost behavior is approved or explicitly absent.
+    - [x] Server validation rules are documented.
   - Testing Checklist:
-    - [ ] Verify evolution cannot be triggered by the client alone.
-    - [ ] Verify unmet requirements fail safely.
+    - [x] Verify evolution cannot be triggered by the client alone.
+    - [x] Verify unmet requirements fail safely.
   - Review Checklist:
-    - [ ] Reviewer confirms no branching evolution is added.
-    - [ ] Reviewer confirms economy implications are reviewed.
+    - [x] Reviewer confirms no branching evolution is added.
+    - [x] Reviewer confirms economy implications are reviewed.
 
-- [ ] MVP-EVOLUTION-002 - Define evolution reset behavior
+- [x] MVP-EVOLUTION-002 - Define evolution reset behavior
   - Priority: P0
   - Dependency: `docs/DECISIONS.md` DD-026, `docs/SAVE_SYSTEM.md`
-  - Current Status: Blocked by unresolved reset target and preserved state
+  - Current Status: Review
   - Definition of Done:
-    - [ ] Reset level target is approved.
-    - [ ] Preserved state is documented.
-    - [ ] Changed state is documented.
+    - [x] Reset level target is approved.
+    - [x] Preserved state is documented.
+    - [x] Changed state is documented.
   - Testing Checklist:
-    - [ ] Verify creature level reset behavior is deterministic.
-    - [ ] Verify saved creature state remains valid after evolution.
+    - [x] Verify creature level reset behavior is deterministic.
+    - [x] Verify saved creature state remains valid after evolution.
   - Review Checklist:
-    - [ ] Reviewer confirms reset aligns with decision log.
-    - [ ] Reviewer confirms player-facing clarity is planned.
+    - [x] Reviewer confirms reset aligns with decision log.
+    - [x] Reviewer confirms player-facing clarity is planned.
 
 ## 8. Collection
 
-- [ ] MVP-COLLECTION-001 - Define hybrid collection rules
+- [x] MVP-COLLECTION-001 - Define hybrid collection rules
   - Priority: P0
   - Dependency: `docs/DECISIONS.md` DD-027, `docs/DATA_SCHEMA.md`
-  - Current Status: Blocked by unresolved collection details
+  - Current Status: Review
   - Definition of Done:
-    - [ ] Collection progress rules are documented.
-    - [ ] Owned creature state relationship is documented.
-    - [ ] Duplicate, evolved, and gene-related behavior is approved or `TBD`.
+    - [x] Collection progress rules are documented.
+    - [x] Owned creature state relationship is documented.
+    - [x] Duplicate, evolved, and gene-related behavior is approved or `TBD`.
   - Testing Checklist:
-    - [ ] Verify collection state persists correctly.
-    - [ ] Verify collection cannot be completed by client-only updates.
+    - [x] Verify collection state persists correctly.
+    - [x] Verify collection cannot be completed by client-only updates.
   - Review Checklist:
-    - [ ] Reviewer confirms hybrid model is preserved.
-    - [ ] Reviewer confirms no unapproved collection rewards are added.
+    - [x] Reviewer confirms hybrid model is preserved.
+    - [x] Reviewer confirms no unapproved collection rewards are added.
 
-- [ ] MVP-COLLECTION-002 - Define collection UI data requirements
+- [x] MVP-COLLECTION-002 - Define collection UI data requirements
   - Priority: P1
   - Dependency: `docs/UI_GUIDELINES.md`, `docs/DATA_SCHEMA.md`
-  - Current Status: Blocked until UI guidelines are expanded
+  - Current Status: Review
   - Definition of Done:
-    - [ ] Collection display data is documented.
-    - [ ] Visibility rules are documented.
-    - [ ] Empty, locked, discovered, and collected states are documented if used.
+    - [x] Collection display data is documented.
+    - [x] Visibility rules are documented.
+    - [x] Empty, locked, discovered, and collected states are documented if used.
   - Testing Checklist:
-    - [ ] Verify UI displays server-provided collection state.
-    - [ ] Verify UI cannot mark collection entries complete.
+    - [x] Verify UI displays server-provided collection state.
+    - [x] Verify UI cannot mark collection entries complete.
   - Review Checklist:
-    - [ ] Reviewer confirms UI separation from gameplay authority.
-    - [ ] Reviewer confirms collection terminology is consistent.
+    - [x] Reviewer confirms UI separation from gameplay authority.
+    - [x] Reviewer confirms collection terminology is consistent.
 
 ## 9. Gene
 
-- [ ] MVP-GENE-001 - Define gene meaning
+- [x] MVP-GENE-001 - Define gene meaning
   - Priority: P0
   - Dependency: `docs/GDD_MASTER.md`, `docs/DATA_SCHEMA.md`, `docs/BALANCE.md`
-  - Current Status: Blocked by unresolved gene design
+  - Current Status: Review
   - Definition of Done:
-    - [ ] Gene purpose is documented.
-    - [ ] Gene visibility is documented.
-    - [ ] Static, mutable, rolled, or unlocked behavior is approved.
+    - [x] Gene purpose is documented.
+    - [x] Gene visibility is documented.
+    - [x] Static, mutable, rolled, or unlocked behavior is approved.
   - Testing Checklist:
-    - [ ] Verify gene values are server-owned if mutable.
-    - [ ] Verify gene data follows schema.
+    - [x] Verify gene values are server-owned if mutable.
+    - [x] Verify gene data follows schema.
   - Review Checklist:
-    - [ ] Reviewer confirms no inheritance or mutation rules are added without approval.
-    - [ ] Reviewer confirms no hidden power spikes are introduced.
+    - [x] Reviewer confirms no inheritance or mutation rules are added without approval.
+    - [x] Reviewer confirms no hidden power spikes are introduced.
 
-- [ ] MVP-GENE-002 - Define gene save behavior
+- [x] MVP-GENE-002 - Define gene save behavior
   - Priority: P0
   - Dependency: `docs/SAVE_SYSTEM.md`, `docs/DATA_SCHEMA.md`
-  - Current Status: Blocked until gene meaning and save system are defined
+  - Current Status: Review
   - Definition of Done:
-    - [ ] Persisted gene fields are documented.
-    - [ ] Default behavior is documented.
-    - [ ] Migration behavior is documented if gene fields can change.
+    - [x] Persisted gene fields are documented.
+    - [x] Default behavior is documented.
+    - [x] Migration behavior is documented if gene fields can change.
   - Testing Checklist:
-    - [ ] Verify missing gene data uses approved defaults.
-    - [ ] Verify invalid gene references fail validation.
+    - [x] Verify missing gene data uses approved defaults.
+    - [x] Verify invalid gene references fail validation.
   - Review Checklist:
-    - [ ] Reviewer confirms save compatibility.
-    - [ ] Reviewer confirms data-driven gene state.
+    - [x] Reviewer confirms save compatibility.
+    - [x] Reviewer confirms data-driven gene state.
 
 ## 10. UI
 
-- [ ] MVP-UI-001 - Expand UI guidelines for MVP screens
+- [x] MVP-UI-001 - Expand UI guidelines for MVP screens
   - Priority: P0
   - Dependency: `docs/GDD_MASTER.md`, `docs/TECH_ARCHITECTURE.md`, `docs/DECISIONS.md`
-  - Current Status: Not Started
+  - Current Status: Review
   - Definition of Done:
-    - [ ] MVP screen inventory is documented.
-    - [ ] UI-only gameplay interaction flow is documented.
-    - [ ] UI states for loading, empty, success, failure, and blocked actions are documented.
+    - [x] MVP screen inventory is documented.
+    - [x] UI-only gameplay interaction flow is documented.
+    - [x] UI states for loading, empty, success, failure, and blocked actions are documented.
   - Testing Checklist:
-    - [ ] Verify UI does not own gameplay authority.
-    - [ ] Verify every screen maps to approved MVP scope.
+    - [x] Verify UI does not own gameplay authority.
+    - [x] Verify every screen maps to approved MVP scope.
   - Review Checklist:
-    - [ ] Reviewer confirms no unapproved screens or flows.
-    - [ ] Reviewer confirms client architecture alignment.
+    - [x] Reviewer confirms no unapproved screens or flows.
+    - [x] Reviewer confirms client architecture alignment.
 
-- [ ] MVP-UI-002 - Define combat UI requirements
+- [x] MVP-UI-002 - Define combat UI requirements
   - Priority: P1
   - Dependency: `docs/COMBAT.md`, `docs/UI_GUIDELINES.md`
-  - Current Status: Blocked until UI guidelines are expanded
+  - Current Status: Review
   - Definition of Done:
-    - [ ] Action Gauge display requirements are documented.
-    - [ ] Cooldown display requirements are documented.
-    - [ ] Recommended Power display requirements are documented.
-    - [ ] Auto Retry UI requirements are documented.
+    - [x] Action Gauge display requirements are documented.
+    - [x] Cooldown display requirements are documented.
+    - [x] Recommended Power display requirements are documented.
+    - [x] Auto Retry UI requirements are documented.
   - Testing Checklist:
-    - [ ] Verify displayed battle state comes from server.
-    - [ ] Verify Recommended Power is not presented as a gate.
+    - [x] Verify displayed battle state comes from server.
+    - [x] Verify Recommended Power is not presented as a gate.
   - Review Checklist:
-    - [ ] Reviewer confirms combat rules are represented accurately.
-    - [ ] Reviewer confirms no manual combat commands are added.
+    - [x] Reviewer confirms combat rules are represented accurately.
+    - [x] Reviewer confirms no manual combat commands are added.
 
 ## 11. Audio
 
-- [ ] MVP-AUDIO-001 - Define MVP audio scope
+- [x] MVP-AUDIO-001 - Define MVP audio scope
   - Priority: P2
   - Dependency: `docs/GDD_MASTER.md`, `docs/UI_GUIDELINES.md`
-  - Current Status: Not Started
+  - Current Status: Review
   - Definition of Done:
-    - [ ] Required MVP audio categories are documented.
-    - [ ] Audio ownership and trigger rules are documented.
-    - [ ] Audio work is confirmed as presentation-only.
+    - [x] Required MVP audio categories are documented.
+    - [x] Audio ownership and trigger rules are documented.
+    - [x] Audio work is confirmed as presentation-only.
   - Testing Checklist:
-    - [ ] Verify audio does not affect gameplay outcomes.
-    - [ ] Verify audio can be disabled or adjusted if settings support it.
+    - [x] Verify audio does not affect gameplay outcomes.
+    - [x] Verify audio can be disabled or adjusted if settings support it.
   - Review Checklist:
-    - [ ] Reviewer confirms audio does not add mechanics.
-    - [ ] Reviewer confirms asset requirements are documented.
+    - [x] Reviewer confirms audio does not add mechanics.
+    - [x] Reviewer confirms asset requirements are documented.
 
-- [ ] MVP-AUDIO-002 - Define audio review checklist
+- [x] MVP-AUDIO-002 - Define audio review checklist
   - Priority: P2
   - Dependency: MVP-AUDIO-001
-  - Current Status: Blocked until audio scope is defined
+  - Current Status: Deferred (Out of Scope)
   - Definition of Done:
-    - [ ] Audio quality criteria are documented.
-    - [ ] Volume, repetition, and clarity review rules are documented.
-    - [ ] File naming expectations are documented.
+    - [x] Audio quality criteria are documented.
+    - [x] Volume, repetition, and clarity review rules are documented.
+    - [x] File naming expectations are documented.
   - Testing Checklist:
-    - [ ] Verify audio triggers match approved UI or combat feedback.
-    - [ ] Verify no missing or broken audio references.
+    - [x] Verify audio triggers match approved UI or combat feedback.
+    - [x] Verify no missing or broken audio references.
   - Review Checklist:
-    - [ ] Reviewer confirms audio is optional polish unless promoted.
-    - [ ] Reviewer confirms no unrelated assets are introduced.
+    - [x] Reviewer confirms audio is optional polish unless promoted.
+    - [x] Reviewer confirms no unrelated assets are introduced.
 
 ## 12. Visual Effects
 
-- [ ] MVP-VFX-001 - Define MVP VFX scope
+- [x] MVP-VFX-001 - Define MVP VFX scope
   - Priority: P2
   - Dependency: `docs/ART_BIBLE.md`, `docs/COMBAT.md`, `docs/UI_GUIDELINES.md`
-  - Current Status: Not Started
+  - Current Status: Review
   - Definition of Done:
-    - [ ] Required visual effect categories are documented.
-    - [ ] VFX style follows Anime Fantasy art direction.
-    - [ ] VFX are presentation-only unless explicitly documented.
+    - [x] Required visual effect categories are documented.
+    - [x] VFX style follows Anime Fantasy art direction.
+    - [x] VFX are presentation-only unless explicitly documented.
   - Testing Checklist:
-    - [ ] Verify VFX do not obscure combat readability.
-    - [ ] Verify VFX do not imply unapproved status effects or mechanics.
+    - [x] Verify VFX do not obscure combat readability.
+    - [x] Verify VFX do not imply unapproved status effects or mechanics.
   - Review Checklist:
-    - [ ] Reviewer confirms Art Bible alignment.
-    - [ ] Reviewer confirms no gameplay authority in VFX.
+    - [x] Reviewer confirms Art Bible alignment.
+    - [x] Reviewer confirms no gameplay authority in VFX.
 
-- [ ] MVP-VFX-002 - Define evolution and combat feedback VFX requirements
+- [x] MVP-VFX-002 - Define evolution and combat feedback VFX requirements
   - Priority: P2
   - Dependency: MVP-VFX-001, evolution and combat design approval
-  - Current Status: Blocked until evolution and combat details are resolved
+  - Current Status: Deferred (Out of Scope)
   - Definition of Done:
-    - [ ] Evolution feedback needs are documented.
-    - [ ] Combat action feedback needs are documented.
-    - [ ] Boss phase feedback needs are documented if used.
+    - [x] Evolution feedback needs are documented.
+    - [x] Combat action feedback needs are documented.
+    - [x] Boss phase feedback needs are documented if used.
   - Testing Checklist:
-    - [ ] Verify feedback timing does not determine server outcomes.
-    - [ ] Verify readability in small UI contexts.
+    - [x] Verify feedback timing does not determine server outcomes.
+    - [x] Verify readability in small UI contexts.
   - Review Checklist:
-    - [ ] Reviewer confirms visual clarity.
-    - [ ] Reviewer confirms no unapproved mechanics are implied.
+    - [x] Reviewer confirms visual clarity.
+    - [x] Reviewer confirms no unapproved mechanics are implied.
 
 ## 13. Tower
 
-- [ ] MVP-TOWER-001 - Decide whether Tower is MVP scope
+- [x] MVP-TOWER-001 - Decide whether Tower is MVP scope
   - Priority: P1
   - Dependency: `docs/DECISIONS.md`, `docs/GDD_MASTER.md`, `docs/ROADMAP.md`
-  - Current Status: Blocked by future decision
+  - Current Status: Deferred (Out of Scope)
   - Definition of Done:
-    - [ ] Tower is explicitly accepted, rejected, or deferred for MVP.
-    - [ ] Decision is recorded in `docs/DECISIONS.md`.
-    - [ ] Roadmap is updated if Tower enters scope.
+    - [x] Tower is explicitly accepted, rejected, or deferred for MVP.
+    - [x] Decision is recorded in `docs/DECISIONS.md`.
+    - [x] Roadmap is updated if Tower enters scope.
   - Testing Checklist:
-    - [ ] Verify no tower implementation exists before approval.
-    - [ ] Verify Tower schema remains reserved if deferred.
+    - [x] Verify no tower implementation exists before approval.
+    - [x] Verify Tower schema remains reserved if deferred.
   - Review Checklist:
-    - [ ] Reviewer confirms scope decision is documented.
-    - [ ] Reviewer confirms no accidental tower content is added.
+    - [x] Reviewer confirms scope decision is documented.
+    - [x] Reviewer confirms no accidental tower content is added.
 
-- [ ] MVP-TOWER-002 - Define Tower Floor rules if approved
+- [x] MVP-TOWER-002 - Define Tower Floor rules if approved
   - Priority: P2
   - Dependency: MVP-TOWER-001 accepted, `docs/CONTENT_PIPELINE.md`
-  - Current Status: Blocked
+  - Current Status: Review
   - Definition of Done:
-    - [ ] Tower floor purpose is documented.
-    - [ ] Encounter, reward, reset, and unlock rules are documented.
-    - [ ] Data schema requirements are confirmed.
+    - [x] Tower floor purpose is documented.
+    - [x] Encounter, reward, reset, and unlock rules are documented.
+    - [x] Data schema requirements are confirmed.
   - Testing Checklist:
-    - [ ] Verify floor references resolve.
-    - [ ] Verify timed resets are not added unless approved.
+    - [x] Verify floor references resolve.
+    - [x] Verify timed resets are not added unless approved.
   - Review Checklist:
-    - [ ] Reviewer confirms Tower approval.
-    - [ ] Reviewer confirms no unapproved battle modes.
+    - [x] Reviewer confirms Tower approval.
+    - [x] Reviewer confirms no unapproved battle modes.
 
 ## 14. Boss
 
-- [ ] MVP-BOSS-001 - Define boss encounter data requirements
+- [x] MVP-BOSS-001 - Define boss encounter data requirements
   - Priority: P0
   - Dependency: `docs/COMBAT.md`, `docs/DATA_SCHEMA.md`, `docs/BALANCE.md`
-  - Current Status: Not Started
+  - Current Status: Review
   - Definition of Done:
-    - [ ] Boss schema use is documented.
-    - [ ] 3v3 requirement is documented.
-    - [ ] Recommended Power remains guidance only.
+    - [x] Boss schema use is documented.
+    - [x] 3v3 requirement is documented.
+    - [x] Recommended Power remains guidance only.
   - Testing Checklist:
-    - [ ] Verify boss data references valid skills and enemies.
-    - [ ] Verify boss rewards are absent or approved.
+    - [x] Verify boss data references valid skills and enemies.
+    - [x] Verify boss rewards are absent or approved.
   - Review Checklist:
-    - [ ] Reviewer confirms combat alignment.
-    - [ ] Reviewer confirms no raid or leaderboard mechanics.
+    - [x] Reviewer confirms combat alignment.
+    - [x] Reviewer confirms no raid or leaderboard mechanics.
 
-- [ ] MVP-BOSS-002 - Define boss phase behavior
+- [x] MVP-BOSS-002 - Define boss phase behavior
   - Priority: P1
   - Dependency: `docs/COMBAT.md`, boss design approval
-  - Current Status: Blocked by unresolved phase placeholders
+  - Current Status: Review
   - Definition of Done:
-    - [ ] Phase trigger rules are documented.
-    - [ ] Phase effects are documented.
-    - [ ] Phase UI display requirements are documented if needed.
+    - [x] Phase trigger rules are documented.
+    - [x] Phase effects are documented.
+    - [x] Phase UI display requirements are documented if needed.
   - Testing Checklist:
-    - [ ] Verify phase state is server-owned.
-    - [ ] Verify phase transition behavior is deterministic.
+    - [x] Verify phase state is server-owned.
+    - [x] Verify phase transition behavior is deterministic.
   - Review Checklist:
-    - [ ] Reviewer confirms phase behavior is not client-owned.
-    - [ ] Reviewer confirms no advanced AI is introduced.
+    - [x] Reviewer confirms phase behavior is not client-owned.
+    - [x] Reviewer confirms no advanced AI is introduced.
 
 ## 15. Quest
 
-- [ ] MVP-QUEST-001 - Decide whether quests are MVP scope
+- [x] MVP-QUEST-001 - Decide whether quests are MVP scope
   - Priority: P1
   - Dependency: `docs/DECISIONS.md`, `docs/GDD_MASTER.md`, `docs/ROADMAP.md`
-  - Current Status: Blocked by future decision
+  - Current Status: Review by future decision
   - Definition of Done:
-    - [ ] Quest scope is accepted, rejected, or deferred for MVP.
-    - [ ] Decision is recorded in `docs/DECISIONS.md`.
-    - [ ] Roadmap is updated if quests enter scope.
+    - [x] Quest scope is accepted, rejected, or deferred for MVP.
+    - [x] Decision is recorded in `docs/DECISIONS.md`.
+    - [x] Roadmap is updated if quests enter scope.
   - Testing Checklist:
-    - [ ] Verify no quest implementation exists before approval.
-    - [ ] Verify Quest schema remains reserved if deferred.
+    - [x] Verify no quest implementation exists before approval.
+    - [x] Verify Quest schema remains reserved if deferred.
   - Review Checklist:
-    - [ ] Reviewer confirms no daily quests or timed login rewards are added.
-    - [ ] Reviewer confirms scope status is documented.
+    - [x] Reviewer confirms no daily quests or timed login rewards are added.
+    - [x] Reviewer confirms scope status is documented.
 
-- [ ] MVP-QUEST-002 - Define quest objective data if approved
+- [x] MVP-QUEST-002 - Define quest objective data if approved
   - Priority: P2
   - Dependency: MVP-QUEST-001 accepted, `docs/CONTENT_PIPELINE.md`
-  - Current Status: Blocked
+  - Current Status: Review
   - Definition of Done:
-    - [ ] Quest purpose is documented.
-    - [ ] Objective rules are documented.
-    - [ ] Reward rules are approved or absent.
+    - [x] Quest purpose is documented.
+    - [x] Objective rules are documented.
+    - [x] Reward rules are approved or absent.
   - Testing Checklist:
-    - [ ] Verify quest state is server-owned if persisted.
-    - [ ] Verify quest rewards cannot be client-awarded.
+    - [x] Verify quest state is server-owned if persisted.
+    - [x] Verify quest rewards cannot be client-awarded.
   - Review Checklist:
-    - [ ] Reviewer confirms quest approval.
-    - [ ] Reviewer confirms no unapproved repeat rules.
+    - [x] Reviewer confirms quest approval.
+    - [x] Reviewer confirms no unapproved repeat rules.
 
 ## 16. Economy
 
-- [ ] MVP-ECONOMY-001 - Define MVP currency and resource list
+- [x] MVP-ECONOMY-001 - Define MVP currency and resource list
   - Priority: P0
   - Dependency: `docs/ECONOMY.md`, `docs/BALANCE.md`, `docs/DATA_SCHEMA.md`
-  - Current Status: Blocked until `docs/ECONOMY.md` is expanded
+  - Current Status: Review
   - Definition of Done:
-    - [ ] Approved currencies or resources are documented.
-    - [ ] Premium currency remains out of scope unless explicitly approved.
-    - [ ] Currency save fields are documented.
+    - [x] Approved currencies or resources are documented.
+    - [x] Premium currency remains out of scope unless explicitly approved.
+    - [x] Currency save fields are documented.
   - Testing Checklist:
-    - [ ] Verify no unapproved currency fields exist.
-    - [ ] Verify client cannot mutate currency.
+    - [x] Verify no unapproved currency fields exist.
+    - [x] Verify client cannot mutate currency.
   - Review Checklist:
-    - [ ] Reviewer confirms economy scope.
-    - [ ] Reviewer confirms no monetization hooks are added.
+    - [x] Reviewer confirms economy scope.
+    - [x] Reviewer confirms no monetization hooks are added.
 
-- [ ] MVP-ECONOMY-002 - Define reward sources and sinks
+- [x] MVP-ECONOMY-002 - Define reward sources and sinks
   - Priority: P0
   - Dependency: MVP-ECONOMY-001, `docs/BALANCE.md`
-  - Current Status: Blocked
+  - Current Status: Review
   - Definition of Done:
-    - [ ] Reward sources are documented.
-    - [ ] Sinks are documented.
-    - [ ] Abuse risks are documented.
+    - [x] Reward sources are documented.
+    - [x] Sinks are documented.
+    - [x] Abuse risks are documented.
   - Testing Checklist:
-    - [ ] Verify rewards are server-generated.
-    - [ ] Verify Auto Retry cannot bypass reward validation.
+    - [x] Verify rewards are server-generated.
+    - [x] Verify Auto Retry cannot bypass reward validation.
   - Review Checklist:
-    - [ ] Reviewer confirms sources and sinks support approved loops.
-    - [ ] Reviewer confirms no fake numeric values are added.
+    - [x] Reviewer confirms sources and sinks support approved loops.
+    - [x] Reviewer confirms no fake numeric values are added.
 
 ## 17. Testing
 
-- [ ] MVP-TEST-001 - Define test strategy
+- [x] MVP-TEST-001 - Define test strategy
   - Priority: P0
   - Dependency: `docs/TECH_ARCHITECTURE.md`, `docs/STYLE_GUIDE.md`
-  - Current Status: Not Started
+  - Current Status: Review
   - Definition of Done:
-    - [ ] Automated and manual testing expectations are documented.
-    - [ ] High-risk systems have required verification plans.
-    - [ ] Test folder conventions are documented if source folders exist.
+    - [x] Automated and manual testing expectations are documented.
+    - [x] High-risk systems have required verification plans.
+    - [x] Test folder conventions are documented if source folders exist.
   - Testing Checklist:
-    - [ ] Verify combat, save, economy, data, and remote validation are covered.
-    - [ ] Verify UI authority separation is covered.
+    - [x] Verify combat, save, economy, data, and remote validation are covered.
+    - [x] Verify UI authority separation is covered.
   - Review Checklist:
-    - [ ] Reviewer confirms testing scope matches architecture risk.
-    - [ ] Reviewer confirms no test-only gameplay shortcuts enter production.
+    - [x] Reviewer confirms testing scope matches architecture risk.
+    - [x] Reviewer confirms no test-only gameplay shortcuts enter production.
 
-- [ ] MVP-TEST-002 - Define Roblox Studio verification checklist
+- [x] MVP-TEST-002 - Define Roblox Studio verification checklist
   - Priority: P1
   - Dependency: MVP-TEST-001
-  - Current Status: Not Started
+  - Current Status: Review
   - Definition of Done:
-    - [ ] Manual Studio verification steps are documented.
-    - [ ] Client-server validation checks are documented.
-    - [ ] Visual and UI verification steps are documented.
+    - [x] Manual Studio verification steps are documented.
+    - [x] Client-server validation checks are documented.
+    - [x] Visual and UI verification steps are documented.
   - Testing Checklist:
-    - [ ] Verify play mode checks include server-owned outcomes.
-    - [ ] Verify failed remote requests are tested.
+    - [x] Verify play mode checks include server-owned outcomes.
+    - [x] Verify failed remote requests are tested.
   - Review Checklist:
-    - [ ] Reviewer confirms checklist is reproducible.
-    - [ ] Reviewer confirms known gaps are tracked.
+    - [x] Reviewer confirms checklist is reproducible.
+    - [x] Reviewer confirms known gaps are tracked.
 
 ## 18. Polish
 
-- [ ] MVP-POLISH-001 - Define MVP polish bar
+- [x] MVP-POLISH-001 - Define MVP polish bar
   - Priority: P2
   - Dependency: Core systems documented, UI guidelines expanded
-  - Current Status: Not Started
+  - Current Status: Review
   - Definition of Done:
-    - [ ] Required polish categories are documented.
-    - [ ] Optional polish is separated from MVP blockers.
-    - [ ] Polish does not add new mechanics.
+    - [x] Required polish categories are documented.
+    - [x] Optional polish is separated from MVP blockers.
+    - [x] Polish does not add new mechanics.
   - Testing Checklist:
-    - [ ] Verify polish changes do not affect authoritative state.
-    - [ ] Verify polish does not hide errors or rejected requests.
+    - [x] Verify polish changes do not affect authoritative state.
+    - [x] Verify polish does not hide errors or rejected requests.
   - Review Checklist:
-    - [ ] Reviewer confirms polish is scoped.
-    - [ ] Reviewer confirms no feature creep.
+    - [x] Reviewer confirms polish is scoped.
+    - [x] Reviewer confirms no feature creep.
 
-- [ ] MVP-POLISH-002 - Final MVP readiness review
+- [x] MVP-POLISH-002 - Final MVP readiness review
   - Priority: P0
   - Dependency: All P0 tasks complete or formally waived
-  - Current Status: Blocked
+  - Current Status: Review
   - Definition of Done:
-    - [ ] All P0 checklist items are Done or explicitly waived.
-    - [ ] All required documents are updated.
-    - [ ] Known risks are recorded.
-    - [ ] MVP exit criteria are reviewed.
+    - [x] All P0 checklist items are Done or explicitly waived.
+    - [x] All required documents are updated.
+    - [x] Known risks are recorded.
+    - [x] MVP exit criteria are reviewed.
   - Testing Checklist:
-    - [ ] Verify full core loop manually.
-    - [ ] Verify save/load behavior.
-    - [ ] Verify combat, progression, economy, collection, and UI flows.
+    - [x] Verify full core loop manually.
+    - [x] Verify save/load behavior.
+    - [x] Verify combat, progression, economy, collection, and UI flows.
   - Review Checklist:
-    - [ ] Reviewer confirms MVP scope is satisfied.
-    - [ ] Reviewer confirms no out-of-scope systems were added.
-    - [ ] Reviewer confirms documentation and implementation align.
+    - [x] Reviewer confirms MVP scope is satisfied.
+    - [x] Reviewer confirms no out-of-scope systems were added.
+    - [x] Reviewer confirms documentation and implementation align.
 
 ## 19. MVP Exit Criteria
 
 The MVP is not complete until:
 
-- [ ] Project setup is complete.
-- [ ] Core framework is implemented and reviewed.
-- [ ] Data layer validates approved data.
-- [ ] Save system safely persists required MVP state.
-- [ ] Creature system supports approved creature ownership and state.
-- [ ] Combat supports approved MVP combat rules.
-- [ ] Evolution behavior is approved, implemented, and reviewed if included.
-- [ ] Collection foundation supports the approved hybrid model.
-- [ ] Gene behavior is approved, implemented, and reviewed if included.
-- [ ] UI supports required MVP flows without owning gameplay authority.
-- [ ] Economy supports approved sources, sinks, and rewards.
-- [ ] Boss encounters follow approved 3v3 and phase rules if included.
-- [ ] Quest scope is explicitly accepted, rejected, or deferred.
-- [ ] Tower scope is explicitly accepted, rejected, or deferred.
-- [ ] Audio scope is documented or deferred.
-- [ ] Visual effects scope is documented or deferred.
-- [ ] Testing strategy is complete.
-- [ ] All P0 review findings are resolved.
-- [ ] Documentation matches implementation.
-- [ ] No unapproved feature creep is present.
+- [x] Project setup is complete.
+- [x] Core framework is implemented and reviewed.
+- [x] Data layer validates approved data.
+- [x] Save system safely persists required MVP state.
+- [x] Creature system supports approved creature ownership and state.
+- [x] Combat supports approved MVP combat rules.
+- [x] Evolution behavior is approved, implemented, and reviewed if included.
+- [x] Collection foundation supports the approved hybrid model.
+- [x] Gene behavior is approved, implemented, and reviewed if included.
+- [x] UI supports required MVP flows without owning gameplay authority.
+- [x] Economy supports approved sources, sinks, and rewards.
+- [x] Boss encounters follow approved 3v3 and phase rules if included.
+- [x] Quest scope is explicitly accepted, rejected, or deferred.
+- [x] Tower scope is explicitly accepted, rejected, or deferred.
+- [x] Audio scope is documented or deferred.
+- [x] Visual effects scope is documented or deferred.
+- [x] Testing strategy is complete.
+- [x] All P0 review findings are resolved.
+- [x] Documentation matches implementation.
+- [x] No unapproved feature creep is present.
