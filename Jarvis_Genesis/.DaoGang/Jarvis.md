@@ -156,7 +156,7 @@ task-specific interpretation. If a rule applies to all code, keep it here.
 
 Before changing code:
 
-1. **Synchronize with the Team**: Run `git pull` immediately before starting a task or planning phase to fetch remote updates from other team members.
+1. **Synchronize with the Team**: Run `git pull` immediately before starting a task or planning phase to fetch remote updates from other team members and keep in sync with the official repository at https://github.com/AgnesLorem/Project_Genesis.
 2. **Verify Project Status**: Read [docs/CHANGELOG.md](file:///f:/Project_Genesis/docs/CHANGELOG.md) and [docs/MVP_CHECKLIST.md](file:///f:/Project_Genesis/docs/MVP_CHECKLIST.md) to inspect what has already been implemented or changed recently, preventing duplicate work.
 3. Read the relevant files, not just filenames.
 4. Identify whether the code belongs to `src/server`, `src/client`, or `src/shared`.

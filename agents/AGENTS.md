@@ -106,7 +106,7 @@ No assistant may override these rules without explicit human approval and a docu
 
 ## 4. Required Reading Before Work
 
-1. **Always run `git pull`** before planning or coding to synchronize your workspace with remote team commits.
+1. **Always run `git pull`** before planning or coding to synchronize your workspace with remote team commits and keep in sync with the official repository at https://github.com/AgnesLorem/Project_Genesis.
 2. **Always read `docs/CHANGELOG.md` and `docs/MVP_CHECKLIST.md`** to verify recent implementation changes and prevent duplicate coding work.
 3. **Always read `Jarvis_Genesis/.DaoGang/Jarvis.md`** for coding standards, Luau style rules, and Roblox Studio MCP sync workflows.
 4. Always read `docs/GDD_MASTER.md` before coding.
