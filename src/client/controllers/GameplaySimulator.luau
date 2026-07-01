@@ -214,7 +214,9 @@ function GameplaySimulator.runStoryBattle()
 	print("[GameplaySimulator] Entering battle with " .. playerCreatureId)
 	
 	-- Disable auto-progress for manual timeline stepping validation
-	BattleController.setAutoProgress(false)
+	if BattleController.setAutoProgress then
+		BattleController.setAutoProgress(false)
+	end
 	
 	local complete = false
 	task.spawn(function()
@@ -232,7 +234,9 @@ function GameplaySimulator.runStoryBattle()
 	local maxSteps = 60
 	for i = 1, 10 do
 		task.wait(0.5)
-		BattleController.nextTurn()
+		if BattleController.nextTurn then
+			BattleController.nextTurn()
+		end
 		steps += 1
 		
 		-- Check if BattleResultModal (BaseModal) is mounted
@@ -248,7 +252,9 @@ function GameplaySimulator.runStoryBattle()
 	-- Wait for completion if not already
 	while not complete and steps < maxSteps do
 		task.wait(0.5)
-		BattleController.nextTurn()
+		if BattleController.nextTurn then
+			BattleController.nextTurn()
+		end
 		steps += 1
 		local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
 		local mainUI = playerGui:FindFirstChild("GenesisMainUI")

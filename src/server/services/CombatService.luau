@@ -243,7 +243,7 @@ function CombatService.resolveStoryBattle(player: Player, playerCreatureId: stri
 		return Result.fail("unowned_creature", "Player does not own this creature.")
 	end
 	
-	local pConfig = CreatureRegistry.getCreature(playerCreatureId)
+	local pConfig = CreatureRegistry.getCreature(pInst.creatureId)
 	if not pConfig then
 		return Result.fail("invalid_creature", "Player creature config not found.")
 	end
