@@ -106,21 +106,24 @@ No assistant may override these rules without explicit human approval and a docu
 
 ## 4. Required Reading Before Work
 
-1. Always read `docs/GDD_MASTER.md` before coding.
-2. Always read the relevant domain document before coding.
-3. Always read `docs/TECH_ARCHITECTURE.md` before architecture or code structure changes.
-4. Always read `docs/DATA_SCHEMA.md` before touching data models, save data, replicated data, or content tables.
-5. Always read `docs/SAVE_SYSTEM.md` before touching persistence, loading, saving, migration, or recovery logic.
-6. Always read `docs/UI_GUIDELINES.md` before UI implementation or UI redesign.
-7. Always read `docs/ECONOMY.md` before changing rewards, prices, currencies, sinks, sources, or monetization-adjacent systems.
-8. Always read `docs/PROGRESSION.md` before changing levels, unlocks, XP, milestones, or player growth.
-9. Always read `docs/COMBAT.md` before changing combat behavior, damage, targeting, enemies, abilities, or encounters.
-10. Always read `docs/ROADMAP.md` before changing milestone scope.
-11. Always read the relevant task file in `tasks/` before implementation.
-12. Always read related review notes in `reviews/` when revisiting a reviewed area.
-13. If required documentation is missing, create or update the documentation before implementation.
-14. If required documentation is ambiguous, ask for clarification or document the assumption.
-15. Do not begin coding from memory alone.
+1. **Always run `git pull`** before planning or coding to synchronize your workspace with remote team commits.
+2. **Always read `docs/CHANGELOG.md` and `docs/MVP_CHECKLIST.md`** to verify recent implementation changes and prevent duplicate coding work.
+3. **Always read `Jarvis_Genesis/.DaoGang/Jarvis.md`** for coding standards, Luau style rules, and Roblox Studio MCP sync workflows.
+4. Always read `docs/GDD_MASTER.md` before coding.
+5. Always read the relevant domain document before coding.
+6. Always read `docs/TECH_ARCHITECTURE.md` before architecture or code structure changes.
+7. Always read `docs/DATA_SCHEMA.md` before touching data models, save data, replicated data, or content tables.
+8. Always read `docs/SAVE_SYSTEM.md` before touching persistence, loading, saving, migration, or recovery logic.
+9. Always read `docs/UI_GUIDELINES.md` before UI implementation or UI redesign.
+10. Always read `docs/ECONOMY.md` before changing rewards, prices, currencies, sinks, sources, or monetization-adjacent systems.
+11. Always read `docs/PROGRESSION.md` before changing levels, unlocks, XP, milestones, or player growth.
+12. Always read `docs/COMBAT.md` before changing combat behavior, damage, targeting, enemies, abilities, or encounters.
+13. Always read `docs/ROADMAP.md` before changing milestone scope.
+14. Always read the relevant task file in `tasks/` before implementation.
+15. Always read related review notes in `reviews/` when revisiting a reviewed area.
+16. If required documentation is missing, create or update the documentation before implementation.
+17. If required documentation is ambiguous, ask for clarification or document the assumption.
+18. Do not begin coding from memory alone.
 
 ## 5. AI Responsibilities
 
