@@ -156,11 +156,13 @@ task-specific interpretation. If a rule applies to all code, keep it here.
 
 Before changing code:
 
-1. Read the relevant files, not just filenames.
-2. Identify whether the code belongs to `src/server`, `src/client`, or `src/shared`.
-3. State assumptions when the task is ambiguous.
-4. Keep changes scoped to the user request.
-5. Do not refactor unrelated modules, comments, names, or formatting.
+1. **Synchronize with the Team**: Run `git pull` immediately before starting a task or planning phase to fetch remote updates from other team members.
+2. **Verify Project Status**: Read [docs/CHANGELOG.md](file:///f:/Project_Genesis/docs/CHANGELOG.md) and [docs/MVP_CHECKLIST.md](file:///f:/Project_Genesis/docs/MVP_CHECKLIST.md) to inspect what has already been implemented or changed recently, preventing duplicate work.
+3. Read the relevant files, not just filenames.
+4. Identify whether the code belongs to `src/server`, `src/client`, or `src/shared`.
+5. State assumptions when the task is ambiguous.
+6. Keep changes scoped to the user request.
+7. Do not refactor unrelated modules, comments, names, or formatting.
 
 For review-only requests:
 
