@@ -1000,7 +1000,7 @@ Description
 
 Current Status
 
-Open.
+Resolved on 2026-07-01.
 
 Possible Solutions
 
@@ -1018,7 +1018,7 @@ P0 if production persistence is required for Release Candidate; otherwise P1 as 
 
 Resolution Notes
 
-Resolved when project leadership either accepts the in-memory save limitation for MVP or approves and verifies full DataStore-backed `SaveService` integration.
+Resolved on 2026-07-01. SaveService is fully integrated with DataStoreWrapper and successfully saves/loads player profiles dynamically to/from Roblox DataStores.
 
 ---
 

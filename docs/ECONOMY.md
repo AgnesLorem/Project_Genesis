@@ -43,7 +43,7 @@ All currency amounts are **integer-only**. No fractional currency values.
 | Source ID | Currency | Description | MVP Status |
 |---|---|---|---|
 | `bio_generator_claim` | Biomass | Bio Generator passive accumulation and claim | Active (MVP-005) |
-| `reward_combat` | DNA | Combat victory rewards | Foundation only — amounts defined in future combat MVP |
+| `reward_combat` | Biomass, DNA | Combat victory rewards | Active (MVP-019). Grants 50 Biomass and 50 DNA upon victory. |
 | `reward_milestone` | DNA | Milestone/progression rewards | Foundation only — amounts defined in future progression MVP |
 
 ## Sinks
@@ -77,5 +77,5 @@ The Bio Generator is the primary Biomass source for MVP.
 ## Open Questions
 
 1. Exact spend costs for Biomass and DNA (depends on future creature/combat MVPs).
-2. DNA reward amounts for combat and milestones (defined by future MVP configs).
+2. DNA/Biomass reward amounts for milestones (defined by future MVP configs).
 3. Additional currencies beyond Biomass and DNA (not approved for MVP).
