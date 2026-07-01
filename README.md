@@ -268,6 +268,7 @@ Before marking work complete:
 - Update relevant docs.
 - Submit work for review.
 - Resolve blocking review issues.
+- Additionally, scan [docs/MVP_CHECKLIST.md](file:///c:/Codes/Project_Genesis/docs/MVP_CHECKLIST.md) and check off (`[x]`) the specific task checkboxes that have been fully validated by this implementation.
 
 ## License Placeholder
 
