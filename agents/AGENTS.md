@@ -146,6 +146,7 @@ No assistant may override these rules without explicit human approval and a docu
 17. Assistants must not present speculative behavior as approved design.
 18. Assistants must not create mechanics without documented approval.
 19. Assistants must not make production decisions silently.
+20. Assistants are responsible for presenting all completed work and playtest verifications to the user for review; they must never push code changes to the remote Git repository without explicit human approval.
 
 ## 6. General Operating Rules
 
