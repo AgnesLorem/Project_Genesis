@@ -3,6 +3,7 @@ local HttpService = game:GetService("HttpService")
 local Result = require(game:GetService("ReplicatedStorage").Genesis.Shared.utilities.Result)
 local CreatureRegistry = require(game:GetService("ReplicatedStorage").Genesis.Shared.data.CreatureRegistry)
 local SaveService = require(script.Parent.SaveService)
+local EquipmentService = require(script.Parent.EquipmentService)
 local TowerChallengeRegistry = require(script.Parent.Parent.data.TowerChallengeRegistry)
 local BalanceRegistry = require(script.Parent.Parent.data.BalanceRegistry)
 local SkillRegistry = require(script.Parent.Parent.data.SkillRegistry)
@@ -87,21 +88,30 @@ local function _findOwnedInstance(save: any, playerInstanceId: string): any
 	return nil
 end
 
-local function _buildUnit(instanceId: string, creatureId: string, config: any): any
+local function _buildUnit(instanceId: string, creatureId: string, config: any, level: number, bonuses: any): any
+	local lvl = level or 1
+	local scale = 1 + (lvl - 1) * 0.1
+	local spdScale = 1 + (lvl - 1) * 0.01
+
+	local hp = math.floor(config.baseStats.hp * scale) + (bonuses and bonuses.hp or 0)
+	local atk = math.floor(config.baseStats.atk * scale) + (bonuses and bonuses.atk or 0)
+	local def = math.floor(config.baseStats.def * scale) + (bonuses and bonuses.def or 0)
+	local spd = math.floor(config.baseStats.spd * spdScale) + (bonuses and bonuses.spd or 0)
+
 	return {
 		instanceId = instanceId,
 		creatureId = creatureId,
 		stats = {
-			hp = config.baseStats.hp,
-			atk = config.baseStats.atk,
-			def = config.baseStats.def,
-			spd = config.baseStats.spd,
+			hp = hp,
+			atk = atk,
+			def = def,
+			spd = spd,
 		},
 		skillIds = config.skillIds,
 	}
 end
 
-local function _resolveBattle(playerInstanceId: string, playerCreatureId: string, enemyInstanceId: string, enemyCreatureId: string)
+local function _resolveBattle(playerInstanceId: string, playerCreatureId: string, enemyInstanceId: string, enemyCreatureId: string, level: number, bonuses: any)
 	local playerConfig = CreatureRegistry.getCreature(playerCreatureId)
 	if not playerConfig or not playerConfig.isEnabled then
 		return Result.fail("invalid_creature", "Player creature config not found or disabled.")
@@ -118,8 +128,8 @@ local function _resolveBattle(playerInstanceId: string, playerCreatureId: string
 	end
 
 	local session = BattleSession.new(
-		{ _buildUnit(playerInstanceId, playerCreatureId, playerConfig) },
-		{ _buildUnit(enemyInstanceId, enemyCreatureId, enemyConfig) },
+		{ _buildUnit(playerInstanceId, playerCreatureId, playerConfig, level, bonuses) },
+		{ _buildUnit(enemyInstanceId, enemyCreatureId, enemyConfig, 1, nil) },
 		combatConfig,
 		SkillRegistry
 	)
@@ -185,8 +195,16 @@ function TowerChallengeService.startRun(player: Player, challengeId: any, floorI
 	end
 
 	local playerCreatureId = ownedInstance.creatureId
+	local level = ownedInstance.level or 1
+
+	local bonuses = nil
+	local bonusResult = EquipmentService.calculateStatBonuses(player)
+	if bonusResult.success then
+		bonuses = bonusResult.value
+	end
+
 	local enemyInstanceId = string.format("enemy_tower_%s_%s", challengeId, floorId)
-	local battleResult = _resolveBattle(playerInstanceId, playerCreatureId, enemyInstanceId, floor.enemyCreatureId)
+	local battleResult = _resolveBattle(playerInstanceId, playerCreatureId, enemyInstanceId, floor.enemyCreatureId, level, bonuses)
 	if not battleResult.success then
 		return battleResult
 	end
