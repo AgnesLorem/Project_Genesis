@@ -1,0 +1,15 @@
+return {
+	id = "item_training_blade",
+	itemId = "item_training_blade",
+	schemaVersion = 1,
+	displayName = "Training Blade",
+	description = "A balanced starter weapon for early field tests.",
+	itemType = "equipment",
+	rarity = "Common",
+	iconSlot = "placeholder_weapon_blade",
+	maxStack = 1,
+	equipmentId = "equipment_training_blade",
+	sortOrder = 10,
+	tags = { "equipment", "weapon", "starter" },
+	isEnabled = true,
+}

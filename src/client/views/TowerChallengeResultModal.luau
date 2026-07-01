@@ -1,0 +1,62 @@
+local UIComponents = require(script.Parent.UIComponents)
+
+local TowerChallengeResultModal = {}
+
+function TowerChallengeResultModal.create(resultValue: any, onContinue: () -> ())
+	local modal = UIComponents.createBaseModal()
+
+	local panel = UIComponents.createBasePanel()
+	panel.Name = "TowerChallengeResultPanel"
+	panel.Size = UDim2.new(0, 420, 0, 270)
+	panel.Position = UDim2.new(0.5, -210, 0.5, -135)
+	panel.ZIndex = 101
+	panel.Parent = modal
+
+	local title = UIComponents.createBaseLabel("Tower Result")
+	title.Name = "Title"
+	title.Size = UDim2.new(1, -40, 0, 42)
+	title.Position = UDim2.new(0, 20, 0, 20)
+	title.TextSize = 28
+	title.TextXAlignment = Enum.TextXAlignment.Center
+	title.ZIndex = 102
+	title.Parent = panel
+
+	local outcome = UIComponents.createBaseLabel(tostring(resultValue.outcome or "Unknown"))
+	outcome.Name = "OutcomeLabel"
+	outcome.Size = UDim2.new(1, -40, 0, 32)
+	outcome.Position = UDim2.new(0, 20, 0, 78)
+	outcome.TextSize = 24
+	outcome.TextXAlignment = Enum.TextXAlignment.Center
+	outcome.ZIndex = 102
+	outcome.Parent = panel
+
+	local progress = resultValue.progress or {}
+	local progressText = string.format(
+		"Floor %d | Best %d | Attempts %d | Clears %d",
+		resultValue.floorNumber or 0,
+		progress.bestFloor or 0,
+		progress.totalAttempts or 0,
+		progress.totalClears or 0
+	)
+
+	local progressLabel = UIComponents.createBaseLabel(progressText)
+	progressLabel.Name = "ProgressLabel"
+	progressLabel.Size = UDim2.new(1, -40, 0, 30)
+	progressLabel.Position = UDim2.new(0, 20, 0, 128)
+	progressLabel.TextSize = 18
+	progressLabel.TextXAlignment = Enum.TextXAlignment.Center
+	progressLabel.ZIndex = 102
+	progressLabel.Parent = panel
+
+	local continueButton = UIComponents.createBaseButton("Continue")
+	continueButton.Name = "ContinueButton"
+	continueButton.Size = UDim2.new(0, 160, 0, 48)
+	continueButton.Position = UDim2.new(0.5, -80, 1, -70)
+	continueButton.ZIndex = 102
+	continueButton.Parent = panel
+	continueButton.MouseButton1Click:Connect(onContinue)
+
+	return modal
+end
+
+return TowerChallengeResultModal

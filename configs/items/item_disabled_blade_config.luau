@@ -1,0 +1,15 @@
+return {
+	id = "item_disabled_blade",
+	itemId = "item_disabled_blade",
+	schemaVersion = 1,
+	displayName = "Disabled Blade",
+	description = "Validation-only disabled item that must not be equippable.",
+	itemType = "equipment",
+	rarity = "Common",
+	iconSlot = "placeholder_disabled_weapon",
+	maxStack = 1,
+	equipmentId = "equipment_disabled_blade",
+	sortOrder = 900,
+	tags = { "equipment", "weapon", "disabled" },
+	isEnabled = false,
+}

@@ -1,0 +1,15 @@
+return {
+	id = "item_focus_charm",
+	itemId = "item_focus_charm",
+	schemaVersion = 1,
+	displayName = "Focus Charm",
+	description = "A small accessory tuned for stable energy flow.",
+	itemType = "equipment",
+	rarity = "Rare",
+	iconSlot = "placeholder_accessory_charm",
+	maxStack = 1,
+	equipmentId = "equipment_focus_charm",
+	sortOrder = 30,
+	tags = { "equipment", "accessory" },
+	isEnabled = true,
+}

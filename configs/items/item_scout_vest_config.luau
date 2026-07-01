@@ -1,0 +1,15 @@
+return {
+	id = "item_scout_vest",
+	itemId = "item_scout_vest",
+	schemaVersion = 1,
+	displayName = "Scout Vest",
+	description = "Light armor with reinforced seams and creature-safe fittings.",
+	itemType = "equipment",
+	rarity = "Common",
+	iconSlot = "placeholder_armor_vest",
+	maxStack = 1,
+	equipmentId = "equipment_scout_vest",
+	sortOrder = 20,
+	tags = { "equipment", "armor", "starter" },
+	isEnabled = true,
+}
