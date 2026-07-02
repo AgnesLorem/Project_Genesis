@@ -9,6 +9,7 @@
 --]]
 
 local GeneratorRegistry = require(script.Parent.Parent.data.GeneratorRegistry)
+local StageOrder = require(script.Parent.Parent.data.StageOrder)
 local CurrencyService = require(script.Parent.CurrencyService)
 local SaveService = require(script.Parent.SaveService)
 local Result = require(game:GetService("ReplicatedStorage").Genesis.Shared.utilities.Result)
@@ -139,6 +140,29 @@ local function _evaluateUnlock(player: any, save: any, config: any): boolean
 		end
 
 		return (requiredState.level or 1) >= (requirement.level or math.huge)
+	end
+
+	if requirementType == "stageClear" then
+		-- DD-029: unlocked when the player holds any stage index that comes
+		-- AFTER requirement.stageId in the shared STAGE_ORDER sequence.
+		local targetIndex = StageOrder.getIndex(requirement.stageId)
+		if not targetIndex then
+			return false
+		end
+
+		local unlockedStages = save.worldProgression and save.worldProgression.unlockedStages
+		if type(unlockedStages) ~= "table" then
+			return false
+		end
+
+		for _, unlockedStageId in ipairs(unlockedStages) do
+			local unlockedIndex = StageOrder.getIndex(unlockedStageId)
+			if unlockedIndex and unlockedIndex > targetIndex then
+				return true
+			end
+		end
+
+		return false
 	end
 
 	return false

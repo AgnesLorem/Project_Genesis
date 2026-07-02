@@ -23,6 +23,7 @@ local VALID_UNLOCK_TYPES = {
 	always = true,
 	currencyBalance = true,
 	generatorLevel = true,
+	stageClear = true,
 }
 
 local function _positiveNumber(value: any): boolean
@@ -75,6 +76,10 @@ local function _validateUnlockRequirement(requirement: any)
 		end
 		if not _positiveInteger(requirement.level) then
 			return Result.fail("validation_failed", "generatorLevel unlock requires a positive integer level.")
+		end
+	elseif requirement.type == "stageClear" then
+		if not _nonEmptyString(requirement.stageId) then
+			return Result.fail("validation_failed", "stageClear unlock requires stageId.")
 		end
 	end
 

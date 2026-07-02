@@ -18,6 +18,7 @@ local RemoteMiddleware = require(script.Parent.RemoteMiddleware)
 
 local CreatureRegistry = require(game:GetService("ReplicatedStorage").Genesis.Shared.data.CreatureRegistry)
 local EvolutionRegistry = require(script.Parent.Parent.data.EvolutionRegistry)
+local StageOrder = require(script.Parent.Parent.data.StageOrder)
 
 local RemoteHandlers = {}
 
@@ -26,8 +27,10 @@ local cachedPublicConfigs = nil
 
 -- ─── Story Stage Sequence ───────────────────────────────────────────────────
 -- Ordered story stage sequence. Defeating a stage unlocks the next entry.
--- MVP-020: hardcoded here pending a dedicated stage/encounter registry.
-local STAGE_ORDER = { "story_stage_1", "story_stage_2", "story_stage_3" }
+-- MVP-020: hardcoded pending a dedicated stage/encounter registry.
+-- Sequence itself lives in StageOrder (shared with GeneratorService's
+-- stageClear unlock requirement, DD-029).
+local STAGE_ORDER = StageOrder.getSequence()
 local STAGE_ENCOUNTERS = {
 	story_stage_1 = "enemy_001",
 	story_stage_2 = "mossbit_001",
