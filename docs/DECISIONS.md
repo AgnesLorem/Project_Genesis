@@ -1005,6 +1005,39 @@ Date
 
 -------------------------------------
 
+Decision ID
+
+DD-029
+
+Title
+
+Server-Authoritative World Progression and Economy Gates
+
+Status
+
+Accepted
+
+Decision
+
+Project Genesis will track player stage progression inside their save profile under `worldProgression.unlockedStages`. Access to story stages is validated on the server. Winning a stage unlocks the subsequent stage defined in the sequence. Generators can gate their unlocks behind this progression using a `"stageClear"` requirement type.
+
+Reason
+
+To create a cohesive loop where economic growth (generators) is tied to gameplay success (story stage clearance) in a secure, server-authoritative manner.
+
+Impact
+
+- `SaveService` / `MigrationManager` persists `worldProgression.unlockedStages` with a default of `{"story_stage_1"}`.
+- `RemoteHandlers` validates stage access on `RequestStoryBattle`.
+- `RemoteHandlers` handles unlocking the next stage in sequence on victory.
+- `GeneratorService`'s `_evaluateUnlock` implements `"stageClear"` checks.
+
+Date
+
+2026-07-02
+
+-------------------------------------
+
 ## Open Questions
 
 1. Exact combat formulas and tuning values.

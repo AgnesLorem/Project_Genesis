@@ -64,6 +64,21 @@ The Bio Generator is the primary Biomass source for MVP.
 | Accumulation Formula | `floor(elapsed_seconds * ratePerSecond)` | Server-calculated |
 | Claim | Server-authoritative, resets timer | CurrencyService validates source and cap |
 
+## Generator Unlocks & Requirements
+
+Generators can configure unlock requirements to restrict when players can purchase or level them up.
+
+### Unlock Requirements Schema
+- **Requirement Types**:
+  - `always`: No requirement, unlocked by default.
+  - `currencyBalance`: Requires player to hold a minimum balance of a specified currency.
+  - `generatorLevel`: Requires a different generator to reach a minimum level.
+  - `stageClear`: Requires a specific world stage to be cleared by the player.
+- **Stage Clear Verification**:
+  - Checking `stageClear` for `stageId` evaluates if the player has unlocked any stage index that comes *after* `stageId` in `STAGE_ORDER` (which is tracked in save progression).
+
+---
+
 ## Risk Controls
 
 1. **Server Authority**: Server owns ALL currency balances, grants, spending, and validation.

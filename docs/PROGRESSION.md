@@ -79,6 +79,20 @@ Evolution is a server-authoritative transaction that upgrades a creature to a st
 - **Collection**: Evolved form is automatically added to the player's collection.
 - **Rollback**: If any verification step fails (including level mismatch, insufficient biomass, or registry error), the transaction is immediately aborted. Biomass is not spent, and the collection is not modified.
 
+## World Stage Progression
+
+World progression in Project Genesis is tracked on the server via unlocked stages.
+
+### Stage Locks & Validation
+- **Save Profile State**: Unlocked stages are tracked in the player's save profile:
+  ```luau
+  worldProgression = {
+      unlockedStages = { "story_stage_1" } -- Default unlocked stage
+  }
+  ```
+- **Access Verification**: Before entering combat, the server validates if the requested `stageId` is present in the player's `unlockedStages` list. Locked stage requests are rejected.
+- **Victory Progression**: On player victory, the server finds the index of the completed stage in the sequence (defined in `RemoteHandlers`). If a subsequent stage exists and is not yet unlocked, it is appended to the player's `unlockedStages` list and marked dirty for saving.
+
 ---
 
 ## Genes and Prestige Boundaries
