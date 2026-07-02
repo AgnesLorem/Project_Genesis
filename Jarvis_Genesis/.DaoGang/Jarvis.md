@@ -115,7 +115,7 @@ Current child docs & task-specific guides:
 *   [`RobloxStudioMcp.md`](RobloxStudioMcp.md): Read before connecting to Roblox Studio through MCP, selecting between multiple open Studio windows, running Studio-side Luau, controlling Studio play-test states using `start_stop_play`, or using MCP to verify/create Studio-owned source objects.
 
 #### Game Vision & Core Scope (Read when designing systems or checking scope boundaries)
-*   [GDD_MASTER.md](file:///f:/Project_Genesis/docs/GDD_MASTER.md): Master Game Design Document. Read for core GDD reference, game loops, card game rules, and design details.
+*   [GDD_MASTER.md](file:///f:/Project_Genesis/docs/GDD_MASTER.md): Master Game Design Document. Read for core GDD reference, game loops, creature auto-battler rules, and design details.
 *   [PROJECT_PRINCIPLES.md](file:///f:/Project_Genesis/docs/PROJECT_PRINCIPLES.md): Core architectural and design principles. Read to verify out-of-scope boundaries (e.g. daily quests, premium shop limits).
 *   [DECISIONS.md](file:///f:/Project_Genesis/docs/DECISIONS.md): Permanent architectural and design decisions log (DD-xxx). Read before proposing major design changes.
 *   [ROADMAP.md](file:///f:/Project_Genesis/docs/ROADMAP.md): High-level production milestones.
@@ -194,7 +194,7 @@ Reference validation rule:
 
 - When adding, porting, editing, or reviewing code that depends on referenced instances, validate the references as well as the code.
 - This is a universal rule, not an effect-only rule. Apply it to `script` children, nearby folders/models, shared storage references, attachments, emitters, sounds, decals, GUI objects, and other hard references the code expects to exist.
-- Example: if a module uses `script:FindFirstChild("CardTemplate"):Clone()`, the agent must verify that a `CardTemplate` child instance exists under that script in the local files or the verified Studio tree before calling the module ready.
+- Example: if a module uses `script:FindFirstChild("CreatureFrame"):Clone()`, the agent must verify that a `CreatureFrame` child instance exists under that script in the local files or the verified Studio tree before calling the module ready.
 - If the reference links cannot be proven from the codebase or the verified Studio tree, warn the user clearly instead of assuming the missing instances exist.
 - Code that reads fine but whose required referenced instances are not verified is not considered fully implemented or safely reviewed yet.
 
@@ -396,10 +396,10 @@ The existing code uses more PascalCase than a generic Luau style guide. Match it
 
 Server authority is absolute.
 
-- The server owns all critical game state: active battle sessions, player decks, hands, card collections, turn-state, energy/currencies, active generators, and math validation.
-- The client owns input presentation, card drag-and-drop visuals, hovering animations, and local UI rendering.
-- Use remotes as requests to execute actions (e.g., "RequestPlayCard", "RequestBuyUpgrade"), never as trusted states.
-- Never trust client-sent deck composition, card draws, active hands, upgrade prices, currency gains, or game outcomes.
+- The server owns all critical game state: active battle sessions, creature collection inventories, progression checkpoints, active generator timers, stats calculation, and math validation.
+- The client owns input presentation, creature visual displays, hovering animations, and local UI rendering.
+- Use remotes as requests to execute actions (e.g., "RequestStoryBattle", "RequestBuyUpgrade"), never as trusted states.
+- Never trust client-sent battle team compositions, battle outcomes, upgrade prices, currency gains, or progression claims.
 
 Service lifecycle:
 
@@ -733,25 +733,24 @@ Do not use remotes to let the client decide:
 - Cooldown completion.
 - Enemy kill state.
 
-## 10. Combat, Movement, and Hitboxes
-## 10. Turn-Based Game Loops & Card State
+## 10. Combat Simulation & Auto-Battle Loops
 
-- All card actions (drawing, shuffling, playing, discarding) must be simulated and validated on the server.
-- The server owns the master turn/phase state machine. Card play requests must be rejected if they are sent out of turn or phase.
-- Client inputs (e.g. dragging a card, clicking upgrade) only fire request remotes. The client must never predict card resolution outcomes that affect player stats, currency, or battle success.
-- Cards, skills, and status effects must be defined in data configurations (e.g. under `configs/`) rather than hardcoding unique scripting logic for every individual card.
+- All battle simulations must run completely on the server (calculating the entire timeline instantly).
+- The server owns the master battle session and timeline calculation. Clients only receive the computed timeline to play it back visually.
+- Client inputs (e.g. clicking a stage to fight, upgrading a creature) only fire request remotes. The client must never predict or calculate battle outcomes or reward distributions.
+- Creatures, skills, worlds, and status effects must be defined in data configurations (e.g. under `configs/`) rather than hardcoding unique scripting logic inside services.
 
 ## 10.5 Incremental Calculations & Numeric Safety
 
 - **Large Number Scales**: Ensure that calculations for player currency, DPS, or stats can scale exponentially without overflow.
 - **Scientific Notation**: Use scientific or engineering notation (e.g., `1.50K`, `3.10M`, `1.00e15`) for displaying values exceeding standard ranges. Integrate standard number formatting helpers from `src/shared/`.
-- **Multiplier Caching**: Recalculating deep stacks of passive stats or multipliers on every frame is banned. Cache player stats and recalculate them only on state changes (e.g., card played, item equipped, upgrade purchased).
+- **Multiplier Caching**: Recalculating deep stacks of passive stats or multipliers on every frame is banned. Cache player stats and recalculate them only on state changes (e.g., creature leveled up, item equipped, upgrade purchased).
 - **Offline / Idle Progression**: Idle income or generator gains accrued during offline periods must be calculated on the server when the player joins. Validate re-login timestamps against trusted time boundaries, not the client's clock.
 
 ## 11. GUI & Temporary Instance Pooling
 
-- UI/GUI elements (like card frames, damage popups, active status icons) are spawned at high rates in card combat. Do not call `Instance.new` or `Clone()` every time.
-- Enforce UI pooling: reuse inactive card or text frames from a local GUI pool instead of instantiating and destroying them.
+- UI/GUI elements (like creature UI frames, damage popups, active status icons) are spawned or updated at high rates in combat playback. Do not call `Instance.new` or `Clone()` every time.
+- Enforce UI pooling: reuse inactive creature frames or damage text objects from a local GUI pool instead of instantiating and destroying them.
 - All temporary instances must have one clear cleanup path: pool release, or explicit `Destroy` when they are no longer needed.
 - Do not leave temporary GUI elements or parented visual effects in the player GUI tree forever; ensure they have strict lifetime limits or transition animations that trigger automatic destruction.
 
@@ -892,7 +891,7 @@ end
 These are not instructions to edit immediately. They are risks to keep in mind when working nearby.
 
 - The project is currently in the MVP release gate audit/foundation phase. Some folders and files contain WIP placeholders or initial foundations. Do not complete unrelated WIP areas.
-- Some data keys might have slight inconsistencies between newer progression/deck code and older services. When touching data, verify every read/write path.
+- Some data keys might have slight inconsistencies between newer progression/inventory code and older services. When touching data, verify every read/write path.
 - Some helpers use global bridges. Treat them as existing contracts until replaced.
 - Spelling mistakes in identifiers may be live API/path contracts. Do not rename them without a migration plan.
 
