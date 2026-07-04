@@ -21,18 +21,4 @@ return {
 	visualRef = "visual_solar_drake_001",
 	sortOrder = 310,
 	isEnabled = true,
-	cardMetadata = {
-		displayName = "Solar Drake",
-		rarity = "Legend",
-		elementType = "Pyro",
-		description = "A radiant drake whose wings brighten before decisive strikes.",
-		placeholderArtSlot = "creature_legend_pyro_001",
-		stats = {
-			hp = 260,
-			atk = 86,
-			def = 32,
-			spd = 22,
-		},
-		evolutionTarget = nil,
-	},
 }

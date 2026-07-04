@@ -21,18 +21,4 @@ return {
 	visualRef = "visual_stormlynx_001",
 	sortOrder = 220,
 	isEnabled = true,
-	cardMetadata = {
-		displayName = "Stormlynx",
-		rarity = "Epic",
-		elementType = "Volt",
-		description = "A sharp-eyed predator that stores lightning along its spine.",
-		placeholderArtSlot = "creature_epic_volt_001",
-		stats = {
-			hp = 185,
-			atk = 70,
-			def = 18,
-			spd = 24,
-		},
-		evolutionTarget = nil,
-	},
 }

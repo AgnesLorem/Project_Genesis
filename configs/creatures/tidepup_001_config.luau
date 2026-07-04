@@ -21,18 +21,4 @@ return {
 	visualRef = "visual_tidepup_001",
 	sortOrder = 130,
 	isEnabled = true,
-	cardMetadata = {
-		displayName = "Tidepup",
-		rarity = "Rare",
-		elementType = "Aqua",
-		description = "A playful hunter that channels pressure through its tail fins.",
-		placeholderArtSlot = "creature_rare_aqua_001",
-		stats = {
-			hp = 145,
-			atk = 40,
-			def = 14,
-			spd = 16,
-		},
-		evolutionTarget = "void_stag_001",
-	},
 }

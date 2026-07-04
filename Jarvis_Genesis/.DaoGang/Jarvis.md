@@ -776,7 +776,7 @@ Any code that creates resources must define ownership and cleanup.
 - Temporary GUI and VFX instances need explicit `Destroy` or pool release.
 - Player-keyed tables need `PlayerRemoving` cleanup.
 - Runtime loops need an exit condition.
-- Do not keep references to destroyed cards, active battles, or UI frames.
+- Do not keep references to destroyed creatures, active battles, or UI frames.
 
 Registry/lifecycle pattern:
 - Helper functions that create loops, tasks, signals, temporary instances, or reusable runtime state should return a Registry table/class.

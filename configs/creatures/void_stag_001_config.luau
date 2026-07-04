@@ -21,18 +21,4 @@ return {
 	visualRef = "visual_void_stag_001",
 	sortOrder = 320,
 	isEnabled = true,
-	cardMetadata = {
-		displayName = "Void Stag",
-		rarity = "Legend",
-		elementType = "Void",
-		description = "A silent legend whose antlers bend light around the battlefield.",
-		placeholderArtSlot = "creature_legend_void_001",
-		stats = {
-			hp = 245,
-			atk = 78,
-			def = 38,
-			spd = 20,
-		},
-		evolutionTarget = nil,
-	},
 }

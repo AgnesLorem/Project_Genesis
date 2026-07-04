@@ -21,18 +21,4 @@ return {
 	visualRef = "visual_enemy_001",
 	sortOrder = 20,
 	isEnabled = true,
-	cardMetadata = {
-		displayName = "Rift Grub",
-		rarity = "Common",
-		elementType = "Void",
-		description = "A low-threat invader used for early combat calibration.",
-		placeholderArtSlot = "creature_common_void_001",
-		stats = {
-			hp = 50,
-			atk = 10,
-			def = 4,
-			spd = 8,
-		},
-		evolutionTarget = nil,
-	},
 }

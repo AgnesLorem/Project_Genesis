@@ -21,18 +21,4 @@ return {
 	visualRef = "visual_mossbit_001",
 	sortOrder = 30,
 	isEnabled = true,
-	cardMetadata = {
-		displayName = "Mossbit",
-		rarity = "Common",
-		elementType = "Terra",
-		description = "A compact grazer that stores mineral biomass in its shell.",
-		placeholderArtSlot = "creature_common_terra_001",
-		stats = {
-			hp = 120,
-			atk = 24,
-			def = 12,
-			spd = 8,
-		},
-		evolutionTarget = "thornhorn_001",
-	},
 }

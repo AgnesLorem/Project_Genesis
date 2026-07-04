@@ -198,11 +198,6 @@ def validate_creature_shape(creature: dict) -> None:
         require(isinstance(creature["baseStats"].get(stat), int), f"{creature['_path']}: invalid baseStats.{stat}.")
         require(creature["baseStats"][stat] > 0, f"{creature['_path']}: baseStats.{stat} must be positive.")
 
-    metadata = creature.get("cardMetadata")
-    require(isinstance(metadata, dict), f"{creature['_path']}: invalid cardMetadata.")
-    for field in ("displayName", "rarity", "elementType", "description", "placeholderArtSlot", "evolutionTarget"):
-        require(metadata.get(field) == creature.get(field), f"{creature['_path']}: cardMetadata.{field} mismatch.")
-    require(metadata.get("stats") == creature["baseStats"], f"{creature['_path']}: cardMetadata.stats mismatch.")
 
 
 def validate_evolution_shape(evolution: dict) -> None:

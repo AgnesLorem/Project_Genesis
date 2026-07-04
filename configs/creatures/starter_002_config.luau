@@ -21,18 +21,4 @@ return {
 	visualRef = "visual_starter_002",
 	sortOrder = 110,
 	isEnabled = true,
-	cardMetadata = {
-		displayName = "Bramble Warden",
-		rarity = "Rare",
-		elementType = "Flora",
-		description = "An evolved guardian with hardened bark and sharpened thorns.",
-		placeholderArtSlot = "creature_rare_flora_001",
-		stats = {
-			hp = 160,
-			atk = 44,
-			def = 16,
-			spd = 13,
-		},
-		evolutionTarget = "starter_003",
-	},
 }

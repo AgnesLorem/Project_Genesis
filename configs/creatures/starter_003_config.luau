@@ -21,18 +21,4 @@ return {
 	visualRef = "visual_starter_003",
 	sortOrder = 210,
 	isEnabled = true,
-	cardMetadata = {
-		displayName = "Elder Verdant",
-		rarity = "Epic",
-		elementType = "Flora",
-		description = "A mature apex form that shields allies with living roots.",
-		placeholderArtSlot = "creature_epic_flora_001",
-		stats = {
-			hp = 220,
-			atk = 62,
-			def = 28,
-			spd = 15,
-		},
-		evolutionTarget = nil,
-	},
 }

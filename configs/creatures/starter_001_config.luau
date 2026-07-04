@@ -21,18 +21,4 @@ return {
 	visualRef = "visual_starter_001",
 	sortOrder = 10,
 	isEnabled = true,
-	cardMetadata = {
-		displayName = "Sprout Imp",
-		rarity = "Common",
-		elementType = "Flora",
-		description = "A resilient young creature with quick-growing vines.",
-		placeholderArtSlot = "creature_common_flora_001",
-		stats = {
-			hp = 110,
-			atk = 28,
-			def = 8,
-			spd = 11,
-		},
-		evolutionTarget = "starter_002",
-	},
 }

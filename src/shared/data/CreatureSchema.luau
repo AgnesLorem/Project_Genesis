@@ -85,44 +85,6 @@ function CreatureSchema.validate(data: any)
         return Result.fail("Missing or invalid isEnabled (boolean)")
     end
 
-    if type(data.cardMetadata) ~= "table" then
-        return Result.fail("Missing or invalid cardMetadata (table)")
-    end
-
-    if data.cardMetadata.displayName ~= data.displayName then
-        return Result.fail("cardMetadata.displayName must match displayName")
-    end
-
-    if data.cardMetadata.rarity ~= data.rarity then
-        return Result.fail("cardMetadata.rarity must match rarity")
-    end
-
-    if data.cardMetadata.elementType ~= data.elementType then
-        return Result.fail("cardMetadata.elementType must match elementType")
-    end
-
-    if data.cardMetadata.description ~= data.description then
-        return Result.fail("cardMetadata.description must match description")
-    end
-
-    if data.cardMetadata.placeholderArtSlot ~= data.placeholderArtSlot then
-        return Result.fail("cardMetadata.placeholderArtSlot must match placeholderArtSlot")
-    end
-
-    if data.cardMetadata.evolutionTarget ~= data.evolutionTarget then
-        return Result.fail("cardMetadata.evolutionTarget must match evolutionTarget")
-    end
-
-    if type(data.cardMetadata.stats) ~= "table" then
-        return Result.fail("Missing or invalid cardMetadata.stats (table)")
-    end
-
-    for _, statName in ipairs({ "hp", "atk", "def", "spd" }) do
-        if data.cardMetadata.stats[statName] ~= data.baseStats[statName] then
-            return Result.fail("cardMetadata.stats must match baseStats")
-        end
-    end
-
     return Result.ok(data)
 end
 

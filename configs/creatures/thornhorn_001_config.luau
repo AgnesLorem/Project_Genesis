@@ -21,18 +21,4 @@ return {
 	visualRef = "visual_thornhorn_001",
 	sortOrder = 140,
 	isEnabled = true,
-	cardMetadata = {
-		displayName = "Thornhorn",
-		rarity = "Rare",
-		elementType = "Terra",
-		description = "A plated charger whose horn grows in rings after each battle.",
-		placeholderArtSlot = "creature_rare_terra_001",
-		stats = {
-			hp = 175,
-			atk = 38,
-			def = 22,
-			spd = 10,
-		},
-		evolutionTarget = "crystal_mantis_001",
-	},
 }

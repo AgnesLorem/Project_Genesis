@@ -21,18 +21,4 @@ return {
 	visualRef = "visual_emberwing_001",
 	sortOrder = 120,
 	isEnabled = true,
-	cardMetadata = {
-		displayName = "Emberwing",
-		rarity = "Rare",
-		elementType = "Pyro",
-		description = "A swift aerial creature that sheds warm cinders when excited.",
-		placeholderArtSlot = "creature_rare_pyro_001",
-		stats = {
-			hp = 135,
-			atk = 46,
-			def = 10,
-			spd = 18,
-		},
-		evolutionTarget = "solar_drake_001",
-	},
 }

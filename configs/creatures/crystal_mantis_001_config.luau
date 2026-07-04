@@ -21,18 +21,4 @@ return {
 	visualRef = "visual_crystal_mantis_001",
 	sortOrder = 230,
 	isEnabled = true,
-	cardMetadata = {
-		displayName = "Crystal Mantis",
-		rarity = "Epic",
-		elementType = "Terra",
-		description = "An evolved sentinel whose forearms refract hostile energy.",
-		placeholderArtSlot = "creature_epic_terra_001",
-		stats = {
-			hp = 205,
-			atk = 58,
-			def = 34,
-			spd = 16,
-		},
-		evolutionTarget = nil,
-	},
 }
