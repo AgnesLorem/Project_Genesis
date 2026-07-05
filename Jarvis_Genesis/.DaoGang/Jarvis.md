@@ -886,6 +886,41 @@ local function AncestryChangedHook(
 end
 ```
 
+## 13.5 Toolchain & Code Quality Pipeline
+
+Project Genesis uses a lightweight, local-first toolchain for code quality and schema validation. All contributors (including AI assistants) must run these checks before push.
+
+### 1. Toolchain Setup (Aftman)
+The project toolchain is managed by [aftman.toml](file:///f:/Project_Genesis/aftman.toml) in the root directory. To install the required tool versions locally, run:
+```bash
+aftman install
+```
+This automatically downloads and sets up the correct versions of `rojo`, `stylua`, `selene`, and `lune` on your machine.
+
+### 2. Code Formatting (StyLua)
+All codebase changes must be formatted using StyLua. Check formatting before committing:
+```bash
+stylua --check src/ configs/
+```
+To automatically format files:
+```bash
+stylua src/ configs/
+```
+
+### 3. Code Linting (Selene)
+Selene is configured for the Roblox environment via [selene.toml](file:///f:/Project_Genesis/selene.toml). Run the linter to catch common bugs and code smells:
+```bash
+selene src/
+```
+
+### 4. Configuration & Schema Validation
+Since gameplay definitions are data-driven, configurations under [configs/](file:///f:/Project_Genesis/configs) must be validated. Run the Python validation scripts under [tests/unit/](file:///f:/Project_Genesis/tests/unit/) (e.g. `mvp015_content_validation.py`, `mvp017_skill_validation.py`) to verify that your configs conform to [DATA_SCHEMA.md](file:///f:/Project_Genesis/docs/DATA_SCHEMA.md) and that all references are valid:
+```bash
+# Run validation suites
+python tests/unit/mvp015_content_validation.py
+python tests/unit/mvp017_skill_validation.py
+```
+
 ## 14. Known Project Risks To Watch
 
 These are not instructions to edit immediately. They are risks to keep in mind when working nearby.
