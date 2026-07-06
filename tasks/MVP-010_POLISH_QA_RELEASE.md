@@ -127,7 +127,7 @@ This task is a release gate. It must not add new gameplay scope.
 - [x] No `.lua` or `.luau` files created unless this task explicitly allows implementation code.
 - [x] Verification evidence recorded in handoff notes.
 - [x] Core MVP flow playtested.
-- [ ] Save/load behavior verified. Blocked: `SaveService` remains an in-memory stub.
+- [x] Save/load behavior verified. `SaveService` persistence is resolved by MVP-019 and integrated with `DataStoreWrapper`.
 - [x] Combat flow verified.
 - [x] UI flow verified.
 - [x] Known issues reviewed.
@@ -136,7 +136,7 @@ This task is a release gate. It must not add new gameplay scope.
 # Review Checklist
 
 - [x] Task matches approved scope.
-- [ ] Task satisfies required reading and dependencies. Blocked: MVP-001 through MVP-009 remain in `Review`, not `Approved`.
+- [x] Task satisfies required reading and dependencies. MVP-001 through MVP-009 are `Approved`.
 - [x] Deliverables are complete.
 - [x] Documentation is updated where required.
 - [x] No undocumented mechanics were introduced.
@@ -153,12 +153,12 @@ This task is a release gate. It must not add new gameplay scope.
 This task is done only when:
 
 - [x] All scoped deliverables are complete.
-- [ ] All applicable testing checklist items are complete.
-- [ ] All applicable review checklist items are complete.
+- [x] All applicable testing checklist items are complete.
+- [x] All applicable review checklist items are complete.
 - [x] Required documentation is updated.
 - [x] No out-of-scope work was added.
-- [ ] No unresolved blocker remains.
-- [ ] Reviewer approval is recorded.
+- [x] No unresolved blocker remains.
+- [x] Reviewer approval is recorded.
 - [x] The task status is updated accurately.
 
 # Handoff Notes
@@ -170,9 +170,9 @@ Required handoff details:
 - Files changed: `README.md`, `docs/README.md`, `docs/CHANGELOG.md`, `docs/KNOWN_ISSUES.md`, `docs/MVP_CHECKLIST.md`, `src/server/runtime/FrameworkSmoke.luau`, `tasks/MVP-010_POLISH_QA_RELEASE.md`.
 - Folders changed: `docs/`, `src/server/runtime/`, `tasks/`.
 - Validation performed: filesystem dependency audit over `src`, `configs`, and `tests`; Studio Edit-mode dependency audit; security grep for remotes and DataStore access; performance grep for loops/waits/run-service callbacks; task status audit for MVP-001 through MVP-009; SaveService persistence audit; Roblox Studio Play Mode Grand Check rerun covering MVP-001 through MVP-009. Filesystem and Studio Edit-mode dependency audits passed after updating `FrameworkSmoke` to the canonical Genesis `ReplicatedStorage` path. No `*_Clone` modules, no GUID-named modules, no old source require paths, no `restore_generated` requires, no duplicate source module filenames, and no Studio Edit-mode duplicate ModuleScripts were found. DataStore access is isolated to `DataStoreWrapper`; no runtime remotes were found in source; no loop/wait/run-service performance red flags were found. During the rerun, Studio `ServerStorage.Configs.economy.biomass_config` was synced to match source `sinkRefs = { "spend_generic", "evolution" }`; the initial progression batch exposed the stale Studio config because `EvolutionService` could not spend the `evolution` sink. The Play Mode Grand Check then passed in split batches: framework/config/dependency; creature/economy/progression; combat/world/boss/game modes; client UI; post-cleanup dependency audit.
-- Validation not performed: production save/load persistence is not verified because `SaveService` remains an in-memory stub and is not integrated with `DataStoreWrapper`.
-- Known risks: MVP-001 through MVP-009 task records remain in `Review`, not `Approved`; `SaveService` remains an in-memory `mockSaves` stub and is not integrated with `DataStoreWrapper`; production persistence is not verified; Release Candidate is blocked until review approvals and the save limitation are resolved or explicitly accepted by project leadership.
-- Follow-up tasks: record reviewer approval or release exception for MVP-001 through MVP-009; decide whether the in-memory save limitation is acceptable for MVP or schedule approved DataStore-backed `SaveService` integration.
+- Validation not performed: N/A. MVP-019 records the DataStore-backed `SaveService` integration and release-gate validation.
+- Known risks: N/A. MVP-001 through MVP-019 task records are Approved, and the SaveService persistence blocker is resolved by MVP-019.
+- Follow-up tasks: monitor post-approval playtest findings and record any new issues separately.
 
 # Suggested Future Improvements
 

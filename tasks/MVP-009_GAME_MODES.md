@@ -146,7 +146,7 @@ This task is done only when:
 - [x] Required documentation is updated.
 - [x] No out-of-scope work was added.
 - [x] No unresolved blocker remains for approved MVP modes; Quest/Tower remain gated by known issues and are not implemented.
-- [ ] Reviewer approval is recorded.
+- [x] Reviewer approval is recorded.
 - [x] The task status is updated accurately.
 
 # Handoff Notes

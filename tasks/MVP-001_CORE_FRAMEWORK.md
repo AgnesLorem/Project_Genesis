@@ -134,7 +134,7 @@ This task is done only when:
 - [x] Required documentation is updated.
 - [x] No out-of-scope work was added.
 - [x] No unresolved blocker remains.
-- [ ] Reviewer approval is recorded. (PENDING human review)
+- [x] Reviewer approval is recorded.
 - [x] The task status is updated accurately.
 
 # Handoff Notes

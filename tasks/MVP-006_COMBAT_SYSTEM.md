@@ -40,16 +40,16 @@ This task covers only documented combat behavior: Auto Battle, Action Time Bar, 
 
 # Scope
 
-- [ ] Finalize documented combat formula and Action Gauge parameters before implementation.
-- [ ] Implement Skill Config schema validation.
-- [ ] Implement server-owned battle session model.
-- [ ] Implement Story 1v1 battle setup.
-- [ ] Implement simplified server-side damage resolver.
-- [ ] Implement SPD Action Gauge resolver.
-- [ ] Implement server-owned cooldown state.
-- [ ] Implement skill execution resolver for approved effects only.
-- [ ] Implement battle completion flow and full post-battle heal.
-- [ ] Prepare extension points for boss/challenge 3v3 without implementing unapproved modes.
+- [x] Finalize documented combat formula and Action Gauge parameters before implementation.
+- [x] Implement Skill Config schema validation.
+- [x] Implement server-owned battle session model.
+- [x] Implement Story 1v1 battle setup.
+- [x] Implement simplified server-side damage resolver.
+- [x] Implement SPD Action Gauge resolver.
+- [x] Implement server-owned cooldown state.
+- [x] Implement skill execution resolver for approved effects only.
+- [x] Implement battle completion flow and full post-battle heal.
+- [x] Prepare extension points for boss/challenge 3v3 without implementing unapproved modes.
 
 # Out of Scope
 
@@ -65,19 +65,19 @@ This task covers only documented combat behavior: Auto Battle, Action Time Bar, 
 
 # Required Reading
 
-- [ ] `docs/README.md`
-- [ ] `README.md`
-- [ ] `docs/PROJECT_PRINCIPLES.md`
-- [ ] `agents/AGENTS.md`
-- [ ] `docs/GDD_MASTER.md`
-- [ ] `docs/DECISIONS.md`
-- [ ] `docs/DEVELOPMENT_WORKFLOW.md`
-- [ ] `docs/DEFINITION_OF_DONE.md`
-- [ ] `docs/COMBAT.md`
-- [ ] `docs/BALANCE.md`
-- [ ] `docs/DATA_SCHEMA.md`
-- [ ] `docs/SECURITY_GUIDE.md`
-- [ ] `tasks/MVP_MASTER_TASK_LIST.md`
+- [x] `docs/README.md`
+- [x] `README.md`
+- [x] `docs/PROJECT_PRINCIPLES.md`
+- [x] `agents/AGENTS.md`
+- [x] `docs/GDD_MASTER.md`
+- [x] `docs/DECISIONS.md`
+- [x] `docs/DEVELOPMENT_WORKFLOW.md`
+- [x] `docs/DEFINITION_OF_DONE.md`
+- [x] `docs/COMBAT.md`
+- [x] `docs/BALANCE.md`
+- [x] `docs/DATA_SCHEMA.md`
+- [x] `docs/SECURITY_GUIDE.md`
+- [x] `tasks/MVP_MASTER_TASK_LIST.md`
 
 # Dependencies
 
@@ -115,45 +115,45 @@ This task covers only documented combat behavior: Auto Battle, Action Time Bar, 
 
 # Testing Checklist
 
-- [ ] Primary success path tested or verified.
-- [ ] Relevant failure path tested or verified.
-- [ ] Invalid input handled where applicable.
-- [ ] No unrelated files changed.
-- [ ] No `.lua` or `.luau` files created unless this task explicitly allows implementation code.
-- [ ] Verification evidence recorded in handoff notes.
-- [ ] Story 1v1 setup validates player creature ownership.
-- [ ] Damage resolver rejects client damage.
-- [ ] Cooldown state remains server-owned.
-- [ ] Action Gauge behavior follows documented SPD rules.
-- [ ] Full heal after battle occurs through server-owned state.
+- [x] Primary success path tested or verified.
+- [x] Relevant failure path tested or verified.
+- [x] Invalid input handled where applicable.
+- [x] No unrelated files changed.
+- [x] No `.lua` or `.luau` files created unless this task explicitly allows implementation code.
+- [x] Verification evidence recorded in handoff notes.
+- [x] Story 1v1 setup validates player creature ownership.
+- [x] Damage resolver rejects client damage.
+- [x] Cooldown state remains server-owned.
+- [x] Action Gauge behavior follows documented SPD rules.
+- [x] Full heal after battle occurs through server-owned state.
 
 # Review Checklist
 
-- [ ] Task matches approved scope.
-- [ ] Task satisfies required reading and dependencies.
-- [ ] Deliverables are complete.
-- [ ] Documentation is updated where required.
-- [ ] No undocumented mechanics were introduced.
-- [ ] No unrelated files were modified.
-- [ ] Server authority is preserved where applicable.
-- [ ] Data-driven rules are preserved where applicable.
-- [ ] Testing or verification evidence is present.
-- [ ] Blocking issues are resolved or clearly documented.
-- [ ] No mana, PvP, manual combat, or status effect system was added.
-- [ ] No power gate was introduced.
+- [x] Task matches approved scope.
+- [x] Task satisfies required reading and dependencies.
+- [x] Deliverables are complete.
+- [x] Documentation is updated where required.
+- [x] No undocumented mechanics were introduced.
+- [x] No unrelated files were modified.
+- [x] Server authority is preserved where applicable.
+- [x] Data-driven rules are preserved where applicable.
+- [x] Testing or verification evidence is present.
+- [x] Blocking issues are resolved or clearly documented.
+- [x] No mana, PvP, manual combat, or status effect system was added.
+- [x] No power gate was introduced.
 
 # Definition of Done
 
 This task is done only when:
 
-- [ ] All scoped deliverables are complete.
-- [ ] All applicable testing checklist items are complete.
-- [ ] All applicable review checklist items are complete.
-- [ ] Required documentation is updated.
-- [ ] No out-of-scope work was added.
-- [ ] No unresolved blocker remains.
-- [ ] Reviewer approval is recorded.
-- [ ] The task status is updated accurately.
+- [x] All scoped deliverables are complete.
+- [x] All applicable testing checklist items are complete.
+- [x] All applicable review checklist items are complete.
+- [x] Required documentation is updated.
+- [x] No out-of-scope work was added.
+- [x] No unresolved blocker remains.
+- [x] Reviewer approval is recorded.
+- [x] The task status is updated accurately.
 
 # Handoff Notes
 
