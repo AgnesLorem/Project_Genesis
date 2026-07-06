@@ -83,17 +83,38 @@ Before completing any task, execute this sequence:
 
 ## 7. Status Definitions
 
-* **`READY_FOR_STUDIO_QA`**: Offline validation completed successfully, but Roblox Studio Play Solo testing is pending.
-* **`READY`**: All steps of the QA checklist have passed, walkthrough screenshots are recorded, and the system is verified.
+* **`READY_FOR_STUDIO_QA`**: Offline validation completed successfully, but Roblox Studio Play Solo testing is pending (Offline Complete).
+* **`READY`**: All steps of the QA checklist have passed, walkthrough screenshots/logs are recorded, and the system is verified in Roblox Studio.
 * **`BLOCKED`**: Encountered technical blockers or missing conditions that prevent task completion or verification.
 
 ---
 
-## 8. Definition of Done & Release Gate
+## 8. Bug Fix Policy
+
+Before implementing any bug fix, you must:
+1. **Reproduce**: Confirm the bug in a local test or Roblox Studio session.
+2. **Identify Root Cause**: Trace the issue completely across all callers to understand the state flow.
+3. **Explain Root Cause**: Document how and why the bug occurs in your plan or report.
+4. **Implement Minimal Fix**: Apply the narrowest possible changes to resolve the root cause. Avoid unrelated refactoring or rewrite of surrounding logic.
+5. **Regression Test**: Run the full validation suite (5x runs for Save, Networking, or race-conditions) to ensure no side effects are introduced.
+
+---
+
+## 9. Evidence Standard
+
+A task is not considered `READY` until your walkthrough contains:
+* **GameplaySimulator PASS**: Console output showing successful execution of the happy path and invalid request checks.
+* **F9 Output Clean**: Visual verification or copy-paste logs proving the Studio console is free of warnings and errors.
+* **Studio Output Clean**: Edit-mode and run-time console output is clean.
+* **Required Screenshots**: Embedded images showing the feature states (Empty, Loading, Error, and Success) in the walkthrough document.
+
+---
+
+## 10. Definition of Done & Release Gate
 
 A task is done only when:
 1. All scoped deliverables are completed.
 2. The code compiles and compiles warning-free.
-3. Playtest verification and regression checklists are passed.
+3. Playtest verification and regression checklists are passed (Evidence Standard satisfied).
 4. Walkthrough documentation containing visual evidence is updated.
 5. **No commit is pushed to the remote GitHub repository until the user has explicitly reviewed and approved the implementation.**
