@@ -32,306 +32,844 @@ end
 getOrCreateFolder(game:GetService("ServerScriptService"), "Server")
 getOrCreateFolder(game:GetService("StarterPlayer").StarterPlayerScripts, "Client")
 getOrCreateFolder(game:GetService("ReplicatedStorage"), "Shared")
-local p = ensurePath(game:GetService("StarterPlayer").StarterPlayerScripts.Client, "models")
-getOrCreateModule(p, "ClientState", [====[
+getOrCreateFolder(game:GetService("ServerStorage"), "Configs")
+local p = ensurePath(game:GetService("ServerScriptService").Server, "networking")
+getOrCreateModule(p, "RemoteHandlers", [====[
 --[[
-	ClientState
-	Location: src/client/models/ClientState.luau
+	RemoteHandlers
+	Location: src/server/networking/RemoteHandlers.luau
 
-	ClientState is a presentation cache only.
-	It mirrors server-approved snapshots.
-	It must never become authoritative gameplay state.
-
-	This module provides a simple key-value store for UI controllers to read
-	from, and for network controllers to write into when the server sends updates.
-
-	Part of MVP-003: UI Foundation.
+	Server-authoritative boundary for client requests.
+	Maps RemoteFunctions to internal Services with Middleware protections.
 --]]
 
-local ClientState = {}
+local Network = require(game:GetService("ReplicatedStorage").Genesis.Shared.remotes.Network)
+local Result = require(game:GetService("ReplicatedStorage").Genesis.Shared.utilities.Result)
 
-local _stateCache = {}
-local _listeners = {}
+local SaveService = require(script.Parent.Parent.services.SaveService)
+local CreatureService = require(script.Parent.Parent.services.CreatureService)
+local CollectionService = require(script.Parent.Parent.services.CollectionService)
+local CurrencyService = require(script.Parent.Parent.services.CurrencyService)
+local GameModeService = require(script.Parent.Parent.services.GameModeService)
+local RemoteMiddleware = require(script.Parent.RemoteMiddleware)
 
---[[
-	ClientState.set(key, value)
-	
-	Updates a key in the presentation cache.
-	Fires any registered listeners for this key.
---]]
-function ClientState.set(key: string, value: any)
-	assert(type(key) == "string" and key ~= "", "[ClientState] Key must be a non-empty string.")
-	_stateCache[key] = value
+local CreatureRegistry = require(game:GetService("ReplicatedStorage").Genesis.Shared.data.CreatureRegistry)
+local EvolutionRegistry = require(script.Parent.Parent.data.EvolutionRegistry)
+local StageOrder = require(script.Parent.Parent.data.StageOrder)
 
-	if _listeners[key] then
-		for _, callback in ipairs(_listeners[key]) do
-			-- Safe execution to prevent listener errors from breaking state updates
-			pcall(callback, value)
+local RemoteHandlers = {}
+
+-- Cached static data
+local cachedPublicConfigs = nil
+
+-- ─── Story Stage Sequence ───────────────────────────────────────────────────
+-- Ordered story stage sequence. Defeating a stage unlocks the next entry.
+-- MVP-020: hardcoded pending a dedicated stage/encounter registry.
+-- Sequence itself lives in StageOrder (shared with GeneratorService's
+-- stageClear unlock requirement, DD-029).
+local STAGE_ORDER = StageOrder.getSequence()
+local STAGE_ENCOUNTERS = {
+	story_stage_1 = "enemy_001",
+	story_stage_2 = "mossbit_001",
+	story_stage_3 = "thornhorn_001",
+}
+
+-- Story battle victory reward amounts. Foundation values per docs/ECONOMY.md
+-- reward_combat source; final balance values remain TBD in docs/BALANCE.md.
+local STORY_VICTORY_BIOMASS = 50
+local STORY_VICTORY_DNA = 50
+
+local function _buildPublicConfigsCache()
+	local all = CreatureRegistry.getAllCreatures()
+	local publicConfigs = {}
+
+	for _, config in ipairs(all) do
+		if config.isEnabled then
+			local evolutionAvailable = nil
+			for _, evol in ipairs(EvolutionRegistry.getAllEvolutions()) do
+				if evol.fromCreatureId == config.creatureId and evol.isEnabled then
+					evolutionAvailable = {
+						evolutionId = evol.evolutionId,
+						toCreatureId = evol.toCreatureId,
+						requiredLevel = evol.requiredLevel,
+						biomassCost = evol.biomassCost,
+					}
+					break
+				end
+			end
+
+			publicConfigs[config.creatureId] = {
+				creatureId = config.creatureId,
+				displayName = config.displayName,
+				collectionCategory = config.collectionCategory,
+				sortOrder = config.sortOrder,
+				isEnabled = config.isEnabled,
+				evolutionLineId = config.evolutionLineId,
+				evolutionAvailable = evolutionAvailable,
+			}
 		end
 	end
+	return publicConfigs
 end
 
---[[
-	ClientState.get(key, default)
-	
-	Retrieves a value from the presentation cache.
-	Returns the default value if the key does not exist.
---]]
-function ClientState.get(key: string, default: any): any
-	assert(type(key) == "string" and key ~= "", "[ClientState] Key must be a non-empty string.")
-	local value = _stateCache[key]
-	if value == nil then
-		return default
-	end
-	return value
-end
+function RemoteHandlers.init()
+	-- Pre-build caches
+	cachedPublicConfigs = _buildPublicConfigsCache()
 
---[[
-	ClientState.listen(key, callback)
-	
-	Registers a callback to be fired whenever the given key is updated.
---]]
-function ClientState.listen(key: string, callback: (any) -> ())
-	assert(type(key) == "string" and key ~= "", "[ClientState] Key must be a non-empty string.")
-	assert(type(callback) == "function", "[ClientState] Callback must be a function.")
-	
-	if not _listeners[key] then
-		_listeners[key] = {}
-	end
-	table.insert(_listeners[key], callback)
-end
+	-- ─── Remotes ─────────────────────────────────────────────────────────────────
+	local GetPlayerProfileSnapshot = Network.getRemoteFunction("GetPlayerProfileSnapshot")
+	local GetStarterChoices = Network.getRemoteFunction("GetStarterChoices")
+	local RequestStarterSelection = Network.getRemoteFunction("RequestStarterSelection")
+	local RequestWorldSnapshot = Network.getRemoteFunction("RequestWorldSnapshot")
+	local RequestStoryBattle = Network.getRemoteFunction("RequestStoryBattle")
+	local GetCollectionSnapshot = Network.getRemoteFunction("GetCollectionSnapshot")
+	local GetCreatureInventory = Network.getRemoteFunction("GetCreatureInventory")
+	local SetActiveCreature = Network.getRemoteFunction("SetActiveCreature")
+	local GetCreatureConfigsPublic = Network.getRemoteFunction("GetCreatureConfigsPublic")
 
---[[
-	ClientState.clear(key)
-	
-	Clears a key from the presentation cache.
---]]
-function ClientState.clear(key: string)
-	assert(type(key) == "string" and key ~= "", "[ClientState] Key must be a non-empty string.")
-	_stateCache[key] = nil
-end
+	-- ─── Handlers ────────────────────────────────────────────────────────────────
 
-return ClientState
+	GetPlayerProfileSnapshot.OnServerInvoke = RemoteMiddleware.createHandler("GetPlayerProfileSnapshot", function(player)
+		local save = SaveService.getPlayerSave(player)
+		if not save then
+			return Result.fail("not_loaded", "Player save data not loaded.")
+		end
 
-]====])
+		local activeId = CreatureService.getActiveCreatureInstanceId(player)
 
-local p = ensurePath(game:GetService("StarterPlayer").StarterPlayerScripts.Client, "views")
-getOrCreateModule(p, "StatePatterns", [====[
---[[
-	StatePatterns
-	Location: src/client/views/StatePatterns.luau
-
-	Standardized presentation states for UI screens.
-	Provides: Loading, Empty, Error, Disconnected, Retry.
-
-	Part of MVP-003: UI Foundation.
---]]
-
-local UIComponents = require(script.Parent.UIComponents)
-
-local StatePatterns = {}
-
-local function _createStateOverlay(name: string, text: string): Frame
-	local overlay = UIComponents.createBaseContainer()
-	overlay.Name = name
-	
-	local bg = UIComponents.createBasePanel()
-	bg.BackgroundTransparency = 0.2
-	bg.Parent = overlay
-	
-	local label = UIComponents.createBaseLabel(text)
-	label.Size = UDim2.new(1, 0, 1, 0)
-	label.TextXAlignment = Enum.TextXAlignment.Center
-	label.TextYAlignment = Enum.TextYAlignment.Center
-	label.TextSize = 24
-	label.Parent = overlay
-	
-	return overlay
-end
-
---[[
-	StatePatterns.Loading(parent) -> Frame
-	Shows when a request is in flight.
---]]
-function StatePatterns.Loading(parent: Instance): Frame
-	local state = _createStateOverlay("LoadingState", "Loading...")
-	if parent then state.Parent = parent end
-	return state
-end
-
---[[
-	StatePatterns.Empty(parent, message) -> Frame
-	Shows when a list or collection has no items.
---]]
-function StatePatterns.Empty(parent: Instance, message: string?): Frame
-	local state = _createStateOverlay("EmptyState", message or "No items found.")
-	if parent then state.Parent = parent end
-	return state
-end
-
---[[
-	StatePatterns.Error(parent, message) -> Frame
-	Shows when an operation fails.
---]]
-function StatePatterns.Error(parent: Instance, message: string?): Frame
-	local state = _createStateOverlay("ErrorState", message or "An error occurred.")
-	local label = state:FindFirstChild("BaseLabel", true)
-	if label and label:IsA("TextLabel") then
-		label.TextColor3 = Color3.fromRGB(255, 100, 100)
-	end
-	if parent then state.Parent = parent end
-	return state
-end
-
---[[
-	StatePatterns.Disconnected(parent) -> Frame
-	Shows when the server connection drops.
---]]
-function StatePatterns.Disconnected(parent: Instance): Frame
-	local state = _createStateOverlay("DisconnectedState", "Disconnected from server.")
-	local label = state:FindFirstChild("BaseLabel", true)
-	if label and label:IsA("TextLabel") then
-		label.TextColor3 = Color3.fromRGB(200, 200, 200)
-	end
-	if parent then state.Parent = parent end
-	return state
-end
-
---[[
-	StatePatterns.Retry(parent, callback, message) -> Frame
-	Shows when a failure can be retried.
---]]
-function StatePatterns.Retry(parent: Instance, callback: () -> (), message: string?): Frame
-	local state = UIComponents.createBaseContainer()
-	state.Name = "RetryState"
-	
-	local bg = UIComponents.createBasePanel()
-	bg.BackgroundTransparency = 0.2
-	bg.Parent = state
-	
-	local label = UIComponents.createBaseLabel(message or "Action failed. Please try again.")
-	label.Size = UDim2.new(1, 0, 0.6, 0)
-	label.TextXAlignment = Enum.TextXAlignment.Center
-	label.TextYAlignment = Enum.TextYAlignment.Bottom
-	label.TextSize = 20
-	label.Parent = state
-	
-	local btn = UIComponents.createBaseButton("Retry")
-	btn.AnchorPoint = Vector2.new(0.5, 0)
-	btn.Position = UDim2.new(0.5, 0, 0.6, 20)
-	btn.Parent = state
-	
-	btn.Activated:Connect(function()
-		if callback then callback() end
+		local snapshot = {
+			creatureInstances = save.creatureInstances or {},
+			collectionState = save.collectionState or { discoveredCreatureIds = {} },
+			balances = save.economyState and save.economyState.balances or {},
+			starterSelected = save.collectionState
+				and save.collectionState.discoveredCreatureIds
+				and save.collectionState.discoveredCreatureIds["starter_001"] == true,
+			activeCreatureInstanceId = activeId,
+		}
+		return Result.ok(snapshot)
 	end)
-	
-	if parent then state.Parent = parent end
-	return state
+
+	GetStarterChoices.OnServerInvoke = RemoteMiddleware.createHandler("GetStarterChoices", function(player)
+		return Result.ok({ "starter_001" })
+	end)
+
+	RequestStarterSelection.OnServerInvoke = RemoteMiddleware.createHandler("RequestStarterSelection", function(player, creatureId)
+		local valRes = RemoteMiddleware.validateString(creatureId, 50)
+		if not valRes.success then return valRes end
+
+		if creatureId ~= "starter_001" then
+			return Result.fail("unapproved_starter", "Only starter_001 is available in MVP.")
+		end
+
+		local grantRes = CreatureService.tryGrantCreature(player, creatureId)
+		if grantRes.success then
+			CreatureService.setActiveCreature(player, grantRes.value.instanceId)
+			SaveService.markDirty(player)
+			return Result.ok(grantRes.value)
+		end
+		return grantRes
+	end)
+
+	RequestWorldSnapshot.OnServerInvoke = RemoteMiddleware.createHandler("RequestWorldSnapshot", function(player)
+		local save = SaveService.getPlayerSave(player)
+		if not save then
+			return Result.fail("not_loaded", "Player save data not loaded.")
+		end
+
+		-- worldProgression is guaranteed by MigrationManager, but stay defensive.
+		save.worldProgression = save.worldProgression or { unlockedStages = { "story_stage_1" } }
+
+		return Result.ok({
+			worldId = "world_001",
+			unlockedStages = save.worldProgression.unlockedStages
+		})
+	end)
+
+	RequestStoryBattle.OnServerInvoke = RemoteMiddleware.createHandler("RequestStoryBattle", function(player, _clientCreatureId, stageId)
+		local stageRes = RemoteMiddleware.validateString(stageId, 50)
+		if not stageRes.success then return stageRes end
+
+		local enemyConfigId = STAGE_ENCOUNTERS[stageId]
+		if not enemyConfigId then
+			return Result.fail("invalid_stage", "Unknown stageId.")
+		end
+
+		local save = SaveService.getPlayerSave(player)
+		if not save then
+			return Result.fail("not_loaded", "Player save data not loaded.")
+		end
+
+		-- worldProgression is guaranteed by MigrationManager, but stay defensive.
+		save.worldProgression = save.worldProgression or { unlockedStages = { "story_stage_1" } }
+		local unlockedStages = save.worldProgression.unlockedStages
+
+		-- SERVER AUTHORITY: Access to a stage is validated against the player's
+		-- persisted unlock list, never trusted from the client.
+		local isUnlocked = false
+		for _, unlockedId in ipairs(unlockedStages) do
+			if unlockedId == stageId then
+				isUnlocked = true
+				break
+			end
+		end
+		if not isUnlocked then
+			return Result.fail("stage_locked", "This stage has not been unlocked yet.")
+		end
+
+		-- SERVER AUTHORITY: Enforce active creature, discard client-provided creature ID
+		local activeCreatureId = CreatureService.getActiveCreatureInstanceId(player)
+		if not activeCreatureId then
+			return Result.fail("invalid_request", "Player has no active creature assigned.")
+		end
+
+		local battleRes = GameModeService.resolveModeBattle(player, {
+			modeId = "story",
+			playerCreatureId = activeCreatureId,
+			enemyConfigId = enemyConfigId
+		})
+
+		if not battleRes.success then
+			return battleRes
+		end
+
+		local xpGained = 0
+		local xpRes = CreatureService.addCreatureXp(player, activeCreatureId, 1000)
+		if xpRes.success then
+			xpGained = 1000
+		end
+
+		local biomassGained = 0
+		local dnaGained = 0
+		local newlyUnlockedStage = nil
+
+		if battleRes.value.isVictory then
+			local bioRes = CurrencyService.tryGrant(player, "biomass", STORY_VICTORY_BIOMASS, "story")
+			if bioRes.success then
+				biomassGained = bioRes.value.granted
+			end
+
+			local dnaRes = CurrencyService.tryGrant(player, "dna", STORY_VICTORY_DNA, "reward_combat")
+			if dnaRes.success then
+				dnaGained = dnaRes.value.granted
+			end
+
+			-- Stage progression: unlock the next stage in the sequence, if any.
+			local stageIndex = table.find(STAGE_ORDER, stageId)
+			local nextStageId = stageIndex and STAGE_ORDER[stageIndex + 1]
+			if nextStageId then
+				local alreadyUnlocked = false
+				for _, unlockedId in ipairs(unlockedStages) do
+					if unlockedId == nextStageId then
+						alreadyUnlocked = true
+						break
+					end
+				end
+				if not alreadyUnlocked then
+					table.insert(unlockedStages, nextStageId)
+					newlyUnlockedStage = nextStageId
+				end
+			end
+		end
+
+		SaveService.markDirty(player)
+
+		return Result.ok({
+			isVictory = battleRes.value.isVictory,
+			timeline = battleRes.value.timeline,
+			summary = battleRes.value.summary,
+			rewards = {
+				biomass = biomassGained,
+				dna = dnaGained,
+			},
+			xpGained = xpGained,
+			creatureUpdates = xpRes.success and xpRes.value or nil,
+			newlyUnlockedStage = newlyUnlockedStage,
+		})
+	end)
+
+	GetCollectionSnapshot.OnServerInvoke = RemoteMiddleware.createHandler("GetCollectionSnapshot", function(player)
+		return CollectionService.getCollectionSnapshot(player)
+	end)
+
+	GetCreatureInventory.OnServerInvoke = RemoteMiddleware.createHandler("GetCreatureInventory", function(player)
+		local save = SaveService.getPlayerSave(player)
+		if not save then
+			return Result.fail("not_loaded", "Player save data not loaded.")
+		end
+
+		local activeId = CreatureService.getActiveCreatureInstanceId(player)
+
+		return Result.ok({
+			instances = save.creatureInstances or {},
+			activeCreatureInstanceId = activeId,
+		})
+	end)
+
+	SetActiveCreature.OnServerInvoke = RemoteMiddleware.createHandler("SetActiveCreature", function(player, instanceId)
+		local valRes = RemoteMiddleware.validateString(instanceId, 100)
+		if not valRes.success then return valRes end
+		
+		return CreatureService.setActiveCreature(player, instanceId)
+	end)
+
+	GetCreatureConfigsPublic.OnServerInvoke = RemoteMiddleware.createHandler("GetCreatureConfigsPublic", function(player)
+		-- O(1) Cache hit
+		return Result.ok(cachedPublicConfigs)
+	end)
 end
 
-return StatePatterns
+return RemoteHandlers
 
 ]====])
 
-local p = ensurePath(game:GetService("StarterPlayer").StarterPlayerScripts.Client, "views")
-getOrCreateModule(p, "UIComponents", [====[
+local p = ensurePath(game:GetService("ServerScriptService").Server, "persistence")
+getOrCreateModule(p, "DataStoreWrapper", [====[
 --[[
-	UIComponents
-	Location: src/client/views/UIComponents.luau
+	DataStoreWrapper
+	Location: src/server/persistence/DataStoreWrapper.luau
 
-	Minimal foundational UI elements using pure Roblox UI with Luau only.
-	No external dependencies.
-	No animation, no theme, no gameplay-specific widgets.
+	Thin server-side wrapper around Roblox DataStoreService.
 
-	Provides:
-	- Base Panel
-	- Base Button
-	- Base Label
-	- Base Container
-	- Base Modal placeholder
+	All persistence reads and writes in Project Genesis must route through
+	this module. No other module should call DataStoreService directly.
 
-	Part of MVP-003: UI Foundation.
+	Responsibilities:
+	- Wrap tất cả DataStore API trong pcall.
+	- Exponential backoff retry (3 lần) khi gặp lỗi mạng tạm thời.
+	- Session Locking: ngăn chặn Dupe Exploit khi người chơi rejoin liên tục.
+	- Đếm pending saves để BindToClose chờ hoàn thành trước khi server tắt.
+	- Không bao giờ lộ raw DataStore error ra ngoài — chỉ dùng mã lỗi an toàn.
+
+	Session Locking Protocol:
+	  1. loadAndClaim:  UpdateAsync để đọc data VÀ ghi SessionId của server này
+	                    vào một thao tác nguyên tử duy nhất. Nếu server khác
+	                    đang giữ lock → trả về session_locked.
+	  2. save:          UpdateAsync kiểm tra SessionId trước khi ghi đè.
+	                    Nếu lock bị đánh cắp → trả về session_stolen, không ghi.
+	  3. saveAndRelease: UpdateAsync lưu data cuối cùng và xóa SessionId
+	                    để server tiếp theo có thể load an sau.
+
+	Session ID field: "_sessionJobId" (tiền tố _ = internal, không dùng cho gameplay)
+	Trong Studio Play Solo, game.JobId là "" nên dùng timestamp thay thế.
+
+	Backend: Roblox DataStoreService (DataStore v1)
+	Per docs/SAVE_SYSTEM.md.
+	Part of MVP-002: Save, Config, and Database Foundation.
 --]]
 
-local UIComponents = {}
+local DataStoreService = game:GetService("DataStoreService")
+
+-- ─── Session Identity ─────────────────────────────────────────────────────────
+-- game.JobId là "" trong Studio → dùng timestamp để tạo session ID duy nhất.
+local SESSION_JOB_ID: string = (game.JobId ~= "" and game.JobId)
+	or ("studio_" .. tostring(os.time()) .. "_" .. tostring(math.random(10000, 99999)))
+
+-- Tên field nội bộ lưu trong DataStore để khóa phiên.
+local SESSION_FIELD = "_sessionJobId"
+
+-- ─── Retry Config ─────────────────────────────────────────────────────────────
+local MAX_RETRIES      = 3
+local RETRY_BASE_DELAY = 2   -- giây; delay = 2^attempt * base → 2s, 4s, 8s
+
+-- ─── Pending Save Tracker ────────────────────────────────────────────────────
+local _pendingSaveCount = 0
+
+-- ─── Result Types ─────────────────────────────────────────────────────────────
+export type LoadResult = {
+	ok: boolean,
+	data: any,
+	errorCategory: string?,
+}
+
+export type SaveResult = {
+	ok: boolean,
+	errorCategory: string?,
+}
+
+-- ─── Safe Error Categories ────────────────────────────────────────────────────
+local ERROR_CATEGORIES = {
+	DATASTORE_UNAVAILABLE   = "datastore_unavailable",
+	REQUEST_BUDGET_EXCEEDED = "request_budget_exceeded",
+	SERIALIZATION_FAILED    = "serialization_failed",
+	KEY_INVALID             = "key_invalid",
+	UNKNOWN_ERROR           = "unknown_error",
+	SESSION_LOCKED          = "session_locked",   -- Server khác đang giữ lock
+	SESSION_STOLEN          = "session_stolen",   -- Lock bị mất giữa chừng (rejoin quá nhanh)
+}
+
+-- ─── Internal Helpers ────────────────────────────────────────────────────────
+
+local function _categorizeError(rawError: string): string
+	if type(rawError) ~= "string" then
+		return ERROR_CATEGORIES.UNKNOWN_ERROR
+	end
+	local lower = string.lower(rawError)
+	if string.find(lower, "budget") or string.find(lower, "throttle") or string.find(lower, "limit") then
+		return ERROR_CATEGORIES.REQUEST_BUDGET_EXCEEDED
+	end
+	if string.find(lower, "serialize") or string.find(lower, "encode") then
+		return ERROR_CATEGORIES.SERIALIZATION_FAILED
+	end
+	if string.find(lower, "key") then
+		return ERROR_CATEGORIES.KEY_INVALID
+	end
+	if string.find(lower, "unavailable") or string.find(lower, "503") or string.find(lower, "connect") then
+		return ERROR_CATEGORIES.DATASTORE_UNAVAILABLE
+	end
+	return ERROR_CATEGORIES.UNKNOWN_ERROR
+end
+
+local function _isTransientError(category: string): boolean
+	return category == ERROR_CATEGORIES.DATASTORE_UNAVAILABLE
+		or category == ERROR_CATEGORIES.REQUEST_BUDGET_EXCEEDED
+		or category == ERROR_CATEGORIES.UNKNOWN_ERROR
+end
+
+local _storeCache: { [string]: DataStore } = {}
+
+local function _getStore(storeName: string): (boolean, DataStore | string)
+	if _storeCache[storeName] then
+		return true, _storeCache[storeName]
+	end
+	local ok, result = pcall(function()
+		return DataStoreService:GetDataStore(storeName)
+	end)
+	if ok then
+		_storeCache[storeName] = result :: DataStore
+		return true, result :: DataStore
+	else
+		return false, tostring(result)
+	end
+end
+
+-- Thực thi callback với exponential backoff retry.
+-- callback phải trả về (boolean, any) theo chuẩn pcall.
+local function _withRetry(label: string, callback: () -> (boolean, any)): (boolean, any)
+	local lastOk, lastResult
+	for attempt = 1, MAX_RETRIES do
+		lastOk, lastResult = callback()
+		if lastOk then
+			return true, lastResult
+		end
+		local category = _categorizeError(tostring(lastResult))
+		if not _isTransientError(category) then
+			warn(string.format("[DataStoreWrapper] %s — lỗi cố định, không retry. Category: %s", label, category))
+			return false, lastResult
+		end
+		if attempt < MAX_RETRIES then
+			local delay = RETRY_BASE_DELAY * (2 ^ (attempt - 1))
+			warn(string.format(
+				"[DataStoreWrapper] %s — lần %d/%d thất bại (%s). Thử lại sau %.0fs...",
+				label, attempt, MAX_RETRIES, category, delay
+			))
+			task.wait(delay)
+		end
+	end
+	warn(string.format("[DataStoreWrapper] %s — đã thử %d lần, tất cả thất bại.", label, MAX_RETRIES))
+	return false, lastResult
+end
+
+-- ─── Public API ───────────────────────────────────────────────────────────────
+
+local DataStoreWrapper = {}
 
 --[[
-	UIComponents.createBaseContainer() -> Frame
-	Invisible container for layout organization.
+	DataStoreWrapper.loadAndClaim(storeName, key) -> LoadResult
+
+	Tải dữ liệu VÀ ghi Session Lock của server hiện tại trong MỘT thao tác
+	UpdateAsync nguyên tử duy nhất. Điều này đảm bảo:
+	  - Không có race condition giữa đọc và ghi lock.
+	  - Nếu server khác đang giữ lock → trả về session_locked ngay lập tức.
+
+	Kết quả trả về KHÔNG chứa field "_sessionJobId" (đã được lọc ra).
+	Caller nhận data sạch, không có metadata nội bộ.
+
+	Trả về:
+	  { ok = true,  data = <value> }                 — Load + lock thành công.
+	  { ok = true,  data = nil }                     — Người chơi mới, lock được thiết lập.
+	  { ok = false, errorCategory = "session_locked" } — Server khác đang giữ lock.
+	  { ok = false, errorCategory = <other> }          — Lỗi DataStore.
 --]]
-function UIComponents.createBaseContainer(): Frame
-	local container = Instance.new("Frame")
-	container.Name = "BaseContainer"
-	container.BackgroundTransparency = 1
-	container.Size = UDim2.new(1, 0, 1, 0)
-	container.Position = UDim2.new(0, 0, 0, 0)
-	return container
+function DataStoreWrapper.loadAndClaim(storeName: string, key: string): LoadResult
+	assert(type(storeName) == "string" and storeName ~= "", "[DataStoreWrapper] storeName phải là chuỗi không rỗng.")
+	assert(type(key) == "string" and key ~= "", "[DataStoreWrapper] key phải là chuỗi không rỗng.")
+
+	local storeOk, storeOrError = _getStore(storeName)
+	if not storeOk then
+		local category = _categorizeError(tostring(storeOrError))
+		warn(string.format("[DataStoreWrapper] loadAndClaim: không lấy được DataStore '%s'. Category: %s", storeName, category))
+		return { ok = false, data = nil, errorCategory = category }
+	end
+
+	local store = storeOrError :: DataStore
+	local label = string.format("loadAndClaim('%s', '%s')", storeName, key)
+
+	-- Biến capture từ trong closure của UpdateAsync
+	local sessionWasLocked = false
+	local capturedCleanData = nil  -- Data đã lọc bỏ SESSION_FIELD
+
+	local ok, result = _withRetry(label, function()
+		return pcall(function()
+			store:UpdateAsync(key, function(oldValue: any)
+				-- ── Kiểm tra Session Lock ──
+				if type(oldValue) == "table"
+					and type(oldValue[SESSION_FIELD]) == "string"
+					and oldValue[SESSION_FIELD] ~= ""
+					and oldValue[SESSION_FIELD] ~= SESSION_JOB_ID
+				then
+					-- Server khác đang giữ lock → huỷ UpdateAsync bằng cách return nil.
+					-- Roblox sẽ không ghi gì vào DataStore khi transform trả về nil.
+					sessionWasLocked = true
+					return nil
+				end
+
+				-- ── Lock còn trống hoặc là của server này → Claim ──
+				-- Deep-copy để không mutate oldValue trực tiếp.
+				local newData: { [string]: any } = {}
+				if type(oldValue) == "table" then
+					for k, v in pairs(oldValue) do
+						newData[k] = v
+					end
+				end
+
+				-- Ghi Session ID của server này để các server khác không ghi đè.
+				newData[SESSION_FIELD] = SESSION_JOB_ID
+
+				-- Lưu bản sạch (không có SESSION_FIELD) để trả về cho SaveService.
+				capturedCleanData = {}
+				for k, v in pairs(newData) do
+					if k ~= SESSION_FIELD then
+						capturedCleanData[k] = v
+					end
+				end
+
+				return newData
+			end)
+		end)
+	end)
+
+	if not ok then
+		local category = _categorizeError(tostring(result))
+		warn(string.format("[DataStoreWrapper] loadAndClaim UpdateAsync thất bại cuối cùng. Category: %s", category))
+		return { ok = false, data = nil, errorCategory = category }
+	end
+
+	if sessionWasLocked then
+		warn(string.format(
+			"[DataStoreWrapper] loadAndClaim: key '%s' đang bị lock bởi server khác. Từ chối load.",
+			key
+		))
+		return { ok = false, data = nil, errorCategory = ERROR_CATEGORIES.SESSION_LOCKED }
+	end
+
+	-- capturedCleanData == nil chỉ khi oldValue là nil (người chơi mới).
+	return { ok = true, data = capturedCleanData, errorCategory = nil }
 end
 
 --[[
-	UIComponents.createBasePanel() -> Frame
-	Visible background panel.
+	DataStoreWrapper.save(storeName, key, data) -> SaveResult
+
+	Lưu data với kiểm tra Session Lock. Nếu lock bị đánh cắp (server khác
+	đã claim trong khi server này đang chạy), từ chối ghi và báo session_stolen.
+
+	Trả về:
+	  { ok = true }                                    — Lưu thành công.
+	  { ok = false, errorCategory = "session_stolen" } — Lock bị mất, không ghi.
+	  { ok = false, errorCategory = <other> }           — Lỗi DataStore.
 --]]
-function UIComponents.createBasePanel(): Frame
-	local panel = Instance.new("Frame")
-	panel.Name = "BasePanel"
-	panel.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-	panel.BorderSizePixel = 0
-	panel.Size = UDim2.new(1, 0, 1, 0)
-	return panel
+function DataStoreWrapper.save(storeName: string, key: string, data: any): SaveResult
+	assert(type(storeName) == "string" and storeName ~= "", "[DataStoreWrapper] storeName phải là chuỗi không rỗng.")
+	assert(type(key) == "string" and key ~= "", "[DataStoreWrapper] key phải là chuỗi không rỗng.")
+
+	local storeOk, storeOrError = _getStore(storeName)
+	if not storeOk then
+		local category = _categorizeError(tostring(storeOrError))
+		warn(string.format("[DataStoreWrapper] save: không lấy được DataStore '%s'. Category: %s", storeName, category))
+		return { ok = false, errorCategory = category }
+	end
+
+	local store = storeOrError :: DataStore
+	local label = string.format("save('%s', '%s')", storeName, key)
+
+	local sessionWasStolen = false
+	_pendingSaveCount += 1
+
+	local ok, result = _withRetry(label, function()
+		return pcall(function()
+			store:UpdateAsync(key, function(oldValue: any)
+				-- ── Kiểm tra Lock bị đánh cắp ──
+				if type(oldValue) == "table"
+					and type(oldValue[SESSION_FIELD]) == "string"
+					and oldValue[SESSION_FIELD] ~= ""
+					and oldValue[SESSION_FIELD] ~= SESSION_JOB_ID
+				then
+					-- Server khác đã giành lock → không ghi gì cả.
+					sessionWasStolen = true
+					return nil
+				end
+
+				-- ── Lock vẫn là của server này → Ghi data mới, giữ lock ──
+				local newData: { [string]: any } = {}
+				if type(data) == "table" then
+					for k, v in pairs(data) do
+						newData[k] = v
+					end
+				end
+				-- Đảm bảo SESSION_FIELD luôn được ghi lại (lock không bị xoá khi save).
+				newData[SESSION_FIELD] = SESSION_JOB_ID
+				return newData
+			end)
+		end)
+	end)
+
+	_pendingSaveCount -= 1
+
+	if not ok then
+		local category = _categorizeError(tostring(result))
+		warn(string.format("[DataStoreWrapper] save UpdateAsync thất bại cuối cùng. Category: %s", category))
+		return { ok = false, errorCategory = category }
+	end
+
+	if sessionWasStolen then
+		warn(string.format(
+			"[DataStoreWrapper] save: Session lock bị đánh cắp tại key '%s'! Không ghi đè.",
+			key
+		))
+		return { ok = false, errorCategory = ERROR_CATEGORIES.SESSION_STOLEN }
+	end
+
+	return { ok = true, errorCategory = nil }
 end
 
 --[[
-	UIComponents.createBaseButton(text) -> TextButton
-	Standard clickable button.
+	DataStoreWrapper.saveAndRelease(storeName, key, data) -> SaveResult
+
+	Lưu data cuối cùng VÀ xoá Session Lock trong một thao tác UpdateAsync
+	nguyên tử. Gọi khi người chơi rời server (PlayerRemoving / BindToClose).
+
+	Sau khi hoàn thành, server tiếp theo có thể claim lock bình thường.
+
+	Không kiểm tra lock vì đây là hành động kết thúc phiên — nếu lock bị
+	stolen, ta vẫn muốn xoá SESSION_FIELD để tránh orphaned lock.
 --]]
-function UIComponents.createBaseButton(text: string): TextButton
-	local button = Instance.new("TextButton")
-	button.Name = "BaseButton"
-	button.Text = text or "Button"
-	button.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-	button.TextColor3 = Color3.fromRGB(255, 255, 255)
-	button.BorderSizePixel = 0
-	button.Size = UDim2.new(0, 150, 0, 50)
-	button.Font = Enum.Font.SourceSans
-	button.TextSize = 18
-	return button
+function DataStoreWrapper.saveAndRelease(storeName: string, key: string, data: any): SaveResult
+	assert(type(storeName) == "string" and storeName ~= "", "[DataStoreWrapper] storeName phải là chuỗi không rỗng.")
+	assert(type(key) == "string" and key ~= "", "[DataStoreWrapper] key phải là chuỗi không rỗng.")
+
+	local storeOk, storeOrError = _getStore(storeName)
+	if not storeOk then
+		local category = _categorizeError(tostring(storeOrError))
+		warn(string.format("[DataStoreWrapper] saveAndRelease: không lấy được DataStore '%s'. Category: %s", storeName, category))
+		return { ok = false, errorCategory = category }
+	end
+
+	local store = storeOrError :: DataStore
+	local label = string.format("saveAndRelease('%s', '%s')", storeName, key)
+
+	_pendingSaveCount += 1
+
+	local ok, result = _withRetry(label, function()
+		return pcall(function()
+			store:UpdateAsync(key, function(_oldValue: any)
+				-- Ghi data mới và XOÁ SESSION_FIELD để nhả lock.
+				local newData: { [string]: any } = {}
+				if type(data) == "table" then
+					for k, v in pairs(data) do
+						if k ~= SESSION_FIELD then  -- Lọc bỏ SESSION_FIELD khỏi payload
+							newData[k] = v
+						end
+					end
+				end
+				-- SESSION_FIELD được để nil (không set) → DataStore xoá field này.
+				-- Server tiếp theo sẽ không thấy lock cũ.
+				return newData
+			end)
+		end)
+	end)
+
+	_pendingSaveCount -= 1
+
+	if not ok then
+		local category = _categorizeError(tostring(result))
+		warn(string.format("[DataStoreWrapper] saveAndRelease UpdateAsync thất bại cuối cùng. Category: %s", category))
+		return { ok = false, errorCategory = category }
+	end
+
+	return { ok = true, errorCategory = nil }
 end
 
 --[[
-	UIComponents.createBaseLabel(text) -> TextLabel
-	Standard text label.
+	DataStoreWrapper.getPendingSaveCount() -> number
+	Số lệnh UpdateAsync đang chạy. BindToClose dùng để biết khi nào an toàn để tắt.
 --]]
-function UIComponents.createBaseLabel(text: string): TextLabel
-	local label = Instance.new("TextLabel")
-	label.Name = "BaseLabel"
-	label.Text = text or "Label"
-	label.BackgroundTransparency = 1
-	label.TextColor3 = Color3.fromRGB(255, 255, 255)
-	label.Size = UDim2.new(0, 200, 0, 30)
-	label.Font = Enum.Font.SourceSans
-	label.TextSize = 16
-	label.TextXAlignment = Enum.TextXAlignment.Left
-	return label
+function DataStoreWrapper.getPendingSaveCount(): number
+	return _pendingSaveCount
 end
 
+DataStoreWrapper.ERROR_CATEGORIES  = ERROR_CATEGORIES
+DataStoreWrapper.SESSION_JOB_ID    = SESSION_JOB_ID  -- Export để SaveSmoke có thể test
+
+return DataStoreWrapper
+
+]====])
+
+local p = ensurePath(game:GetService("ServerScriptService").Server, "persistence")
+getOrCreateModule(p, "MigrationManager", [====[
 --[[
-	UIComponents.createBaseModal() -> Frame
-	Blocking modal background placeholder.
+	MigrationManager
+	Location: src/server/persistence/MigrationManager.luau
+	
+	Handles schema migrations for player save data.
 --]]
-function UIComponents.createBaseModal(): Frame
-	local modal = Instance.new("Frame")
-	modal.Name = "BaseModal"
-	modal.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-	modal.BackgroundTransparency = 0.5
-	modal.BorderSizePixel = 0
-	modal.Size = UDim2.new(1, 0, 1, 0)
-	modal.ZIndex = 100 -- Ensure it blocks underlying UI
-	modal.Active = true -- Block clicks
-	return modal
+
+local MigrationManager = {}
+
+local CURRENT_SAVE_VERSION = 3
+local DEFAULT_UNLOCKED_STAGES = { "story_stage_1" }
+
+-- v0 (Mock/Empty) to v1
+local function _migrateToV1(data: any): any
+    if type(data) ~= "table" then
+        data = {}
+    end
+    
+    local migrated = {
+        saveVersion = 1,
+        creatureInstances = data.creatureInstances or {},
+        economyState = data.economyState or {
+            balances = {},
+            generators = {},
+        },
+        collectionState = data.collectionState or {
+            discoveredCreatureIds = {},
+        },
+    }
+    
+    return migrated
 end
 
-return UIComponents
+-- v1 to v2: added activeCreatureInstanceId
+local function _migrateToV2(data: any): any
+    data.saveVersion = 2
+    -- Default nil — will be set when player first selects a creature
+    if data.activeCreatureInstanceId == nil then
+        data.activeCreatureInstanceId = nil
+    end
+    return data
+end
+
+-- v2 to v3: added worldProgression (persistent story stage unlocks)
+local function _migrateToV3(data: any): any
+    data.saveVersion = 3
+    if type(data.worldProgression) ~= "table" then
+        data.worldProgression = { unlockedStages = { table.unpack(DEFAULT_UNLOCKED_STAGES) } }
+    end
+    return data
+end
+
+function MigrationManager.migrate(data: any): any
+    if not data or type(data) ~= "table" then
+        data = _migrateToV1(data)
+    end
+    
+    local version = data.saveVersion or 0
+    
+    if version < 1 then
+        data = _migrateToV1(data)
+    end
+    
+    -- Backfill guard: ensure required fields exist even on v1 saves
+    -- that may have been written before the full schema was in place.
+    if not data.creatureInstances then data.creatureInstances = {} end
+    if type(data.economyState) ~= "table" then
+        data.economyState = { balances = {}, generators = {} }
+    else
+        if not data.economyState.balances then data.economyState.balances = {} end
+        if not data.economyState.generators then data.economyState.generators = {} end
+    end
+    if type(data.collectionState) ~= "table" then
+        data.collectionState = { discoveredCreatureIds = {} }
+    else
+        if not data.collectionState.discoveredCreatureIds then data.collectionState.discoveredCreatureIds = {} end
+    end
+
+    if data.saveVersion < 2 then
+        data = _migrateToV2(data)
+    end
+
+    if data.saveVersion < 3 then
+        data = _migrateToV3(data)
+    end
+
+    -- v3+ guard: ensure worldProgression.unlockedStages is a valid, non-empty
+    -- array of strings. Falls back to the default starting stage otherwise.
+    if type(data.worldProgression) ~= "table" then
+        data.worldProgression = { unlockedStages = { table.unpack(DEFAULT_UNLOCKED_STAGES) } }
+    else
+        local stages = data.worldProgression.unlockedStages
+        local isValid = type(stages) == "table"
+        if isValid then
+            local count = 0
+            for key, stageId in pairs(stages) do
+                count += 1
+                if type(key) ~= "number" or type(stageId) ~= "string" or stageId == "" then
+                    isValid = false
+                    break
+                end
+            end
+            if count == 0 then
+                isValid = false
+            end
+        end
+        if not isValid then
+            data.worldProgression.unlockedStages = { table.unpack(DEFAULT_UNLOCKED_STAGES) }
+        end
+    end
+
+    -- v2+ guard: ensure activeCreatureInstanceId key exists (even if nil)
+    -- and that it references a creature the player actually owns.
+    -- If it points to a non-existent instance, clear it so auto-recovery
+    -- can select a valid one at runtime.
+    if data.activeCreatureInstanceId ~= nil then
+        local instances = data.creatureInstances or {}
+        local stillOwned = (
+            type(instances[data.activeCreatureInstanceId]) == "table"
+        )
+        if not stillOwned then
+            warn(string.format(
+                "[MigrationManager] activeCreatureInstanceId '%s' no longer owned — cleared.",
+                tostring(data.activeCreatureInstanceId)
+            ))
+            data.activeCreatureInstanceId = nil
+        end
+    end
+    
+    return data
+end
+
+function MigrationManager.getCurrentVersion(): number
+    return CURRENT_SAVE_VERSION
+end
+
+function MigrationManager.getTemplate(): any
+    return {
+        saveVersion = CURRENT_SAVE_VERSION,
+        creatureInstances = {},
+        economyState = {
+            balances = {},
+            generators = {},
+        },
+        collectionState = {
+            discoveredCreatureIds = {},
+        },
+        activeCreatureInstanceId = nil,
+        worldProgression = {
+            unlockedStages = { table.unpack(DEFAULT_UNLOCKED_STAGES) },
+        },
+    }
+end
+
+return MigrationManager
 
 ]====])
 

@@ -32,191 +32,173 @@ end
 getOrCreateFolder(game:GetService("ServerScriptService"), "Server")
 getOrCreateFolder(game:GetService("StarterPlayer").StarterPlayerScripts, "Client")
 getOrCreateFolder(game:GetService("ReplicatedStorage"), "Shared")
-local p = ensurePath(game:GetService("ReplicatedStorage").Shared, "utilities")
-getOrCreateModule(p, "Result", [====[
+getOrCreateFolder(game:GetService("ServerStorage"), "Configs")
+local p = ensurePath(game:GetService("ServerScriptService").Server, "data")
+getOrCreateModule(p, "BalanceRegistry", [====[
 --[[
-	Result
-	Location: src/shared/utilities/Result.luau
+	BalanceRegistry
+	Location: src/server/data/BalanceRegistry.luau
 
-	Shared success/failure result pattern for Project Genesis.
-
-	Every server service, remote handler, and validation function that can
-	fail should return a Result table instead of throwing an error or
-	returning raw nil.
-
-	This pattern makes failure handling explicit, prevents silent failures,
-	and provides a uniform interface for callers to branch on.
+	Loads balance configs (including combat_config) via ConfigRegistry.
+	Validates with respective schemas.
 
 	Rules:
-	- Result tables are immutable once created.
-	- Result.ok(value) wraps a successful result.
-	- Result.fail(code, message?) wraps a failure with a safe error code.
-	- Callers must check the "success" field before using the "value" field.
-	- Error codes must be strings — never raw error objects or stack traces.
-	- This module is shared-safe: no server-only logic, no gameplay values.
-
-	Part of MVP-001: Core Framework Foundation.
+	- Static definitions only.
 --]]
 
--- Type exports for use by other modules.
-export type OkResult<T> = {
-	success: true,
-	value: T,
-}
+local ConfigRegistry = require(script.Parent.ConfigRegistry)
+local CombatBalanceSchema = require(game:GetService("ReplicatedStorage").Genesis.Shared.data.CombatBalanceSchema)
 
-export type FailResult = {
-	success: false,
-	code: string,
-	message: string?,
-}
+local BalanceRegistry = {}
 
-export type Result<T> = OkResult<T> | FailResult
+local _registry: { [string]: any } = {}
+local _initialized = false
 
-local Result = {}
-
---[[
-	Result.ok(value) -> OkResult<T>
-
-	Wraps a successful result with the given value.
-	"value" may be any type, including nil for void successes.
-
-	Example:
-	  local r = Result.ok(42)
-	  if r.success then print(r.value) end
---]]
-function Result.ok<T>(value: T): OkResult<T>
-	return {
-		success = true,
-		value = value,
-	}
-end
-
---[[
-	Result.fail(code, message?) -> FailResult
-
-	Wraps a failure result with a safe error code and optional message.
-
-	"code" should be a documented error code string such as:
-	  "invalid_input"
-	  "not_found"
-	  "unauthorized"
-	  "service_unavailable"
-	  "validation_failed"
-
-	"message" is optional human-readable context for debugging.
-	Do NOT put sensitive data, raw stack traces, or save payloads in message.
-
-	Example:
-	  local r = Result.fail("not_found", "Player session not found.")
-	  if not r.success then warn(r.code) end
---]]
-function Result.fail(code: string, message: string?): FailResult
-	assert(type(code) == "string" and code ~= "", "[Result] Error code must be a non-empty string.")
-	return {
-		success = false,
-		code = code,
-		message = message,
-	}
-end
-
---[[
-	Result.isOk(result) -> boolean
-
-	Returns true if the result represents success.
-	Type-safe guard for branching on result state.
---]]
-function Result.isOk(result: { success: boolean }): boolean
-	return result.success == true
-end
-
---[[
-	Result.isFail(result) -> boolean
-
-	Returns true if the result represents failure.
---]]
-function Result.isFail(result: { success: boolean }): boolean
-	return result.success == false
-end
-
---[[
-	Result.unwrapOr(result, default) -> T
-
-	Returns the result's value on success, or the default value on failure.
-	Use when a fallback is appropriate and failure should not propagate.
-
-	Example:
-	  local count = Result.unwrapOr(Result.fail("not_found"), 0)
---]]
-function Result.unwrapOr<T>(result: OkResult<T> | FailResult, default: T): T
-	if result.success then
-		return (result :: OkResult<T>).value
-	else
-		return default
+function BalanceRegistry.init()
+	if _initialized then
+		warn("[BalanceRegistry] Already initialized. Skipping.")
+		return
 	end
+
+	local records = ConfigRegistry.load("balance")
+
+	for _, record in ipairs(records) do
+		if record.id == "combat_core" then
+			local result = CombatBalanceSchema.validate(record)
+			if result.success then
+				_registry["combat_core"] = result.value
+				print("[BalanceRegistry] Loaded combat_core config")
+			else
+				warn("[BalanceRegistry] combat_core validation failed: " .. (result.message or result.code))
+			end
+		else
+			-- Other balance configs go here
+			_registry[record.id] = record
+		end
+	end
+
+	_initialized = true
 end
 
-return Result
+function BalanceRegistry.getCombatConfig(): any
+	return _registry["combat_core"]
+end
+
+function BalanceRegistry.isInitialized(): boolean
+	return _initialized
+end
+
+return BalanceRegistry
 
 ]====])
 
-local p = ensurePath(game:GetService("ServerScriptService").Server, "bootstrap")
-getOrCreateModule(p, "ServerBootstrap", [====[
+local p = ensurePath(game:GetService("ServerScriptService").Server, "data")
+getOrCreateModule(p, "BossRegistry", [====[
 --[[
-	ServerBootstrap
-	Location: src/server/bootstrap/ServerBootstrap.luau
+	BossRegistry
+	Location: src/server/data/BossRegistry.luau
 
-	Server-side bootstrap shell for Project Genesis.
-
-	This script is the entry point for all server-side systems.
-	It initializes and starts server services in the documented lifecycle order
-	using ServiceLifecycle.
-
-	Current registered services: NONE (MVP-001 shell only).
-	Future tasks will register their services here after implementation.
-
-	Startup sequence:
-	  1. Require all approved services.
-	  2. Register each service with ServiceLifecycle.
-	  3. Call ServiceLifecycle.init() — runs all init() phases.
-	  4. Call ServiceLifecycle.start() — runs all start() phases.
-
-	Rules:
-	- This script is server-only. It must live in ServerScriptService.
-	- No gameplay values are hardcoded here.
-	- No combat, creature, economy, or save systems are started here
-	  (those belong in future approved tasks).
-	- Bootstrap must fail gracefully — a single service failure must not
-	  crash the entire bootstrap.
-
-	Part of MVP-001: Core Framework Foundation.
+	Loads enabled boss/challenge configs, validates them via BossSchema, and
+	exposes static lookup/display data. It does not resolve rewards or switch
+	boss phases at runtime.
 --]]
 
--- Services are required here, before bootstrap runs.
--- Example (to be added by future tasks):
---   local SaveService     = require(ServerScriptService.Server.services.SaveService)
---   local CreatureService = require(ServerScriptService.Server.services.CreatureService)
+local ConfigRegistry = require(script.Parent.ConfigRegistry)
+local BossSchema = require(game:GetService("ReplicatedStorage").Genesis.Shared.data.BossSchema)
 
-local ServiceLifecycle = require(script.Parent.Parent.runtime.ServiceLifecycle)
+local BossRegistry = {}
+local _registry: { [string]: any } = {}
+local _initialized = false
 
-print("[ServerBootstrap] ═══ Project Genesis Server Starting ═══")
-print(string.format("[ServerBootstrap] Registered services: %d", #ServiceLifecycle.getRegisteredNames()))
+local function _cloneArray(value: { any }): { any }
+	local output = {}
+	for _, item in ipairs(value) do
+		table.insert(output, item)
+	end
+	return output
+end
 
--- ─── Register Services ───────────────────────────────────────────────────────
--- (Empty for MVP-001 — future tasks will add service registrations here)
---
--- Template:
---   ServiceLifecycle.register(SaveService)
---   ServiceLifecycle.register(CreatureService)
+local function _buildSnapshot(boss: any): any
+	return {
+		bossId = boss.bossId,
+		displayName = boss.displayName,
+		battleMode = boss.battleMode,
+		teamSize = boss.teamSize,
+		recommendedPower = boss.recommendedPower,
+		enemyRefs = _cloneArray(boss.enemyRefs),
+		retryPolicyRef = boss.retryPolicyRef,
+		isEnabled = boss.isEnabled,
+	}
+end
 
--- ─── Phase 1: Initialize ─────────────────────────────────────────────────────
-ServiceLifecycle.init()
-print("[ServerBootstrap] All services initialized.")
+function BossRegistry.init()
+	if _initialized then
+		warn("[BossRegistry] Already initialized. Skipping.")
+		return
+	end
 
--- ─── Phase 2: Start ─────────────────────────────────────────────────────────
-ServiceLifecycle.start()
-print("[ServerBootstrap] All services started.")
+	local records = ConfigRegistry.load("bosses")
+	for _, record in ipairs(records) do
+		local result = BossSchema.validate(record)
+		if result.success then
+			local boss = result.value
+			if boss.isEnabled then
+				local bossId = boss.bossId
+				if _registry[bossId] then
+					warn(string.format("[BossRegistry] Duplicate bossId '%s' - skipping.", bossId))
+				else
+					_registry[bossId] = boss
+				end
+			end
+		else
+			warn(string.format(
+				"[BossRegistry] Validation failed for '%s': %s",
+				tostring(record.bossId or record.id or "unknown"),
+				result.message or result.code
+			))
+		end
+	end
 
-print("[ServerBootstrap] ═══ Server Ready ═══")
+	_initialized = true
+end
+
+function BossRegistry.getBoss(bossId: string): any
+	return _registry[bossId]
+end
+
+function BossRegistry.getBossSnapshot(bossId: string): any
+	local boss = BossRegistry.getBoss(bossId)
+	if not boss then
+		return nil
+	end
+
+	return _buildSnapshot(boss)
+end
+
+function BossRegistry.getAllBosses(): { any }
+	local list = {}
+	for _, boss in pairs(_registry) do
+		table.insert(list, boss)
+	end
+	return list
+end
+
+function BossRegistry.getAllBossSnapshots(): { any }
+	local list = {}
+	for _, boss in pairs(_registry) do
+		table.insert(list, _buildSnapshot(boss))
+	end
+	table.sort(list, function(a, b)
+		return a.bossId < b.bossId
+	end)
+	return list
+end
+
+function BossRegistry.isInitialized(): boolean
+	return _initialized
+end
+
+return BossRegistry
 
 ]====])
 
@@ -253,6 +235,8 @@ local ACTIVE_CATEGORIES = {
 	"balance",
 	"drop_tables",
 	"shared",
+	"generators",
+	"evolutions",
 }
 
 -- Reserved categories that must NOT be loaded as active gameplay.

@@ -1,8 +1,10 @@
-# Project Genesis - AI Agent System Prompt
+# Project Genesis AI System Prompt
+Version: 1.1
+Last Updated: 2026-07-07
 
 This document defines the global rules, coding standards, QA workflows, and security requirements for all AI agents (Codex, Claude, Gemini, etc.) working in this repository.
 
-Before starting any task, read this document to understand the standards, then read the specific task file (e.g. `tasks/MVP-xxx.md`).
+Before starting any task, load this file as your primary system instruction, then read the specific task file (e.g. `tasks/MVP-xxx.md`).
 
 ---
 
@@ -16,29 +18,44 @@ You are a **Senior Roblox Engineer** for Project Genesis (a creature auto-battle
   2. **Reusability:** Is there an existing helper in `src/shared/` or `src/server/`? Use it.
   3. **Standard Library / Platform Features:** Solve using native Luau or Roblox APIs first.
   4. **Custom Code:** Only write custom code when rungs 1-3 are fully exhausted.
-* **Scope Guard**: Do not modify files outside the specific task scope. No unrelated refactoring or formatting changes.
 
 ---
 
-## 2. Coding Standards & Luau Style
+## 2. Project Layout
 
-* **Structure**: ModuleScripts must return a single table/class.
+AI agents should look inside these directories to locate and modify code:
+* `configs/`: Creature, evolution, items, and generator configurations.
+* `src/server/`: Server services, database access, persistence, and network handlers.
+* `src/client/`: Client controllers, UI views, state management, and local simulation.
+* `src/shared/`: Shared schemas, utility libraries, and network contracts.
+* `tests/`: Automated unit tests (Python and Luau validation suites).
+* `tasks/`: Task-specific requirements documents (`MVP-xxx.md`).
+
+---
+
+## 3. Ownership Boundary
+
+* **Strict Task Scope**: Only edit files specified in your active task description.
+* **Shared Modules Rules**: If a task requires modifying shared integration gateways (such as `RemoteHandlers.luau`, `ServerBootstrap.luau`, `ClientBootstrap.luau`, or `GameplaySimulator.luau`), write only the minimum code needed to integrate your feature. Do not refactor, clean up, or change unrelated parts of these files.
+
+---
+
+## 4. Coding Standards & Luau Style
+
+* **Structure**: ModuleScripts must return a single table or class.
 * **Naming**:
   * PascalCase for Services, Modules, Classes, and Folders (e.g., `SaveService`, `DataStoreWrapper`).
   * PascalCase verb phrases for public methods (e.g., `RegisterCreature`, `TakeDamage`).
   * camelCase for private local variables.
-* **Compact Guards**: Use guard clauses with `return` or `continue` to avoid deep nesting:
-  ```luau
-  if not Humanoid then UpdateHealth(nil) return end
-  ```
-* **Typed Luau**: Use type annotations for new/changed public APIs. Put file-local type aliases under the `--// Types \\--` category.
+* **Compact Guards**: Use guard clauses with `return` or `continue` to avoid deep nesting.
+* **Typed Luau**: Use type annotations for new/changed public APIs.
 * **Helper Isolation**: If a script grows past ~800 lines of code (LOC), extract helper functions to an external `script.Helpers` ModuleScript. If it exceeds 2,000 LOC, this extraction is mandatory.
 
 ---
 
-## 3. Remote & Network Security
+## 5. Remote & Network Security
 
-* **RemoteEvents Only**: Avoid `RemoteFunction` by default. Prefer one-way `RemoteEvent` flows:
+* **RemoteEvents Only**: Avoid `RemoteFunction`. Prefer one-way `RemoteEvent` flows:
   1. Client fires `Request` (compact, validated arguments).
   2. Server validates ownership, cooldowns, limits, and authoritative state.
   3. Server fires `Update` back to that client.
@@ -47,37 +64,34 @@ You are a **Senior Roblox Engineer** for Project Genesis (a creature auto-battle
 
 ---
 
-## 4. QA & Playtest Verification Protocol (Mandatory)
+## 6. Standardized QA Checklist
 
-Offline syntax checks or schema checks are NOT sufficient. You must verify code execution in the Roblox engine.
+Before completing any task, execute this sequence:
 
-* **Roblox Studio Connection**: Follow the `RobloxStudioMcp.md` protocol to list, select, and set the active Studio instance before executing Luau.
-* **Mandatory Play Solo Runtime Verification**:
-  * Run Play Solo mode in Roblox Studio using the `start_stop_play` tool.
-  * Run **GameplaySimulator** or console Luau scripts to execute the feature end-to-end.
-  * Check the **Studio Output Window (F9 Console)** for any errors or warnings.
-* **Regression Testing**:
-  * Run the full regression test suite at least **2 times** (or **5 times** if fixing a critical bug).
-  * Ensure no existing systems are broken.
-* **Screenshot Verification**: Embed visual screenshots or recordings in the task walkthrough showing:
-  * Key UI states (Empty, Loading, Error, and Success paths).
-  * F9 console logs showing zero errors.
-* **Report Protocol**:
-  * If successful, report: `READY` along with verification logs, test counts, and screenshots.
-  * If blocked, report: `BLOCKED` with root-cause analysis, errors encountered, and steps taken.
+1. **Offline Validation**: Run local syntax checks, schema checks, or Python unit tests in `tests/`.
+2. **Studio Sync**: Verify that local file edits have synced correctly to Roblox Studio via Rojo.
+3. **Play Solo**: Start Play Solo mode in Roblox Studio.
+4. **GameplaySimulator**: Trigger simulator commands to verify the new logic paths.
+5. **Console Check**: Inspect F9 Console Output and Studio Output for any errors or warnings.
+6. **Regression Testing**:
+   * **2x runs** for standard gameplay/UI changes.
+   * **5x runs** for changes affecting Save, Networking, or race-condition sensitive systems.
+7. **Screenshots**: Document visual evidence of Empty, Loading, Error, and Success paths in the walkthrough.
+8. **Reporting**: Report your status using the state definitions below.
 
 ---
 
-## 5. Bug-Fixing Protocol
+## 7. Status Definitions
 
-* **Cure the Disease, Not the Symptoms**: Trace the root cause completely across all callers. Do not apply quick patches to error lines without understanding the state flow.
-* **Regression Proof**: Write a `GameplaySimulator` check or unit test to verify the fix and prevent future regressions.
+* **`READY_FOR_STUDIO_QA`**: Offline validation completed successfully, but Roblox Studio Play Solo testing is pending.
+* **`READY`**: All steps of the QA checklist have passed, walkthrough screenshots are recorded, and the system is verified.
+* **`BLOCKED`**: Encountered technical blockers or missing conditions that prevent task completion or verification.
 
 ---
 
-## 6. Definition of Done & Release Gate
+## 8. Definition of Done & Release Gate
 
-A task is complete only when:
+A task is done only when:
 1. All scoped deliverables are completed.
 2. The code compiles and compiles warning-free.
 3. Playtest verification and regression checklists are passed.

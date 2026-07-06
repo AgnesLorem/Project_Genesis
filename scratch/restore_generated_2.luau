@@ -32,6 +32,7 @@ end
 getOrCreateFolder(game:GetService("ServerScriptService"), "Server")
 getOrCreateFolder(game:GetService("StarterPlayer").StarterPlayerScripts, "Client")
 getOrCreateFolder(game:GetService("ReplicatedStorage"), "Shared")
+getOrCreateFolder(game:GetService("ServerStorage"), "Configs")
 local p = ensurePath(game:GetService("ServerScriptService").Server, "data")
 getOrCreateModule(p, "ConfigValidator", [====[
 --[[
@@ -250,228 +251,228 @@ return ConfigValidator
 ]====])
 
 local p = ensurePath(game:GetService("ServerScriptService").Server, "data")
-getOrCreateModule(p, "ReferenceResolver", [====[
+getOrCreateModule(p, "EconomyRegistry", [====[
 --[[
-	ReferenceResolver
-	Location: src/server/data/ReferenceResolver.luau
-	
-	Validates cross-config references between active MVP config categories.
-	
-	A "reference" is when one config record has an ID field that points to
-	a record in another category. For example, a creature config that lists
-	a skillId must resolve to an actual skill config record.
-	
+	EconomyRegistry
+	Location: src/server/data/EconomyRegistry.luau
+
+	Loads currency configs via ConfigRegistry, validates each with EconomySchema,
+	indexes by currencyId.
+
 	Rules:
-	- Missing references fail safely — return nil or { ok=false }, never throw.
-	- Reserved category references are blocked and return an error.
-	- All resolution routes through ConfigRegistry.
-	- This module does not own config data; it delegates to ConfigRegistry.
-	- No gameplay logic here — purely structural reference validation.
-	
-	Part of MVP-002: Save, Config, and Database Foundation.
+	- Static definitions only. No player state.
+	- Loads from ServerStorage.Configs.economy via ConfigRegistry.
+	- Invalid configs are rejected and logged, never silently accepted.
+
+	Part of MVP-005: Bio Generator and Economy Foundation.
 --]]
 
 local ConfigRegistry = require(script.Parent.ConfigRegistry)
+local EconomySchema = require(game:GetService("ReplicatedStorage").Genesis.Shared.data.EconomySchema)
 
--- Reserved categories that must not be referenced from active MVP config.
--- (from docs/CONFIG_STRUCTURE.md and docs/DATA_SCHEMA.md)
-local RESERVED_CATEGORIES = {
-	quests        = true,
-	towers        = true,
-	status_effects = true,
-}
+local EconomyRegistry = {}
 
-export type ResolveResult = {
-	ok: boolean,
-	record: { [string]: any }?,
-	error: string?,
-}
-
-local ReferenceResolver = {}
+local _registry: { [string]: any } = {}
+local _initialized = false
 
 --[[
-	ReferenceResolver.resolve(refId: string, category: string) -> table?
-	
-	Attempts to find a config record by its stable ID in the given category.
-	Returns the record table if found, nil otherwise.
-	
-	Does NOT validate whether the category is reserved — use resolveRef for that.
-	Use this for trusted internal calls where you already know the category is valid.
+	EconomyRegistry.init()
+
+	Loads all economy configs, validates each, and indexes by currencyId.
+	Must be called once during server bootstrap before any service uses currencies.
 --]]
-function ReferenceResolver.resolve(refId: string, category: string): { [string]: any }?
-	if type(refId) ~= "string" or type(category) ~= "string" then
-		return nil
+function EconomyRegistry.init()
+	if _initialized then
+		warn("[EconomyRegistry] Already initialized. Skipping.")
+		return
 	end
 
-	return ConfigRegistry.get(category, refId)
-end
+	local records = ConfigRegistry.load("economy")
 
---[[
-	ReferenceResolver.validateRef(refId: string, category: string) -> ResolveResult
-	
-	Validates that a reference ID resolves to an existing, enabled record
-	in the given category.
-	
-	Checks:
-	1. category is not reserved.
-	2. The record exists.
-	3. The record has isEnabled = true.
-	
-	Returns { ok = true, record = <record> } on success.
-	Returns { ok = false, error = <message> } on any failure.
-	Never throws.
---]]
-function ReferenceResolver.validateRef(refId: string, category: string): ResolveResult
-	-- Input type guard.
-	if type(refId) ~= "string" then
-		return {
-			ok = false,
-			record = nil,
-			error = string.format(
-				"validateRef: refId must be a string, got '%s'.",
-				type(refId)
-			),
-		}
-	end
-
-	if type(category) ~= "string" then
-		return {
-			ok = false,
-			record = nil,
-			error = string.format(
-				"validateRef: category must be a string, got '%s'.",
-				type(category)
-			),
-		}
-	end
-
-	-- Block reserved categories.
-	if RESERVED_CATEGORIES[category] then
-		return {
-			ok = false,
-			record = nil,
-			error = string.format(
-				"Reference to reserved category '%s' is not allowed in active MVP config. " ..
-				"ID: '%s'.",
-				category,
-				refId
-			),
-		}
-	end
-
-	-- Resolve the reference via ConfigRegistry.
-	local record = ConfigRegistry.get(category, refId)
-
-	if record == nil then
-		return {
-			ok = false,
-			record = nil,
-			error = string.format(
-				"Reference '%s' not found in category '%s'.",
-				refId,
-				category
-			),
-		}
-	end
-
-	-- Check that the referenced record is enabled.
-	if record.isEnabled == false then
-		return {
-			ok = false,
-			record = nil,
-			error = string.format(
-				"Reference '%s' in category '%s' exists but is disabled (isEnabled = false). " ..
-				"Disabled records must not be referenced in active content.",
-				refId,
-				category
-			),
-		}
-	end
-
-	return {
-		ok = true,
-		record = record,
-		error = nil,
-	}
-end
-
---[[
-	ReferenceResolver.validateAllRefs(refIds: { string }, category: string) -> { ResolveResult }
-	
-	Validates a list of reference IDs against a single category.
-	Returns an array of ResolveResult, one per input refId.
-	Useful for validating skillIds, geneSlots, phaseIds arrays in config records.
-	
-	Never throws.
---]]
-function ReferenceResolver.validateAllRefs(
-	refIds: { string },
-	category: string
-): { ResolveResult }
-
-	local results: { ResolveResult } = {}
-
-	if type(refIds) ~= "table" then
-		return {
-			{
-				ok = false,
-				record = nil,
-				error = string.format(
-					"validateAllRefs: refIds must be a table, got '%s'.",
-					type(refIds)
-				),
-			},
-		}
-	end
-
-	for _, refId in ipairs(refIds) do
-		table.insert(results, ReferenceResolver.validateRef(refId, category))
-	end
-
-	return results
-end
-
---[[
-	ReferenceResolver.hasAnyFailure(results: { ResolveResult }) -> boolean
-	
-	Utility: returns true if any ResolveResult in the array has ok = false.
-	Use after validateAllRefs to check for batch failures.
---]]
-function ReferenceResolver.hasAnyFailure(results: { ResolveResult }): boolean
-	for _, result in ipairs(results) do
-		if not result.ok then
-			return true
+	for _, record in ipairs(records) do
+		local result = EconomySchema.validate(record)
+		if result.success then
+			local currencyId = result.value.currencyId
+			if _registry[currencyId] then
+				warn(string.format(
+					"[EconomyRegistry] Duplicate currencyId '%s' — skipping.",
+					currencyId
+				))
+			else
+				_registry[currencyId] = result.value
+				print(string.format("[EconomyRegistry] Loaded currency: '%s'", currencyId))
+			end
+		else
+			warn(string.format(
+				"[EconomyRegistry] Config validation failed: %s — %s",
+				tostring(record.id or "unknown"),
+				result.message or result.code
+			))
 		end
 	end
-	return false
+
+	_initialized = true
 end
 
-return ReferenceResolver
+--[[
+	EconomyRegistry.getCurrency(currencyId) -> config?
+
+	Returns the validated config for a currencyId, or nil if not found.
+--]]
+function EconomyRegistry.getCurrency(currencyId: string): any
+	return _registry[currencyId]
+end
+
+--[[
+	EconomyRegistry.getAllCurrencies() -> { config }
+
+	Returns a list of all loaded currency configs.
+--]]
+function EconomyRegistry.getAllCurrencies(): { any }
+	local list = {}
+	for _, config in pairs(_registry) do
+		table.insert(list, config)
+	end
+	return list
+end
+
+--[[
+	EconomyRegistry.isInitialized() -> boolean
+--]]
+function EconomyRegistry.isInitialized(): boolean
+	return _initialized
+end
+
+return EconomyRegistry
 
 ]====])
 
-local p = ensurePath(game:GetService("ServerScriptService").Server, "network")
-getOrCreateModule(p, "CreatureSnapshotBuilder", [====[
-local CreatureRegistry = require(game:GetService("ReplicatedStorage").Shared.data.CreatureRegistry)
-local CreatureSnapshotType = require(game:GetService("ReplicatedStorage").Shared.network.CreatureSnapshotType)
+local p = ensurePath(game:GetService("ServerScriptService").Server, "data")
+getOrCreateModule(p, "EquipmentRegistry", [====[
+local ServerStorage = game:GetService("ServerStorage")
 
-local CreatureSnapshotBuilder = {}
+local EquipmentSchema = require(game:GetService("ReplicatedStorage").Genesis.Shared.data.EquipmentSchema)
 
--- Server builds the snapshot to ensure no server-only metadata leaks
-function CreatureSnapshotBuilder.build(instance: any): CreatureSnapshotType.CreatureSnapshotType?
-    local config = CreatureRegistry.getCreature(instance.creatureId)
-    if not config then
-        return nil
-    end
+local EquipmentRegistry = {}
 
-    return {
-        instanceId = instance.instanceId,
-        creatureId = instance.creatureId,
-        displayName = config.displayName
-    }
+local _registry: { [string]: any } = {}
+local _byItemId: { [string]: any } = {}
+local _initialized = false
+
+local function _getConfigFolder(): Folder?
+	local configs = ServerStorage:FindFirstChild("Configs")
+	if not configs then
+		warn("[EquipmentRegistry] ServerStorage.Configs folder not found.")
+		return nil
+	end
+
+	local folder = configs:FindFirstChild("equipment")
+	if not folder then
+		warn("[EquipmentRegistry] ServerStorage.Configs.equipment folder not found.")
+		return nil
+	end
+
+	if not folder:IsA("Folder") then
+		warn("[EquipmentRegistry] ServerStorage.Configs.equipment is not a Folder.")
+		return nil
+	end
+
+	return folder :: Folder
 end
 
-return CreatureSnapshotBuilder
+local function _buildSnapshot(equipment: any): any
+	return {
+		equipmentId = equipment.equipmentId,
+		itemId = equipment.itemId,
+		displayName = equipment.displayName,
+		slotId = equipment.slotId,
+		equipmentType = equipment.equipmentType,
+		statBonuses = {
+			hp = equipment.statBonuses.hp,
+			atk = equipment.statBonuses.atk,
+			def = equipment.statBonuses.def,
+			spd = equipment.statBonuses.spd,
+		},
+		isEnabled = equipment.isEnabled,
+	}
+end
+
+function EquipmentRegistry.init()
+	if _initialized then
+		warn("[EquipmentRegistry] Already initialized. Skipping.")
+		return
+	end
+
+	local folder = _getConfigFolder()
+	if folder then
+		for _, child in ipairs(folder:GetChildren()) do
+			if child:IsA("ModuleScript") then
+				local ok, record = pcall(require, child :: ModuleScript)
+				if ok and type(record) == "table" then
+					local result = EquipmentSchema.validate(record)
+					if result.success then
+						local equipment = result.value
+						if _registry[equipment.equipmentId] then
+							warn(string.format("[EquipmentRegistry] Duplicate equipmentId '%s' - skipping.", equipment.equipmentId))
+						else
+							_registry[equipment.equipmentId] = equipment
+							_byItemId[equipment.itemId] = equipment
+							print(string.format("[EquipmentRegistry] Loaded equipment '%s'.", equipment.equipmentId))
+						end
+					else
+						warn(string.format(
+							"[EquipmentRegistry] Validation failed for '%s': %s",
+							tostring(record.equipmentId or record.id or child.Name),
+							result.message or result.code
+						))
+					end
+				else
+					warn(string.format("[EquipmentRegistry] Failed to require '%s': %s", child:GetFullName(), tostring(record)))
+				end
+			end
+		end
+	end
+
+	_initialized = true
+end
+
+function EquipmentRegistry.getEquipment(equipmentId: string): any
+	return _registry[equipmentId]
+end
+
+function EquipmentRegistry.getEquipmentByItemId(itemId: string): any
+	return _byItemId[itemId]
+end
+
+function EquipmentRegistry.getEquipmentSnapshot(equipmentId: string): any
+	local equipment = EquipmentRegistry.getEquipment(equipmentId)
+	if not equipment then
+		return nil
+	end
+	return _buildSnapshot(equipment)
+end
+
+function EquipmentRegistry.getEquipmentSnapshotByItemId(itemId: string): any
+	local equipment = EquipmentRegistry.getEquipmentByItemId(itemId)
+	if not equipment then
+		return nil
+	end
+	return _buildSnapshot(equipment)
+end
+
+function EquipmentRegistry.getAllEquipment(): { any }
+	local list = {}
+	for _, equipment in pairs(_registry) do
+		table.insert(list, equipment)
+	end
+	return list
+end
+
+function EquipmentRegistry.isInitialized(): boolean
+	return _initialized
+end
+
+return EquipmentRegistry
 
 ]====])
 

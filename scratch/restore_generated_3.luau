@@ -32,445 +32,272 @@ end
 getOrCreateFolder(game:GetService("ServerScriptService"), "Server")
 getOrCreateFolder(game:GetService("StarterPlayer").StarterPlayerScripts, "Client")
 getOrCreateFolder(game:GetService("ReplicatedStorage"), "Shared")
-local p = ensurePath(game:GetService("ServerScriptService").Server, "persistence")
-getOrCreateModule(p, "DataStoreWrapper", [====[
+getOrCreateFolder(game:GetService("ServerStorage"), "Configs")
+local p = ensurePath(game:GetService("ServerScriptService").Server, "data")
+getOrCreateModule(p, "EvolutionRegistry", [====[
 --[[
-	DataStoreWrapper
-	Location: src/server/persistence/DataStoreWrapper.luau
-	
-	Thin server-side wrapper around Roblox DataStoreService.
-	
-	All persistence reads and writes in Project Genesis must route through
-	this module. No other module should call DataStoreService directly.
-	
-	Responsibilities:
-	- Wrap GetAsync/SetAsync in pcall for safe error handling.
-	- Return structured LoadResult/SaveResult tables instead of raw values.
-	- Never expose raw DataStore errors externally — use error categories.
-	- Enforce server-only usage (Roblox runtime enforces this naturally,
-	  but we document it here for architectural clarity).
-	
-	This module has NO knowledge of save schemas, player data structure,
-	or gameplay rules. It is a pure transport layer.
-	
-	Backend: Roblox DataStoreService (DataStore v1)
-	Per docs/SAVE_SYSTEM.md.
-	
-	Part of MVP-002: Save, Config, and Database Foundation.
+	EvolutionRegistry
+	Location: src/server/data/EvolutionRegistry.luau
+
+	Loads evolution configs, validates them via EvolutionSchema, and indexes them.
 --]]
 
-local DataStoreService = game:GetService("DataStoreService")
+local ConfigRegistry = require(script.Parent.ConfigRegistry)
+local EvolutionSchema = require(game:GetService("ReplicatedStorage").Genesis.Shared.data.EvolutionSchema)
 
--- Structured result types.
-export type LoadResult = {
-	ok: boolean,
-	data: any,          -- The loaded value, or nil on failure or missing key.
-	errorCategory: string?, -- Safe error category string if ok = false.
-}
+local EvolutionRegistry = {}
+local _registry: { [string]: any } = {}
+local _initialized = false
 
-export type SaveResult = {
-	ok: boolean,
-	errorCategory: string?, -- Safe error category string if ok = false.
-}
-
--- Safe error categories (from docs/SAVE_SYSTEM.md).
--- These must not expose raw DataStore messages.
-local ERROR_CATEGORIES = {
-	DATASTORE_UNAVAILABLE   = "datastore_unavailable",
-	REQUEST_BUDGET_EXCEEDED = "request_budget_exceeded",
-	SERIALIZATION_FAILED    = "serialization_failed",
-	KEY_INVALID             = "key_invalid",
-	UNKNOWN_ERROR           = "unknown_error",
-}
-
--- Internal: map a DataStore error message to a safe category string.
--- This prevents raw error internals from leaking to callers.
-local function _categorizeError(rawError: string): string
-	if type(rawError) ~= "string" then
-		return ERROR_CATEGORIES.UNKNOWN_ERROR
+function EvolutionRegistry.init()
+	if _initialized then return end
+	
+	local records = ConfigRegistry.load("evolutions")
+	for _, record in ipairs(records) do
+		local result = EvolutionSchema.validate(record)
+		if result.success then
+			local id = result.value.evolutionId
+			if _registry[id] then
+				warn(string.format("[EvolutionRegistry] Duplicate evolutionId '%s' — skipped.", id))
+			else
+				_registry[id] = result.value
+			end
+		else
+			warn(string.format("[EvolutionRegistry] Validation failed for '%s': %s", tostring(record.evolutionId or "unknown"), result.message or result.code))
+		end
 	end
-
-	local lower = string.lower(rawError)
-
-	if string.find(lower, "budget") or string.find(lower, "throttle") or string.find(lower, "limit") then
-		return ERROR_CATEGORIES.REQUEST_BUDGET_EXCEEDED
-	end
-
-	if string.find(lower, "serialize") or string.find(lower, "encode") then
-		return ERROR_CATEGORIES.SERIALIZATION_FAILED
-	end
-
-	if string.find(lower, "key") then
-		return ERROR_CATEGORIES.KEY_INVALID
-	end
-
-	if string.find(lower, "unavailable") or string.find(lower, "503") or string.find(lower, "connect") then
-		return ERROR_CATEGORIES.DATASTORE_UNAVAILABLE
-	end
-
-	return ERROR_CATEGORIES.UNKNOWN_ERROR
+	
+	_initialized = true
 end
 
--- Cache for DataStore instances to avoid repeated GetDataStore calls.
-local _storeCache: { [string]: DataStore } = {}
-
--- Internal: get or create a DataStore instance by name.
-local function _getStore(storeName: string): (boolean, DataStore | string)
-	if _storeCache[storeName] then
-		return true, _storeCache[storeName]
-	end
-
-	local ok, storeOrError = pcall(function()
-		return DataStoreService:GetDataStore(storeName)
-	end)
-
-	if ok then
-		_storeCache[storeName] = storeOrError :: DataStore
-		return true, storeOrError :: DataStore
-	else
-		return false, tostring(storeOrError)
-	end
+function EvolutionRegistry.getEvolution(evolutionId: string): any
+	return _registry[evolutionId]
 end
 
-local DataStoreWrapper = {}
-
---[[
-	DataStoreWrapper.load(storeName: string, key: string) -> LoadResult
-	
-	Loads data from the named DataStore at the given key.
-	
-	Returns:
-	  { ok = true, data = <value> }         -- Key found, data returned.
-	  { ok = true, data = nil }             -- Key exists but has no data (new player).
-	  { ok = false, errorCategory = <cat> } -- DataStore call failed.
-	
-	Never throws. Caller must handle all result cases.
---]]
-function DataStoreWrapper.load(storeName: string, key: string): LoadResult
-	assert(type(storeName) == "string" and storeName ~= "", "[DataStoreWrapper] storeName must be a non-empty string.")
-	assert(type(key) == "string" and key ~= "", "[DataStoreWrapper] key must be a non-empty string.")
-
-	-- Get or create DataStore instance.
-	local storeOk, storeOrError = _getStore(storeName)
-	if not storeOk then
-		local category = _categorizeError(tostring(storeOrError))
-		warn(string.format(
-			"[DataStoreWrapper] Failed to get DataStore '%s'. Category: %s",
-			storeName, category
-		))
-		return { ok = false, data = nil, errorCategory = category }
+function EvolutionRegistry.getAllEvolutions(): { any }
+	local list = {}
+	for _, evol in pairs(_registry) do
+		table.insert(list, evol)
 	end
-
-	local store = storeOrError :: DataStore
-
-	-- Attempt GetAsync.
-	local ok, dataOrError = pcall(function()
-		return store:GetAsync(key)
-	end)
-
-	if ok then
-		-- dataOrError is the actual data value (may be nil for new players).
-		return { ok = true, data = dataOrError, errorCategory = nil }
-	else
-		local category = _categorizeError(tostring(dataOrError))
-		warn(string.format(
-			"[DataStoreWrapper] GetAsync failed. Store: '%s'. Category: %s",
-			storeName, category
-		))
-		return { ok = false, data = nil, errorCategory = category }
-	end
+	return list
 end
 
---[[
-	DataStoreWrapper.save(storeName: string, key: string, data: any) -> SaveResult
-	
-	Saves data to the named DataStore at the given key.
-	
-	Returns:
-	  { ok = true }                         -- Save succeeded.
-	  { ok = false, errorCategory = <cat> } -- DataStore call failed.
-	
-	Never throws. Caller must check result and handle failures.
-	On failure, caller must NOT assume the data was saved.
---]]
-function DataStoreWrapper.save(storeName: string, key: string, data: any): SaveResult
-	assert(type(storeName) == "string" and storeName ~= "", "[DataStoreWrapper] storeName must be a non-empty string.")
-	assert(type(key) == "string" and key ~= "", "[DataStoreWrapper] key must be a non-empty string.")
-
-	-- Get or create DataStore instance.
-	local storeOk, storeOrError = _getStore(storeName)
-	if not storeOk then
-		local category = _categorizeError(tostring(storeOrError))
-		warn(string.format(
-			"[DataStoreWrapper] Failed to get DataStore '%s' for save. Category: %s",
-			storeName, category
-		))
-		return { ok = false, errorCategory = category }
-	end
-
-	local store = storeOrError :: DataStore
-
-	-- Attempt SetAsync.
-	local ok, errorValue = pcall(function()
-		store:SetAsync(key, data)
-	end)
-
-	if ok then
-		return { ok = true, errorCategory = nil }
-	else
-		local category = _categorizeError(tostring(errorValue))
-		warn(string.format(
-			"[DataStoreWrapper] SetAsync failed. Store: '%s'. Category: %s",
-			storeName, category
-		))
-		return { ok = false, errorCategory = category }
-	end
+function EvolutionRegistry.isInitialized(): boolean
+	return _initialized
 end
 
---[[
-	DataStoreWrapper.ERROR_CATEGORIES
-	
-	Exported safe error category constants for callers to reference.
---]]
-DataStoreWrapper.ERROR_CATEGORIES = ERROR_CATEGORIES
-
-return DataStoreWrapper
+return EvolutionRegistry
 
 ]====])
 
-local p = ensurePath(game:GetService("ServerScriptService").Server, "persistence")
-getOrCreateModule(p, "PersistenceReporter", [====[
+local p = ensurePath(game:GetService("ServerScriptService").Server, "data")
+getOrCreateModule(p, "GeneratorRegistry", [====[
 --[[
-	PersistenceReporter
-	Location: src/server/persistence/PersistenceReporter.luau
-	
-	Controlled failure reporting for persistence operations.
-	
-	All load and save failures must be reported through this module.
-	It ensures that failure information is logged safely without exposing
-	raw save payloads, player data contents, or full DataStore error messages.
-	
+	GeneratorRegistry
+	Location: src/server/data/GeneratorRegistry.luau
+
+	Loads generator configs via ConfigRegistry, validates each with GeneratorSchema,
+	indexes by generatorId.
+
 	Rules:
-	- Log the userId and error category only — NOT raw data or full stack traces.
-	- Do NOT mutate any state when called.
-	- Do NOT throw.
-	- Reporting is output only (warn/print). No return values for the caller to branch on.
-	- This is a reporting utility, not a decision-making system.
-	
-	Part of MVP-002: Save, Config, and Database Foundation.
+	- Static definitions only. No player state.
+	- Loads from ServerStorage.Configs.generators via ConfigRegistry.
+	- Invalid configs are rejected and logged, never silently accepted.
+
+	Part of MVP-005: Bio Generator and Economy Foundation.
 --]]
 
--- Log prefix for all persistence reporter messages.
-local LOG_PREFIX = "[PersistenceReporter]"
+local ConfigRegistry = require(script.Parent.ConfigRegistry)
+local GeneratorSchema = require(game:GetService("ReplicatedStorage").Genesis.Shared.data.GeneratorSchema)
 
-local PersistenceReporter = {}
+local GeneratorRegistry = {}
+
+local _registry: { [string]: any } = {}
+local _initialized = false
 
 --[[
-	PersistenceReporter.reportLoadFailure(userId: any, errorCategory: string?)
-	
-	Reports a player data load failure.
-	
-	Logs:
-	- The userId (or a placeholder if invalid).
-	- The error category string (safe, not the raw DataStore error).
-	
-	Does NOT expose the save data, raw error messages, or stack traces.
-	Does NOT mutate any session state.
+	GeneratorRegistry.init()
+
+	Loads all generator configs, validates each, and indexes by generatorId.
+	Must be called once during server bootstrap before any service uses generators.
 --]]
-function PersistenceReporter.reportLoadFailure(userId: any, errorCategory: string?)
-	local safeUserId: string
-	if type(userId) == "number" and userId > 0 then
-		safeUserId = tostring(math.floor(userId))
-	else
-		safeUserId = "[invalid_userId]"
+function GeneratorRegistry.init()
+	if _initialized then
+		warn("[GeneratorRegistry] Already initialized. Skipping.")
+		return
 	end
 
-	local safeCategory: string
-	if type(errorCategory) == "string" and errorCategory ~= "" then
-		safeCategory = errorCategory
-	else
-		safeCategory = "unknown_error"
+	local records = ConfigRegistry.load("generators")
+
+	for _, record in ipairs(records) do
+		local result = GeneratorSchema.validate(record)
+		if result.success then
+			local generatorId = result.value.generatorId
+			if _registry[generatorId] then
+				warn(string.format(
+					"[GeneratorRegistry] Duplicate generatorId '%s' — skipping.",
+					generatorId
+				))
+			else
+				_registry[generatorId] = result.value
+				print(string.format("[GeneratorRegistry] Loaded generator: '%s'", generatorId))
+			end
+		else
+			warn(string.format(
+				"[GeneratorRegistry] Config validation failed: %s — %s",
+				tostring(record.id or "unknown"),
+				result.message or result.code
+			))
+		end
 	end
 
-	warn(string.format(
-		"%s LOAD FAILURE | userId: %s | errorCategory: %s",
-		LOG_PREFIX,
-		safeUserId,
-		safeCategory
-	))
+	_initialized = true
 end
 
 --[[
-	PersistenceReporter.reportSaveFailure(userId: any, errorCategory: string?)
-	
-	Reports a player data save failure.
-	
-	Logs:
-	- The userId (or a placeholder if invalid).
-	- The error category string (safe, not the raw DataStore error).
-	
-	Does NOT expose the save data, raw error messages, or stack traces.
-	Does NOT mutate any session state.
+	GeneratorRegistry.getGenerator(generatorId) -> config?
+
+	Returns the validated config for a generatorId, or nil if not found.
 --]]
-function PersistenceReporter.reportSaveFailure(userId: any, errorCategory: string?)
-	local safeUserId: string
-	if type(userId) == "number" and userId > 0 then
-		safeUserId = tostring(math.floor(userId))
-	else
-		safeUserId = "[invalid_userId]"
-	end
-
-	local safeCategory: string
-	if type(errorCategory) == "string" and errorCategory ~= "" then
-		safeCategory = errorCategory
-	else
-		safeCategory = "unknown_error"
-	end
-
-	warn(string.format(
-		"%s SAVE FAILURE | userId: %s | errorCategory: %s",
-		LOG_PREFIX,
-		safeUserId,
-		safeCategory
-	))
+function GeneratorRegistry.getGenerator(generatorId: string): any
+	return _registry[generatorId]
 end
 
 --[[
-	PersistenceReporter.reportInfo(message: string)
-	
-	Logs a general informational message for persistence lifecycle events.
-	Use for expected events like load success, save success, new player initialized.
-	
-	Does NOT expose data contents.
+	GeneratorRegistry.getAllGenerators() -> { config }
+
+	Returns a list of all loaded generator configs.
 --]]
-function PersistenceReporter.reportInfo(message: string)
-	if type(message) == "string" then
-		print(string.format("%s %s", LOG_PREFIX, message))
+function GeneratorRegistry.getAllGenerators(): { any }
+	local list = {}
+	for _, config in pairs(_registry) do
+		table.insert(list, config)
 	end
+	return list
 end
 
-return PersistenceReporter
+--[[
+	GeneratorRegistry.isInitialized() -> boolean
+--]]
+function GeneratorRegistry.isInitialized(): boolean
+	return _initialized
+end
+
+return GeneratorRegistry
 
 ]====])
 
-local p = ensurePath(game:GetService("ServerScriptService").Server, "persistence")
-getOrCreateModule(p, "SaveKeyBuilder", [====[
---[[
-	SaveKeyBuilder
-	Location: src/server/persistence/SaveKeyBuilder.luau
-	
-	Constructs deterministic, stable save keys for player data.
-	
-	Rules (from docs/SAVE_SYSTEM.md):
-	- Keys use Player.UserId (integer), NOT Player.Name (can change).
-	- Key format: "player_{userId}"
-	- Key format must never change after data has been saved.
-	- Invalid or nil UserId is rejected and returns nil.
-	- This module is server-only by architectural convention.
-	
-	This module has NO knowledge of DataStore names, save schema, or
-	gameplay rules. It only builds and validates key strings.
-	
-	Part of MVP-002: Save, Config, and Database Foundation.
---]]
+local p = ensurePath(game:GetService("ServerScriptService").Server, "data")
+getOrCreateModule(p, "ItemRegistry", [====[
+local ServerStorage = game:GetService("ServerStorage")
 
--- The DataStore name for player save data (documented in docs/SAVE_SYSTEM.md).
-local PLAYER_SAVE_STORE_NAME = "PlayerSaveData"
+local ItemSchema = require(game:GetService("ReplicatedStorage").Genesis.Shared.data.ItemSchema)
 
--- Key prefix as documented in docs/SAVE_SYSTEM.md.
-local KEY_PREFIX = "player_"
+local ItemRegistry = {}
 
-local SaveKeyBuilder = {}
+local _registry: { [string]: any } = {}
+local _initialized = false
 
---[[
-	SaveKeyBuilder.validateUserId(userId: any) -> boolean
-	
-	Returns true if the given value is a valid Roblox UserId.
-	A valid UserId is an integer greater than 0.
-	
-	Returns false for nil, non-number, fractional, or non-positive values.
---]]
-function SaveKeyBuilder.validateUserId(userId: any): boolean
-	if type(userId) ~= "number" then
-		return false
-	end
-
-	if userId <= 0 then
-		return false
-	end
-
-	-- Must be a whole number (integer).
-	if userId ~= math.floor(userId) then
-		return false
-	end
-
-	return true
-end
-
---[[
-	SaveKeyBuilder.buildPlayerKey(userId: any) -> string?
-	
-	Constructs the save key string for a player.
-	Returns a key string on success.
-	Returns nil if the userId is invalid — caller must handle nil.
-	
-	Key format: "player_{userId}"
-	Example: "player_123456"
-	
-	Never throws.
---]]
-function SaveKeyBuilder.buildPlayerKey(userId: any): string?
-	if not SaveKeyBuilder.validateUserId(userId) then
-		warn(string.format(
-			"[SaveKeyBuilder] buildPlayerKey received invalid userId: '%s' (type: %s). Returning nil.",
-			tostring(userId),
-			type(userId)
-		))
+local function _getConfigFolder(): Folder?
+	local configs = ServerStorage:FindFirstChild("Configs")
+	if not configs then
+		warn("[ItemRegistry] ServerStorage.Configs folder not found.")
 		return nil
 	end
 
-	return KEY_PREFIX .. tostring(math.floor(userId))
-end
-
---[[
-	SaveKeyBuilder.getStoreName() -> string
-	
-	Returns the canonical DataStore name for player save data.
-	Centralised here so all persistence code references one source of truth.
---]]
-function SaveKeyBuilder.getStoreName(): string
-	return PLAYER_SAVE_STORE_NAME
-end
-
---[[
-	SaveKeyBuilder.parseUserIdFromKey(key: string) -> number?
-	
-	Utility: extracts the UserId from a save key string.
-	Returns the UserId as a number, or nil if the key format is unrecognized.
-	Useful for debugging and audit tooling.
-	
-	Never throws.
---]]
-function SaveKeyBuilder.parseUserIdFromKey(key: string): number?
-	if type(key) ~= "string" then
+	local folder = configs:FindFirstChild("items")
+	if not folder then
+		warn("[ItemRegistry] ServerStorage.Configs.items folder not found.")
 		return nil
 	end
 
-	-- Match "player_<digits>"
-	local digits = string.match(key, "^player_(%d+)$")
-	if not digits then
+	if not folder:IsA("Folder") then
+		warn("[ItemRegistry] ServerStorage.Configs.items is not a Folder.")
 		return nil
 	end
 
-	local userId = tonumber(digits)
-	if userId == nil or not SaveKeyBuilder.validateUserId(userId) then
-		return nil
-	end
-
-	return userId
+	return folder :: Folder
 end
 
-return SaveKeyBuilder
+local function _buildSnapshot(item: any): any
+	return {
+		itemId = item.itemId,
+		displayName = item.displayName,
+		description = item.description,
+		itemType = item.itemType,
+		rarity = item.rarity,
+		iconSlot = item.iconSlot,
+		maxStack = item.maxStack,
+		equipmentId = item.equipmentId,
+		sortOrder = item.sortOrder,
+		tags = item.tags,
+		isEnabled = item.isEnabled,
+	}
+end
+
+function ItemRegistry.init()
+	if _initialized then
+		warn("[ItemRegistry] Already initialized. Skipping.")
+		return
+	end
+
+	local folder = _getConfigFolder()
+	if folder then
+		for _, child in ipairs(folder:GetChildren()) do
+			if child:IsA("ModuleScript") then
+				local ok, record = pcall(require, child :: ModuleScript)
+				if ok and type(record) == "table" then
+					local result = ItemSchema.validate(record)
+					if result.success then
+						local item = result.value
+						if _registry[item.itemId] then
+							warn(string.format("[ItemRegistry] Duplicate itemId '%s' - skipping.", item.itemId))
+						else
+							_registry[item.itemId] = item
+							print(string.format("[ItemRegistry] Loaded item '%s'.", item.itemId))
+						end
+					else
+						warn(string.format(
+							"[ItemRegistry] Validation failed for '%s': %s",
+							tostring(record.itemId or record.id or child.Name),
+							result.message or result.code
+						))
+					end
+				else
+					warn(string.format("[ItemRegistry] Failed to require '%s': %s", child:GetFullName(), tostring(record)))
+				end
+			end
+		end
+	end
+
+	_initialized = true
+end
+
+function ItemRegistry.getItem(itemId: string): any
+	return _registry[itemId]
+end
+
+function ItemRegistry.getItemSnapshot(itemId: string): any
+	local item = ItemRegistry.getItem(itemId)
+	if not item then
+		return nil
+	end
+	return _buildSnapshot(item)
+end
+
+function ItemRegistry.getAllItems(): { any }
+	local list = {}
+	for _, item in pairs(_registry) do
+		table.insert(list, item)
+	end
+	return list
+end
+
+function ItemRegistry.isInitialized(): boolean
+	return _initialized
+end
+
+return ItemRegistry
 
 ]====])
 

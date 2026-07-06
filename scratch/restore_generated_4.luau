@@ -32,415 +32,363 @@ end
 getOrCreateFolder(game:GetService("ServerScriptService"), "Server")
 getOrCreateFolder(game:GetService("StarterPlayer").StarterPlayerScripts, "Client")
 getOrCreateFolder(game:GetService("ReplicatedStorage"), "Shared")
-local p = ensurePath(game:GetService("ServerScriptService").Server, "runtime")
-getOrCreateModule(p, "FrameworkSmoke", [====[
+getOrCreateFolder(game:GetService("ServerStorage"), "Configs")
+local p = ensurePath(game:GetService("ServerScriptService").Server, "data")
+getOrCreateModule(p, "ReferenceResolver", [====[
 --[[
-	FrameworkSmoke
-	Location: src/server/runtime/FrameworkSmoke.luau
-
-	Framework smoke verification for Project Genesis MVP-001.
-
-	This module provides a suite of self-contained checks that verify the
-	core framework modules (Result, ServiceLifecycle) are functioning
-	correctly after bootstrap.
-
+	ReferenceResolver
+	Location: src/server/data/ReferenceResolver.luau
+	
+	Validates cross-config references between active MVP config categories.
+	
+	A "reference" is when one config record has an ID field that points to
+	a record in another category. For example, a creature config that lists
+	a skillId must resolve to an actual skill config record.
+	
 	Rules:
-	- Smoke tests must be self-contained and not depend on gameplay systems.
-	- Smoke tests must not mutate game state.
-	- Smoke tests must print PASS or FAIL with the test name.
-	- This module must ONLY be called during development/Studio verification.
-	  It must NOT be called automatically in production bootstrap.
-	- No gameplay values are tested here.
-
-	Part of MVP-001: Core Framework Foundation.
+	- Missing references fail safely — return nil or { ok=false }, never throw.
+	- Reserved category references are blocked and return an error.
+	- All resolution routes through ConfigRegistry.
+	- This module does not own config data; it delegates to ConfigRegistry.
+	- No gameplay logic here — purely structural reference validation.
+	
+	Part of MVP-002: Save, Config, and Database Foundation.
 --]]
 
--- Results are required freshly so this module gets isolated state.
-local Result = require(script.Parent.Parent.Parent.shared.utilities.Result)
--- Note: ServiceLifecycle is stateful (singleton) — we test behavior only.
+local ConfigRegistry = require(script.Parent.ConfigRegistry)
 
-local FrameworkSmoke = {}
-
-local _passCount = 0
-local _failCount = 0
-
-local function _assert(testName: string, condition: boolean, detail: string?)
-	if condition then
-		_passCount += 1
-		print(string.format("[FrameworkSmoke] PASS — %s", testName))
-	else
-		_failCount += 1
-		warn(string.format(
-			"[FrameworkSmoke] FAIL — %s%s",
-			testName,
-			detail and (": " .. detail) or ""
-		))
-	end
-end
-
--- ─── Result Tests ────────────────────────────────────────────────────────────
-
-local function _testResult()
-	-- T1: ok() creates a success result.
-	local r1 = Result.ok(42)
-	_assert("Result.ok creates success", r1.success == true, "success should be true")
-	_assert("Result.ok has value", r1.value == 42, "value should be 42")
-
-	-- T2: fail() creates a failure result.
-	local r2 = Result.fail("not_found", "Resource missing.")
-	_assert("Result.fail creates failure", r2.success == false, "success should be false")
-	_assert("Result.fail has code", r2.code == "not_found", "code should be 'not_found'")
-	_assert("Result.fail has message", r2.message == "Resource missing.", "message mismatch")
-
-	-- T3: ok() with nil value is valid (void success).
-	local r3 = Result.ok(nil)
-	_assert("Result.ok(nil) is valid", r3.success == true, "void success should work")
-
-	-- T4: isOk() / isFail() helpers.
-	_assert("Result.isOk on ok", Result.isOk(r1) == true, "isOk should be true")
-	_assert("Result.isFail on fail", Result.isFail(r2) == true, "isFail should be true")
-	_assert("Result.isOk on fail", Result.isOk(r2) == false, "isOk on fail should be false")
-	_assert("Result.isFail on ok", Result.isFail(r1) == false, "isFail on ok should be false")
-
-	-- T5: unwrapOr() returns value on success, default on failure.
-	local v1 = Result.unwrapOr(r1, 0)
-	_assert("Result.unwrapOr on ok", v1 == 42, "should return value=42")
-	local v2 = Result.unwrapOr(r2, 0)
-	_assert("Result.unwrapOr on fail", v2 == 0, "should return default=0")
-
-	-- T6: fail() with empty code should throw.
-	local badCodeOk = pcall(function()
-		Result.fail("")
-	end)
-	_assert("Result.fail empty code throws", badCodeOk == false, "should assert on empty code")
-
-	-- T7: fail() without message is valid.
-	local r4 = Result.fail("unauthorized")
-	_assert("Result.fail no message", r4.message == nil, "message should be nil")
-end
-
--- ─── ServiceLifecycle Tests ──────────────────────────────────────────────────
-
-local function _testServiceLifecycle()
-	-- These tests use a fresh local lifecycle copy to avoid polluting
-	-- the real singleton state used by ServerBootstrap.
-	-- We test by creating a local table that mimics the lifecycle interface
-	-- and verifying ServiceContract validation logic inline.
-
-	-- T1: A valid ServiceContract shape has the correct fields.
-	local fakeService = {
-		name = "TestService",
-		init = function() end,
-		start = function() end,
-	}
-	_assert(
-		"ServiceContract: name is string",
-		type(fakeService.name) == "string" and fakeService.name ~= "",
-		"name check"
-	)
-	_assert(
-		"ServiceContract: init is function",
-		type(fakeService.init) == "function",
-		"init check"
-	)
-	_assert(
-		"ServiceContract: start is function",
-		type(fakeService.start) == "function",
-		"start check"
-	)
-
-	-- T2: A ServiceContract without name fails the contract check.
-	local badService = { init = function() end, start = function() end }
-	local nameCheckFails = (type(badService.name) ~= "string" or badService.name == "")
-	_assert("ServiceContract: missing name caught", nameCheckFails == true, "name validation")
-
-	-- T3: A ServiceContract without init fails.
-	local noInitService = { name = "NoInit", start = function() end }
-	_assert(
-		"ServiceContract: missing init caught",
-		type(noInitService.init) ~= "function",
-		"init validation"
-	)
-end
-
--- ─── Public API ─────────────────────────────────────────────────────────────
-
---[[
-	FrameworkSmoke.run()
-
-	Runs all framework smoke checks and prints a summary.
-	Call this from Studio command bar or a test script during development.
-	Do NOT call from production ServerBootstrap.
-
-	Returns { passed = number, failed = number }.
---]]
-function FrameworkSmoke.run(): { passed: number, failed: number }
-	_passCount = 0
-	_failCount = 0
-
-	print("[FrameworkSmoke] ═══ Starting MVP-001 Framework Smoke Verification ═══")
-
-	_testResult()
-	_testServiceLifecycle()
-
-	print(string.format(
-		"[FrameworkSmoke] ═══ Done: %d PASSED, %d FAILED ═══",
-		_passCount,
-		_failCount
-	))
-
-	return { passed = _passCount, failed = _failCount }
-end
-
-return FrameworkSmoke
-
-]====])
-
-local p = ensurePath(game:GetService("ServerScriptService").Server, "runtime")
-getOrCreateModule(p, "ServiceLifecycle", [====[
---[[
-	ServiceLifecycle
-	Location: src/server/runtime/ServiceLifecycle.luau
-
-	Minimal server service lifecycle contract for Project Genesis.
-
-	Every server service must implement this lifecycle interface so that
-	the server bootstrap can start services in a documented, predictable order.
-
-	Lifecycle phases (in order):
-	  1. init()    — Service sets up internal state and registers dependencies.
-	                 No cross-service calls during init.
-	  2. start()   — Service begins active operation (listens for players, connects events).
-	                 Cross-service calls are allowed after all services have init()d.
-
-	Rules:
-	- Services must implement both init() and start().
-	- init() must not depend on other services being started yet.
-	- start() may call other services that have already init()d.
-	- Neither phase should throw — use Result pattern for failures.
-	- Gameplay systems (combat, creature, economy) must not be started here.
-	  They will be added by future approved tasks.
-	- This module registers and validates the lifecycle contract only.
-	  It does not own service instances.
-
-	Part of MVP-001: Core Framework Foundation.
---]]
-
--- Type alias: all services must implement this interface.
-export type ServiceContract = {
-	name: string,          -- Stable service identifier for logging and debugging.
-	init: () -> (),        -- Phase 1: initialize internal state.
-	start: () -> (),       -- Phase 2: begin active operation.
+-- Reserved categories that must not be referenced from active MVP config.
+-- (from docs/CONFIG_STRUCTURE.md and docs/DATA_SCHEMA.md)
+local RESERVED_CATEGORIES = {
+	quests        = true,
+	towers        = true,
+	status_effects = true,
 }
 
--- Internal: ordered list of registered services.
-local _registeredServices: { ServiceContract } = {}
-local _isInitialized = false
-local _isStarted = false
+export type ResolveResult = {
+	ok: boolean,
+	record: { [string]: any }?,
+	error: string?,
+}
 
-local ServiceLifecycle = {}
+local ReferenceResolver = {}
 
 --[[
-	ServiceLifecycle.register(service: ServiceContract)
-
-	Registers a service to participate in the lifecycle.
-	Services must be registered before ServiceLifecycle.init() is called.
-
-	Throws if:
-	  - service is not a table.
-	  - service.name is missing or not a string.
-	  - service.init is not a function.
-	  - service.start is not a function.
-	  - A service with the same name is already registered.
-	  - Registration happens after init() has already run.
+	ReferenceResolver.resolve(refId: string, category: string) -> table?
+	
+	Attempts to find a config record by its stable ID in the given category.
+	Returns the record table if found, nil otherwise.
+	
+	Does NOT validate whether the category is reserved — use resolveRef for that.
+	Use this for trusted internal calls where you already know the category is valid.
 --]]
-function ServiceLifecycle.register(service: ServiceContract)
-	assert(
-		type(service) == "table",
-		"[ServiceLifecycle] register: service must be a table."
-	)
-	assert(
-		type(service.name) == "string" and service.name ~= "",
-		"[ServiceLifecycle] register: service.name must be a non-empty string."
-	)
-	assert(
-		type(service.init) == "function",
-		string.format("[ServiceLifecycle] register: '%s'.init must be a function.", service.name)
-	)
-	assert(
-		type(service.start) == "function",
-		string.format("[ServiceLifecycle] register: '%s'.start must be a function.", service.name)
-	)
-	assert(
-		not _isInitialized,
-		string.format(
-			"[ServiceLifecycle] register: Cannot register '%s' after lifecycle has already initialized.",
-			service.name
-		)
-	)
+function ReferenceResolver.resolve(refId: string, category: string): { [string]: any }?
+	if type(refId) ~= "string" or type(category) ~= "string" then
+		return nil
+	end
 
-	-- Check for duplicate names.
-	for _, existing in ipairs(_registeredServices) do
-		if existing.name == service.name then
-			error(string.format(
-				"[ServiceLifecycle] register: A service named '%s' is already registered.",
-				service.name
-			))
+	return ConfigRegistry.get(category, refId)
+end
+
+--[[
+	ReferenceResolver.validateRef(refId: string, category: string) -> ResolveResult
+	
+	Validates that a reference ID resolves to an existing, enabled record
+	in the given category.
+	
+	Checks:
+	1. category is not reserved.
+	2. The record exists.
+	3. The record has isEnabled = true.
+	
+	Returns { ok = true, record = <record> } on success.
+	Returns { ok = false, error = <message> } on any failure.
+	Never throws.
+--]]
+function ReferenceResolver.validateRef(refId: string, category: string): ResolveResult
+	-- Input type guard.
+	if type(refId) ~= "string" then
+		return {
+			ok = false,
+			record = nil,
+			error = string.format(
+				"validateRef: refId must be a string, got '%s'.",
+				type(refId)
+			),
+		}
+	end
+
+	if type(category) ~= "string" then
+		return {
+			ok = false,
+			record = nil,
+			error = string.format(
+				"validateRef: category must be a string, got '%s'.",
+				type(category)
+			),
+		}
+	end
+
+	-- Block reserved categories.
+	if RESERVED_CATEGORIES[category] then
+		return {
+			ok = false,
+			record = nil,
+			error = string.format(
+				"Reference to reserved category '%s' is not allowed in active MVP config. " ..
+				"ID: '%s'.",
+				category,
+				refId
+			),
+		}
+	end
+
+	-- Resolve the reference via ConfigRegistry.
+	local record = ConfigRegistry.get(category, refId)
+
+	if record == nil then
+		return {
+			ok = false,
+			record = nil,
+			error = string.format(
+				"Reference '%s' not found in category '%s'.",
+				refId,
+				category
+			),
+		}
+	end
+
+	-- Check that the referenced record is enabled.
+	if record.isEnabled == false then
+		return {
+			ok = false,
+			record = nil,
+			error = string.format(
+				"Reference '%s' in category '%s' exists but is disabled (isEnabled = false). " ..
+				"Disabled records must not be referenced in active content.",
+				refId,
+				category
+			),
+		}
+	end
+
+	return {
+		ok = true,
+		record = record,
+		error = nil,
+	}
+end
+
+--[[
+	ReferenceResolver.validateAllRefs(refIds: { string }, category: string) -> { ResolveResult }
+	
+	Validates a list of reference IDs against a single category.
+	Returns an array of ResolveResult, one per input refId.
+	Useful for validating skillIds, geneSlots, phaseIds arrays in config records.
+	
+	Never throws.
+--]]
+function ReferenceResolver.validateAllRefs(
+	refIds: { string },
+	category: string
+): { ResolveResult }
+
+	local results: { ResolveResult } = {}
+
+	if type(refIds) ~= "table" then
+		return {
+			{
+				ok = false,
+				record = nil,
+				error = string.format(
+					"validateAllRefs: refIds must be a table, got '%s'.",
+					type(refIds)
+				),
+			},
+		}
+	end
+
+	for _, refId in ipairs(refIds) do
+		table.insert(results, ReferenceResolver.validateRef(refId, category))
+	end
+
+	return results
+end
+
+--[[
+	ReferenceResolver.hasAnyFailure(results: { ResolveResult }) -> boolean
+	
+	Utility: returns true if any ResolveResult in the array has ok = false.
+	Use after validateAllRefs to check for batch failures.
+--]]
+function ReferenceResolver.hasAnyFailure(results: { ResolveResult }): boolean
+	for _, result in ipairs(results) do
+		if not result.ok then
+			return true
 		end
 	end
-
-	table.insert(_registeredServices, service)
+	return false
 end
 
---[[
-	ServiceLifecycle.init()
-
-	Runs Phase 1: calls init() on every registered service in order.
-	All services are initialized before any service's start() is called.
-
-	Safe error handling: if a service init() throws, the error is caught,
-	logged with the service name, and the lifecycle logs it without crashing
-	the full server. The failed service is noted but startup continues
-	(fail-log, not fail-hard during MVP bootstrap).
-
-	Must be called once, before ServiceLifecycle.start().
---]]
-function ServiceLifecycle.init()
-	assert(not _isInitialized, "[ServiceLifecycle] init() has already been called.")
-	_isInitialized = true
-
-	for _, service in ipairs(_registeredServices) do
-		local ok, err = pcall(service.init)
-		if not ok then
-			warn(string.format(
-				"[ServiceLifecycle] init() FAILED for service '%s': %s",
-				service.name,
-				tostring(err)
-			))
-		else
-			print(string.format("[ServiceLifecycle] init() OK — '%s'", service.name))
-		end
-	end
-end
-
---[[
-	ServiceLifecycle.start()
-
-	Runs Phase 2: calls start() on every registered service in order.
-	All services have been init()d before any start() is called.
-
-	Must be called once, after ServiceLifecycle.init().
---]]
-function ServiceLifecycle.start()
-	assert(_isInitialized, "[ServiceLifecycle] init() must be called before start().")
-	assert(not _isStarted, "[ServiceLifecycle] start() has already been called.")
-	_isStarted = true
-
-	for _, service in ipairs(_registeredServices) do
-		local ok, err = pcall(service.start)
-		if not ok then
-			warn(string.format(
-				"[ServiceLifecycle] start() FAILED for service '%s': %s",
-				service.name,
-				tostring(err)
-			))
-		else
-			print(string.format("[ServiceLifecycle] start() OK — '%s'", service.name))
-		end
-	end
-end
-
---[[
-	ServiceLifecycle.getRegisteredNames() -> { string }
-
-	Returns a list of registered service names in registration order.
-	Useful for diagnostics and smoke verification.
---]]
-function ServiceLifecycle.getRegisteredNames(): { string }
-	local names = {}
-	for _, service in ipairs(_registeredServices) do
-		table.insert(names, service.name)
-	end
-	return names
-end
-
---[[
-	ServiceLifecycle.isInitialized() -> boolean
-
-	Returns true after init() has been called.
---]]
-function ServiceLifecycle.isInitialized(): boolean
-	return _isInitialized
-end
-
---[[
-	ServiceLifecycle.isStarted() -> boolean
-
-	Returns true after start() has been called.
---]]
-function ServiceLifecycle.isStarted(): boolean
-	return _isStarted
-end
-
-return ServiceLifecycle
+return ReferenceResolver
 
 ]====])
 
-local p = ensurePath(game:GetService("ServerScriptService").Server, "services")
-getOrCreateModule(p, "CreatureService", [====[
-local CreatureRegistry = require(game:GetService("ReplicatedStorage").Shared.data.CreatureRegistry)
-local SaveService = require(script.Parent.SaveService)
-local Result = require(game:GetService("ReplicatedStorage").Shared.utilities.Result)
-local HttpService = game:GetService("HttpService")
+local p = ensurePath(game:GetService("ServerScriptService").Server, "data")
+getOrCreateModule(p, "SkillRegistry", [====[
+local ConfigRegistry = require(script.Parent.ConfigRegistry)
+local SkillSchema = require(game:GetService("ReplicatedStorage").Genesis.Shared.data.SkillSchema)
 
-local CreatureService = {}
+local SkillRegistry = {}
 
--- Narrow interface to SaveService.
--- CreatureService must not communicate with DataStore directly.
-function CreatureService.tryGrantCreature(player: Player, creatureId: string)
-    -- Validate: Creature exists in Registry
-    local config = CreatureRegistry.getCreature(creatureId)
-    if not config then
-        return Result.fail("Invalid Creature ID rejected.")
-    end
+local _registry: { [string]: any } = {}
+local _allRegistry: { [string]: any } = {}
+local _initialized = false
 
-    -- Validate: Creature is enabled
-    if not config.isEnabled then
-        return Result.fail("Disabled Creature rejected.")
-    end
-
-    -- Validate: Duplicate check
-    local playerSave = SaveService.getPlayerSave(player)
-    local instances = playerSave.creatureInstances or {}
-    
-    for _, instance in pairs(instances) do
-        if instance.creatureId == creatureId then
-            return Result.fail("Duplicate grant behavior follows documented rule: cannot grant duplicate.")
-        end
-    end
-
-    -- Generate instance
-    local instanceId = HttpService:GenerateGUID(false)
-    local newInstance = {
-        instanceId = instanceId,
-        creatureId = creatureId,
-        acquiredAt = os.time()
-    }
-
-    -- Apply to SaveService
-    instances[instanceId] = newInstance
-    playerSave.creatureInstances = instances
-    SaveService.savePlayer(player)
-
-    return Result.ok(newInstance)
+local function _copyArray(values: any): { any }
+	local output = {}
+	if type(values) == "table" then
+		for _, value in ipairs(values) do
+			table.insert(output, value)
+		end
+	end
+	return output
 end
 
-function CreatureService.getPlayerCreatures(player: Player)
-    local playerSave = SaveService.getPlayerSave(player)
-    return playerSave.creatureInstances or {}
+local function _buildSnapshot(config: any)
+	return {
+		skillId = config.skillId,
+		displayName = config.displayName,
+		description = config.description,
+		skillType = config.skillType,
+		rarity = config.rarity,
+		elementType = config.elementType,
+		cooldown = config.cooldown,
+		targetRule = config.targetRule,
+		damageMultiplier = config.damageMultiplier,
+		statusEffectRefs = _copyArray(config.statusEffectRefs),
+		iconPlaceholder = config.iconPlaceholder,
+		isEnabled = config.isEnabled,
+	}
 end
 
-return CreatureService
+function SkillRegistry.init()
+	if _initialized then
+		warn("[SkillRegistry] Already initialized. Skipping.")
+		return
+	end
+
+	local records = ConfigRegistry.load("skills")
+
+	for _, record in ipairs(records) do
+		local result = SkillSchema.validate(record)
+		if result.success then
+			local skill = result.value
+			if _allRegistry[skill.skillId] then
+				warn(string.format("[SkillRegistry] Duplicate skillId '%s' skipped.", skill.skillId))
+			else
+				_allRegistry[skill.skillId] = skill
+			end
+
+			if _allRegistry[skill.skillId] ~= skill then
+				continue
+			elseif not skill.isEnabled then
+				print(string.format("[SkillRegistry] Skipped disabled skill '%s'.", skill.skillId))
+			elseif _registry[skill.skillId] then
+				warn(string.format("[SkillRegistry] Duplicate skillId '%s' skipped.", skill.skillId))
+			else
+				_registry[skill.skillId] = skill
+				print(string.format("[SkillRegistry] Loaded skill '%s'.", skill.skillId))
+			end
+		else
+			warn(string.format(
+				"[SkillRegistry] Config validation failed: %s - %s",
+				tostring(record.id or "unknown"),
+				tostring(result.message or result.code)
+			))
+		end
+	end
+
+	_initialized = true
+end
+
+function SkillRegistry.getSkill(skillId: string): any
+	return _allRegistry[skillId]
+end
+
+function SkillRegistry.getEnabledSkill(skillId: string): any
+	return _registry[skillId]
+end
+
+function SkillRegistry.getSkillSnapshot(skillId: string): any
+	local config = SkillRegistry.getEnabledSkill(skillId)
+	return config and _buildSnapshot(config) or nil
+end
+
+function SkillRegistry.getAllSkills(): { any }
+	local list = {}
+	for _, config in pairs(_registry) do
+		table.insert(list, config)
+	end
+	table.sort(list, function(a, b)
+		return a.skillId < b.skillId
+	end)
+	return list
+end
+
+function SkillRegistry.getAllSkillSnapshots(): { any }
+	local list = {}
+	for _, config in ipairs(SkillRegistry.getAllSkills()) do
+		table.insert(list, _buildSnapshot(config))
+	end
+	return list
+end
+
+function SkillRegistry.isInitialized(): boolean
+	return _initialized
+end
+
+return SkillRegistry
+
+]====])
+
+local p = ensurePath(game:GetService("ServerScriptService").Server, "data")
+getOrCreateModule(p, "StageOrder", [====[
+--[[
+	StageOrder
+	Location: src/server/data/StageOrder.luau
+
+	Single source of truth for the ordered story stage sequence.
+	MVP-020: hardcoded here pending a dedicated stage/encounter registry.
+
+	Shared by:
+	- RemoteHandlers (RequestStoryBattle victory progression)
+	- GeneratorService (stageClear generator unlock requirement, DD-029)
+--]]
+
+local StageOrder = {}
+
+local STAGE_ORDER = { "story_stage_1", "story_stage_2", "story_stage_3" }
+
+--[[
+	StageOrder.getSequence() -> { string }
+
+	Returns the ordered list of story stage ids.
+--]]
+function StageOrder.getSequence(): { string }
+	return STAGE_ORDER
+end
+
+--[[
+	StageOrder.getIndex(stageId) -> number?
+
+	Returns the 1-based index of stageId in the sequence, or nil if unknown.
+--]]
+function StageOrder.getIndex(stageId: string): number?
+	return table.find(STAGE_ORDER, stageId)
+end
+
+return StageOrder
 
 ]====])
 

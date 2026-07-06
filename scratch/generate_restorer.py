@@ -4,7 +4,8 @@ import json
 roots = {
     "src/server": "game:GetService('ServerScriptService').Server",
     "src/client": "game:GetService('StarterPlayer').StarterPlayerScripts.Client",
-    "src/shared": "game:GetService('ReplicatedStorage').Shared"
+    "src/shared": "game:GetService('ReplicatedStorage').Shared",
+    "configs": "game:GetService('ServerStorage').Configs"
 }
 
 luau_script = """
@@ -42,6 +43,7 @@ end
 getOrCreateFolder(game:GetService("ServerScriptService"), "Server")
 getOrCreateFolder(game:GetService("StarterPlayer").StarterPlayerScripts, "Client")
 getOrCreateFolder(game:GetService("ReplicatedStorage"), "Shared")
+getOrCreateFolder(game:GetService("ServerStorage"), "Configs")
 
 """
 

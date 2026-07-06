@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 
-$baseDir = "f:\Project_Genesis\src"
+$baseDir = "f:\Project_Genesis"
 $outPath = "f:\Project_Genesis\scratch\restore_generated.luau"
 
 $scriptContent = @"
@@ -38,6 +38,7 @@ end
 getOrCreateFolder(game:GetService("ServerScriptService"), "Server")
 getOrCreateFolder(game:GetService("StarterPlayer").StarterPlayerScripts, "Client")
 getOrCreateFolder(game:GetService("ReplicatedStorage"), "Shared")
+getOrCreateFolder(game:GetService("ServerStorage"), "Configs")
 
 "@
 
@@ -47,9 +48,10 @@ $fileIndex = 0
 $moduleCount = 0
 
 $roots = @{
-    "server" = 'game:GetService("ServerScriptService").Server'
-    "client" = 'game:GetService("StarterPlayer").StarterPlayerScripts.Client'
-    "shared" = 'game:GetService("ReplicatedStorage").Shared'
+    "src/server" = 'game:GetService("ServerScriptService").Server'
+    "src/client" = 'game:GetService("StarterPlayer").StarterPlayerScripts.Client'
+    "src/shared" = 'game:GetService("ReplicatedStorage").Shared'
+    "configs" = 'game:GetService("ServerStorage").Configs'
 }
 
 foreach ($key in $roots.Keys) {
