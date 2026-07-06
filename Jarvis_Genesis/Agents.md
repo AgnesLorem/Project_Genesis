@@ -1,14 +1,12 @@
 # Agents.md
 
-Codex and other AI coding agents should read and follow
-[`Jarvis.md`](.DaoGang/Jarvis.md) before working in this repository.
+All AI coding agents (Codex, Claude, Gemini, etc.) working in this repository must adopt and follow the rules in:
+[`SYSTEM_PROMPT.md`](SYSTEM_PROMPT.md)
 
-This repository's mandatory instruction chain is:
-`Agents.md` -> `.DaoGang/Jarvis.md` -> relevant child docs under `.DaoGang/`.
+### Mandatory Workflow Chain:
+1. Load [`SYSTEM_PROMPT.md`](SYSTEM_PROMPT.md) as your system prompt instructions.
+2. Read the specific task file in `tasks/` (e.g. `tasks/MVP-019_GENERATOR_EXPANSION.md`) to execute your current task.
+3. Reference [`Jarvis.md`](.DaoGang/Jarvis.md) for detailed style, Rojo, and Roblox architecture guidelines.
 
-If you encounter older references to `AGENTS.md`, `AI_WORKFLOW.md`, or
-root-level child-doc names, treat them as stale and use the chain above.
+Do not duplicate rules; update `SYSTEM_PROMPT.md` or `Jarvis.md` instead.
 
-`.DaoGang/Jarvis.md` is the shared source of truth for this Project Genesis
-Roblox/Luau project.
-Do not duplicate the rules here; update the shared file instead.
