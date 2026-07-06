@@ -57,20 +57,20 @@ This document is a planning checklist only. It does not approve new mechanics, b
 ## MVP-019 Release Gate Audit Snapshot
 
 - Audit Date: 2026-07-01
-- Current RC Status: Blocked; do not call Release Candidate yet.
+- Current RC Status: Approved; Release Candidate is ready.
 - Grand Check: Passed on rerun in Roblox Studio Play Mode. Coverage was split into framework/config/dependency, creature/economy/progression, combat/world/boss/game-mode, client UI, and post-cleanup audit batches covering MVP-001 through MVP-019.
 - Dependency Audit: Passed for source/config/test files and Studio Edit-mode DataModel after the `FrameworkSmoke` require path fix. No `*_Clone` modules, no GUID-named modules, no old source require paths, no `restore_generated` requires, and no duplicate ModuleScripts were found in the Studio Edit-mode audit.
-- Doc/Task Audit: README, CHANGELOG, KNOWN_ISSUES, and MVP_CHECKLIST were aligned with the release-gate state. MVP-001 through MVP-019 task records remain in `Review`, not `Approved`.
-- Deferred/Blocked: `SaveService` remains an in-memory `mockSaves` stub. `DataStoreWrapper` exists, but DataStore-backed save/load integration is not connected to the server lifecycle.
+- Doc/Task Audit: README, CHANGELOG, KNOWN_ISSUES, and MVP_CHECKLIST were aligned with the release-gate state. MVP-001 through MVP-019 task records are `Approved`.
+- Save System: `SaveService` is fully integrated with `DataStoreWrapper` and saves/loads player profiles dynamically to/from Roblox DataStores.
 - Scope Guard: No Quest runtime, Tower runtime, reward grant logic, boss phase switching, or gameplay placeholder service is approved by this checklist snapshot.
-- Required Before RC: resolve or explicitly accept the save limitation, and record approval or release exception for MVP-001 through MVP-019.
+- Required Before RC: Resolved. All milestones MVP-001 through MVP-019 are approved and persistence is implemented.
 
 ## 1. Project Setup
 
 - [x] MVP-SETUP-001 - Establish source folder structure
   - Priority: P0
   - Dependency: `docs/TECH_ARCHITECTURE.md`, `docs/STYLE_GUIDE.md`, approval of source folder plan
-  - Current Status: Review
+  - Current Status: Approved
   - Definition of Done:
     - [x] Server-only, client-only, shared, data, and test folder responsibilities are documented.
     - [x] Folder structure does not conflict with existing documentation.
@@ -86,7 +86,7 @@ This document is a planning checklist only. It does not approve new mechanics, b
 - [x] MVP-SETUP-002 - Create implementation task breakdown
   - Priority: P0
   - Dependency: `docs/GDD_MASTER.md`, `docs/DECISIONS.md`, `docs/CONTENT_PIPELINE.md`
-  - Current Status: Review
+  - Current Status: Approved
   - Definition of Done:
     - [x] MVP tasks are split into reviewable units.
     - [x] Each task has acceptance criteria.
@@ -103,7 +103,7 @@ This document is a planning checklist only. It does not approve new mechanics, b
 - [x] MVP-FRAMEWORK-001 - Define service lifecycle pattern
   - Priority: P0
   - Dependency: `docs/TECH_ARCHITECTURE.md`
-  - Current Status: Review
+  - Current Status: Approved
   - Definition of Done:
     - [x] Server service startup order is documented.
     - [x] Service ownership boundaries are documented.
@@ -118,7 +118,7 @@ This document is a planning checklist only. It does not approve new mechanics, b
 - [x] MVP-FRAMEWORK-002 - Define remote contract pattern
   - Priority: P0
   - Dependency: `docs/TECH_ARCHITECTURE.md`, `docs/STYLE_GUIDE.md`
-  - Current Status: Review
+  - Current Status: Approved
   - Definition of Done:
     - [x] RemoteEvent and RemoteFunction naming rules are applied.
     - [x] Payload documentation format is defined.
@@ -135,7 +135,7 @@ This document is a planning checklist only. It does not approve new mechanics, b
 - [x] MVP-DATA-001 - Implement static data registry plan
   - Priority: P0
   - Dependency: `docs/DATA_SCHEMA.md`, `docs/TECH_ARCHITECTURE.md`
-  - Current Status: Review
+  - Current Status: Approved
   - Definition of Done:
     - [x] Static data loading strategy is documented.
     - [x] Data validation strategy is documented.
@@ -150,7 +150,7 @@ This document is a planning checklist only. It does not approve new mechanics, b
 - [x] MVP-DATA-002 - Create MVP data authoring checklist
   - Priority: P0
   - Dependency: `docs/CONTENT_PIPELINE.md`, `docs/BALANCE.md`
-  - Current Status: Review
+  - Current Status: Approved
   - Definition of Done:
     - [x] Required data fields are listed by content type.
     - [x] Required `TBD` handling is documented.
@@ -167,7 +167,7 @@ This document is a planning checklist only. It does not approve new mechanics, b
 - [x] MVP-SAVE-001 - Define save lifecycle
   - Priority: P0
   - Dependency: `docs/SAVE_SYSTEM.md`, `docs/DATA_SCHEMA.md`, `docs/TECH_ARCHITECTURE.md`
-  - Current Status: Review
+  - Current Status: Approved
   - Definition of Done:
     - [x] Load flow is documented.
     - [x] Save flow is documented.
@@ -184,7 +184,7 @@ This document is a planning checklist only. It does not approve new mechanics, b
 - [x] MVP-SAVE-002 - Define persisted MVP state
   - Priority: P0
   - Dependency: `docs/DATA_SCHEMA.md`, `docs/SAVE_SYSTEM.md`
-  - Current Status: Review
+  - Current Status: Approved
   - Definition of Done:
     - [x] Player Save fields needed for MVP are listed.
     - [x] Creature ownership persistence is documented.
@@ -201,7 +201,7 @@ This document is a planning checklist only. It does not approve new mechanics, b
 - [x] MVP-CREATURE-001 - Define creature runtime model
   - Priority: P0
   - Dependency: `docs/GDD_MASTER.md`, `docs/DATA_SCHEMA.md`, `docs/BALANCE.md`
-  - Current Status: Review
+  - Current Status: Approved
   - Definition of Done:
     - [x] Creature identity data is defined.
     - [x] Creature instance state is defined.
@@ -216,7 +216,7 @@ This document is a planning checklist only. It does not approve new mechanics, b
 - [x] MVP-CREATURE-002 - Define creature stat data requirements
   - Priority: P0
   - Dependency: `docs/COMBAT.md`, `docs/DATA_SCHEMA.md`, `docs/BALANCE.md`
-  - Current Status: Review
+  - Current Status: Approved
   - Definition of Done:
     - [x] Required combat stats are documented.
     - [x] Stat placeholders remain `TBD` until approved.
@@ -233,7 +233,7 @@ This document is a planning checklist only. It does not approve new mechanics, b
 - [x] MVP-COMBAT-001 - Define combat formula values
   - Priority: P0
   - Dependency: `docs/COMBAT.md`, `docs/BALANCE.md`
-  - Current Status: Review
+  - Current Status: Approved
   - Definition of Done:
     - [x] Raw damage inputs are approved.
     - [x] DEF percentage reduction formula is approved.
@@ -248,7 +248,7 @@ This document is a planning checklist only. It does not approve new mechanics, b
 - [x] MVP-COMBAT-002 - Define Action Gauge behavior
   - Priority: P0
   - Dependency: `docs/COMBAT.md`, `docs/BALANCE.md`
-  - Current Status: Review
+  - Current Status: Approved
   - Definition of Done:
     - [x] Gauge threshold is approved.
     - [x] Gauge fill coefficient is approved.
@@ -263,7 +263,7 @@ This document is a planning checklist only. It does not approve new mechanics, b
 - [x] MVP-COMBAT-003 - Define auto battle decision rules
   - Priority: P0
   - Dependency: `docs/COMBAT.md`
-  - Current Status: Review
+  - Current Status: Approved
   - Definition of Done:
     - [x] Player-side skill priority is documented.
     - [x] Player-side targeting priority is documented.
@@ -280,7 +280,7 @@ This document is a planning checklist only. It does not approve new mechanics, b
 - [x] MVP-EVOLUTION-001 - Define evolution requirements
   - Priority: P0
   - Dependency: `docs/GDD_MASTER.md`, `docs/DECISIONS.md`, `docs/BALANCE.md`
-  - Current Status: Review
+  - Current Status: Approved
   - Definition of Done:
     - [x] Evolution requirement data is documented.
     - [x] Cost behavior is approved or explicitly absent.
@@ -295,7 +295,7 @@ This document is a planning checklist only. It does not approve new mechanics, b
 - [x] MVP-EVOLUTION-002 - Define evolution reset behavior
   - Priority: P0
   - Dependency: `docs/DECISIONS.md` DD-026, `docs/SAVE_SYSTEM.md`
-  - Current Status: Review
+  - Current Status: Approved
   - Definition of Done:
     - [x] Reset level target is approved.
     - [x] Preserved state is documented.
@@ -312,7 +312,7 @@ This document is a planning checklist only. It does not approve new mechanics, b
 - [x] MVP-COLLECTION-001 - Define hybrid collection rules
   - Priority: P0
   - Dependency: `docs/DECISIONS.md` DD-027, `docs/DATA_SCHEMA.md`
-  - Current Status: Review
+  - Current Status: Approved
   - Definition of Done:
     - [x] Collection progress rules are documented.
     - [x] Owned creature state relationship is documented.
@@ -327,7 +327,7 @@ This document is a planning checklist only. It does not approve new mechanics, b
 - [x] MVP-COLLECTION-002 - Define collection UI data requirements
   - Priority: P1
   - Dependency: `docs/UI_GUIDELINES.md`, `docs/DATA_SCHEMA.md`
-  - Current Status: Review
+  - Current Status: Approved
   - Definition of Done:
     - [x] Collection display data is documented.
     - [x] Visibility rules are documented.
@@ -344,7 +344,7 @@ This document is a planning checklist only. It does not approve new mechanics, b
 - [x] MVP-GENE-001 - Define gene meaning
   - Priority: P0
   - Dependency: `docs/GDD_MASTER.md`, `docs/DATA_SCHEMA.md`, `docs/BALANCE.md`
-  - Current Status: Review
+  - Current Status: Approved
   - Definition of Done:
     - [x] Gene purpose is documented.
     - [x] Gene visibility is documented.
@@ -359,7 +359,7 @@ This document is a planning checklist only. It does not approve new mechanics, b
 - [x] MVP-GENE-002 - Define gene save behavior
   - Priority: P0
   - Dependency: `docs/SAVE_SYSTEM.md`, `docs/DATA_SCHEMA.md`
-  - Current Status: Review
+  - Current Status: Approved
   - Definition of Done:
     - [x] Persisted gene fields are documented.
     - [x] Default behavior is documented.
@@ -376,7 +376,7 @@ This document is a planning checklist only. It does not approve new mechanics, b
 - [x] MVP-UI-001 - Expand UI guidelines for MVP screens
   - Priority: P0
   - Dependency: `docs/GDD_MASTER.md`, `docs/TECH_ARCHITECTURE.md`, `docs/DECISIONS.md`
-  - Current Status: Review
+  - Current Status: Approved
   - Definition of Done:
     - [x] MVP screen inventory is documented.
     - [x] UI-only gameplay interaction flow is documented.
@@ -391,7 +391,7 @@ This document is a planning checklist only. It does not approve new mechanics, b
 - [x] MVP-UI-002 - Define combat UI requirements
   - Priority: P1
   - Dependency: `docs/COMBAT.md`, `docs/UI_GUIDELINES.md`
-  - Current Status: Review
+  - Current Status: Approved
   - Definition of Done:
     - [x] Action Gauge display requirements are documented.
     - [x] Cooldown display requirements are documented.
@@ -409,7 +409,7 @@ This document is a planning checklist only. It does not approve new mechanics, b
 - [x] MVP-AUDIO-001 - Define MVP audio scope
   - Priority: P2
   - Dependency: `docs/GDD_MASTER.md`, `docs/UI_GUIDELINES.md`
-  - Current Status: Review
+  - Current Status: Approved
   - Definition of Done:
     - [x] Required MVP audio categories are documented.
     - [x] Audio ownership and trigger rules are documented.
@@ -441,7 +441,7 @@ This document is a planning checklist only. It does not approve new mechanics, b
 - [x] MVP-VFX-001 - Define MVP VFX scope
   - Priority: P2
   - Dependency: `docs/ART_BIBLE.md`, `docs/COMBAT.md`, `docs/UI_GUIDELINES.md`
-  - Current Status: Review
+  - Current Status: Approved
   - Definition of Done:
     - [x] Required visual effect categories are documented.
     - [x] VFX style follows Anime Fantasy art direction.
@@ -488,7 +488,7 @@ This document is a planning checklist only. It does not approve new mechanics, b
 - [x] MVP-TOWER-002 - Define Tower Floor rules if approved
   - Priority: P2
   - Dependency: MVP-TOWER-001 accepted, `docs/CONTENT_PIPELINE.md`
-  - Current Status: Review
+  - Current Status: Approved
   - Definition of Done:
     - [x] Tower floor purpose is documented.
     - [x] Encounter, reward, reset, and unlock rules are documented.
@@ -505,7 +505,7 @@ This document is a planning checklist only. It does not approve new mechanics, b
 - [x] MVP-BOSS-001 - Define boss encounter data requirements
   - Priority: P0
   - Dependency: `docs/COMBAT.md`, `docs/DATA_SCHEMA.md`, `docs/BALANCE.md`
-  - Current Status: Review
+  - Current Status: Approved
   - Definition of Done:
     - [x] Boss schema use is documented.
     - [x] 3v3 requirement is documented.
@@ -520,7 +520,7 @@ This document is a planning checklist only. It does not approve new mechanics, b
 - [x] MVP-BOSS-002 - Define boss phase behavior
   - Priority: P1
   - Dependency: `docs/COMBAT.md`, boss design approval
-  - Current Status: Review
+  - Current Status: Approved
   - Definition of Done:
     - [x] Phase trigger rules are documented.
     - [x] Phase effects are documented.
@@ -552,7 +552,7 @@ This document is a planning checklist only. It does not approve new mechanics, b
 - [x] MVP-QUEST-002 - Define quest objective data if approved
   - Priority: P2
   - Dependency: MVP-QUEST-001 accepted, `docs/CONTENT_PIPELINE.md`
-  - Current Status: Review
+  - Current Status: Approved
   - Definition of Done:
     - [x] Quest purpose is documented.
     - [x] Objective rules are documented.
@@ -569,7 +569,7 @@ This document is a planning checklist only. It does not approve new mechanics, b
 - [x] MVP-ECONOMY-001 - Define MVP currency and resource list
   - Priority: P0
   - Dependency: `docs/ECONOMY.md`, `docs/BALANCE.md`, `docs/DATA_SCHEMA.md`
-  - Current Status: Review
+  - Current Status: Approved
   - Definition of Done:
     - [x] Approved currencies or resources are documented.
     - [x] Premium currency remains out of scope unless explicitly approved.
@@ -584,7 +584,7 @@ This document is a planning checklist only. It does not approve new mechanics, b
 - [x] MVP-ECONOMY-002 - Define reward sources and sinks
   - Priority: P0
   - Dependency: MVP-ECONOMY-001, `docs/BALANCE.md`
-  - Current Status: Review
+  - Current Status: Approved
   - Definition of Done:
     - [x] Reward sources are documented.
     - [x] Sinks are documented.
@@ -601,7 +601,7 @@ This document is a planning checklist only. It does not approve new mechanics, b
 - [x] MVP-TEST-001 - Define test strategy
   - Priority: P0
   - Dependency: `docs/TECH_ARCHITECTURE.md`, `docs/STYLE_GUIDE.md`
-  - Current Status: Review
+  - Current Status: Approved
   - Definition of Done:
     - [x] Automated and manual testing expectations are documented.
     - [x] High-risk systems have required verification plans.
@@ -616,7 +616,7 @@ This document is a planning checklist only. It does not approve new mechanics, b
 - [x] MVP-TEST-002 - Define Roblox Studio verification checklist
   - Priority: P1
   - Dependency: MVP-TEST-001
-  - Current Status: Review
+  - Current Status: Approved
   - Definition of Done:
     - [x] Manual Studio verification steps are documented.
     - [x] Client-server validation checks are documented.
@@ -633,7 +633,7 @@ This document is a planning checklist only. It does not approve new mechanics, b
 - [x] MVP-POLISH-001 - Define MVP polish bar
   - Priority: P2
   - Dependency: Core systems documented, UI guidelines expanded
-  - Current Status: Review
+  - Current Status: Approved
   - Definition of Done:
     - [x] Required polish categories are documented.
     - [x] Optional polish is separated from MVP blockers.
@@ -648,7 +648,7 @@ This document is a planning checklist only. It does not approve new mechanics, b
 - [x] MVP-POLISH-002 - Final MVP readiness review
   - Priority: P0
   - Dependency: All P0 tasks complete or formally waived
-  - Current Status: Review
+  - Current Status: Approved
   - Definition of Done:
     - [x] All P0 checklist items are Done or explicitly waived.
     - [x] All required documents are updated.

@@ -20,7 +20,7 @@ Allowed values:
 - Approved
 - Blocked
 
-Current Status: Review
+Current Status: Approved
 
 # Priority
 

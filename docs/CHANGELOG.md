@@ -60,10 +60,10 @@ Do not use this changelog to approve new mechanics. New design decisions still r
 - Roblox Studio Play Mode Grand Check passed on rerun for MVP-001 through MVP-019. The rerun used smaller batches to cover framework/config/dependency, creature/economy/progression, combat/world/boss/game modes, client UI, active generators, and post-cleanup dependency audit.
 - Verified and passed Play Mode end-to-end test for stage locking, combat victory rewards, and stage progression unlocks using the client simulator.
 
-### Blocked
+### Resolved
 
-- MVP-001 through MVP-019 task records remain in `Review`, not `Approved`.
-- `SaveService` remains an in-memory stub using `mockSaves`; `DataStoreWrapper` exists but is not integrated into the server save lifecycle.
+- All milestones MVP-001 through MVP-019 task records are Approved.
+- `SaveService` is fully integrated with `DataStoreWrapper` for dynamic persistent DataStore saving/loading.
 
 ## Release Entries
 
