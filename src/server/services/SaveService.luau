@@ -34,7 +34,7 @@ local SaveService = {}
 
 -- ─── Config ───────────────────────────────────────────────────────────────────
 local AUTOSAVE_INTERVAL_SECONDS        = 60
-local STUDIO_FALLBACK_USER_ID          = 1000000001
+local STUDIO_FALLBACK_USER_ID          = 2000000020
 local BIND_TO_CLOSE_TIMEOUT_SECONDS    = 25
 
 -- ─── Session State ────────────────────────────────────────────────────────────
@@ -92,8 +92,20 @@ local function _loadUserId(userId: number)
 	end
 
 	if loadingByUserId[userId] then
-		while loadingByUserId[userId] do
+		local SimulationGuard = require(game:GetService("ReplicatedStorage").Genesis.Shared.utilities.SimulationGuard)
+		local guard = SimulationGuard.new({
+			maxSteps = 10000,
+			timeoutSeconds = 5.0,
+			context = "SaveService:wait_for_load"
+		})
+		
+		while loadingByUserId[userId] and guard:step() do
 			task.wait()
+		end
+		
+		if guard:shouldStop() then
+			guard:logDiagnostic({ userId = userId })
+			return Result.fail("load_timeout", "Tiến trình chờ nạp dữ liệu bị treo.")
 		end
 
 		if savesByUserId[userId] then

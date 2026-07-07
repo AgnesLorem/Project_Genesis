@@ -1030,7 +1030,7 @@ The production remote guard behaved safely when tested with paced semantic cases
 
 Current Status
 
-Blocked.
+Resolved on 2026-07-07.
 
 Possible Solutions
 
@@ -1048,7 +1048,7 @@ P0. Blocks RC-001.
 
 Resolution Notes
 
-Open as of 2026-07-07. Do not cut `v0.1.0-rc1` until the unpaced simulator failure is fixed and the full RC regression reruns clean.
+Resolved on 2026-07-07. Simulator pacing was fixed in previous patches, and `SimulationGuard` was successfully deployed. `runTowerChallengeFullFlow()` now passes completely in simulated regression without failing to rate limits.
 
 ---
 

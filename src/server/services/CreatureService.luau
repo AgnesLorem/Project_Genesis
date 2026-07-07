@@ -78,11 +78,25 @@ function CreatureService.addCreatureXp(player: Player, instanceId: string, amoun
 		return level * 100
 	end
 
+	local SimulationGuard = require(game:GetService("ReplicatedStorage").Genesis.Shared.utilities.SimulationGuard)
+	local guard = SimulationGuard.new({
+		maxSteps = 500, -- max 500 level ups at once
+		timeoutSeconds = 0.5,
+		noProgressLimit = 100,
+		context = "CreatureService:addXp"
+	})
+
 	local leveledUp = false
-	while creature.xp >= getXpNeeded(creature.level) do
+	while creature.xp >= getXpNeeded(creature.level) and guard:step() do
 		creature.xp -= getXpNeeded(creature.level)
 		creature.level += 1
 		leveledUp = true
+		guard:markProgress()
+	end
+	
+	if guard:shouldStop() then
+		guard:logDiagnostic({ creatureId = creature.creatureId, finalLevel = creature.level, remainingXp = creature.xp })
+		warn("[CreatureService] Loop stalled while leveling up instance: " .. tostring(instanceId))
 	end
 
 	SaveService.savePlayer(player)

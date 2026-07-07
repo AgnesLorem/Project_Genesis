@@ -201,11 +201,20 @@ function BattleSession:_executeAction(actor)
 	actor.gauge = 0
 end
 
+local SimulationGuard = require(game:GetService("ReplicatedStorage").Genesis.Shared.utilities.SimulationGuard)
+
 -- Simulates the entire battle instantly
 function BattleSession:simulate()
 	local maxTurns = self.config.maxTurnSafeguard
 	
-	while self.turnCount < maxTurns do
+	local guard = SimulationGuard.new({
+		maxSteps = 50000,
+		timeoutSeconds = 2.0,
+		noProgressLimit = 1000,
+		context = "BattleSession:simulate"
+	})
+	
+	while guard:step() do
 		-- Check win/loss
 		if self:_isTeamDead(self.teamA) then
 			return { isVictory = false, timeline = self.timeline, summary = { turns = self.turnCount, reason = "defeat" } }
@@ -237,6 +246,7 @@ function BattleSession:simulate()
 		for _, actor in ipairs(actorsThisTick) do
 			if actor.hp > 0 then -- might have died during this tick from another actor
 				self:_executeAction(actor)
+				guard:markProgress()
 				
 				-- Recheck win/loss immediately after action to prevent dead units acting
 				if self:_isTeamDead(self.teamA) or self:_isTeamDead(self.teamB) then
@@ -244,6 +254,21 @@ function BattleSession:simulate()
 				end
 			end
 		end
+		
+		-- Also break immediately if win/loss happened during the tick
+		if self:_isTeamDead(self.teamA) or self:_isTeamDead(self.teamB) then
+			break -- let the next tick handle returning
+		end
+	end
+	
+	if guard:shouldStop() then
+		local p1 = self.units[1] and { id = self.units[1].id, hp = self.units[1].hp, spd = self.units[1].spd, gauge = self.units[1].gauge }
+		local p2 = self.units[2] and { id = self.units[2].id, hp = self.units[2].hp, spd = self.units[2].spd, gauge = self.units[2].gauge }
+		guard:logDiagnostic({
+			turnCount = self.turnCount,
+			units = { p1, p2 }
+		})
+		return { isStalled = true, failReason = guard:failReason(), timeline = self.timeline, summary = { turns = self.turnCount } }
 	end
 	
 	return { isVictory = false, timeline = self.timeline, summary = { turns = self.turnCount, reason = "max_turns_safeguard" } }

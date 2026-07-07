@@ -35,6 +35,7 @@ Do not use this changelog to approve new mechanics. New design decisions still r
 - MVP-016 added item and equipment data registries, server-authoritative validations, and offset offline calculations.
 - MVP-017 added skill configuration structures, skill cooldown triggers, and skill damage simulation integration.
 - MVP-019 added Bio Generator, DNA Generator, and Advanced Bio Generator configuration registries along with `GeneratorService` for passive Biomass/DNA accumulation.
+- MVP-020 added Shared `SimulationGuard` utility to prevent server infinite loops during combat, persistence, and progression logic.
 - Persistent world stage progression and save migrations from v0 to v3 inside `MigrationManager.luau` and `SaveService.luau`.
 - Server-authoritative stage-lock checks and next-stage unlocking on victory inside `RemoteHandlers.luau` (`RequestStoryBattle` / `RequestWorldSnapshot`).
 - DNA victory rewards: grants 50 DNA (story), 100 DNA (boss), and 150 DNA (challenge) on player victory, returning reward details in client payloads.

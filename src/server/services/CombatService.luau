@@ -187,6 +187,10 @@ local function _runBattle(playerTeam: { any }, enemyTeam: { any })
 	local result = session:simulate()
 	session = nil
 
+	if result.isStalled then
+		return Result.fail("simulation_stalled", "The battle simulation timed out or stalled.")
+	end
+
 	return Result.ok(result)
 end
 

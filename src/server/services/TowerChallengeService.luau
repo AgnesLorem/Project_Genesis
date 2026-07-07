@@ -135,6 +135,10 @@ local function _resolveBattle(playerInstanceId: string, playerCreatureId: string
 	)
 	local battleValue = session:simulate()
 	session = nil
+	
+	if battleValue.isStalled then
+		return Result.fail("simulation_stalled", "The tower battle simulation timed out or stalled.")
+	end
 
 	return Result.ok(battleValue)
 end

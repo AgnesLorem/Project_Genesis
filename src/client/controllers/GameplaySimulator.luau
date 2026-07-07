@@ -1607,7 +1607,13 @@ function GameplaySimulator.reconnectValidation()
 		end)
 	end)
 	
-	while not complete do task.wait(0.2) end
+	local SimulationGuard = require(game:GetService("ReplicatedStorage").Genesis.Shared.utilities.SimulationGuard)
+	local guard = SimulationGuard.new({ timeoutSeconds = 10.0, context = "GameplaySimulator:ReconnectWait" })
+	while not complete and guard:step() do task.wait(0.2) end
+	if guard:shouldStop() then
+		warn("[GameplaySimulator] Reconnect flow timed out waiting for complete.")
+		return { success = false, message = "reconnect_timeout" }
+	end
 	print("[GameplaySimulator] Reconnect flow completed.")
 	print("[GameplaySimulator] SCREENSHOT TRIGGER: Reconnect restored state")
 	return { success = true }
@@ -1625,9 +1631,15 @@ function GameplaySimulator.runProgressionLoop()
 	local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
 	local mainUI = playerGui:WaitForChild("GenesisMainUI")
 	
+	local SimulationGuard = require(game:GetService("ReplicatedStorage").Genesis.Shared.utilities.SimulationGuard)
+	local uiGuard = SimulationGuard.new({ timeoutSeconds = 10.0, context = "GameplaySimulator:UIWait" })
+	
 	print("[GameplaySimulator] Waiting for UI to initialize...")
-	while not mainUI:FindFirstChild("StarterSelectionScreen") and not mainUI:FindFirstChild("WorldScreen") do
+	while not mainUI:FindFirstChild("StarterSelectionScreen") and not mainUI:FindFirstChild("WorldScreen") and uiGuard:step() do
 		task.wait(0.2)
+	end
+	if uiGuard:shouldStop() then
+		error("[GameplaySimulator] Timeout waiting for Starter/World Screen to initialize.")
 	end
 	print("[GameplaySimulator] UI initialized.")
 
