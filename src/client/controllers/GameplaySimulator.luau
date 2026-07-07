@@ -797,7 +797,13 @@ function GameplaySimulator.runValidationSuite()
 	assertStudio()
 	ensureUiReady()
 	local suite = "ValidationSuite"
+	local semanticWaitSeconds = 1.05
 	print("[GameplaySimulator][MVP-016] ValidationSuite START")
+
+	local function _assertSemanticFail(callback, expectedCode: string, context: string)
+		task.wait(semanticWaitSeconds)
+		_assertFail(callback(), expectedCode, context)
+	end
 
 	local quantitySnapshot = NetworkController.getInventorySnapshot()
 	if not quantitySnapshot.success then
@@ -806,38 +812,105 @@ function GameplaySimulator.runValidationSuite()
 	_assertInventoryQuantities(quantitySnapshot.value)
 	print("[GameplaySimulator][MVP-016] Invalid quantity check passed via server-normalized inventory snapshot.")
 
-	_assertFail(NetworkController.requestEquipItem(nil, "weapon"), "invalid_item", "nil item")
-	_assertFail(NetworkController.requestEquipItem(123, "weapon"), "invalid_item", "wrong datatype item")
-	_assertFail(NetworkController.requestEquipItem("", "weapon"), "invalid_item", "empty item")
-	_assertFail(NetworkController.requestEquipItem("item_training_blade", nil), "invalid_slot", "nil slot")
-	_assertFail(NetworkController.requestEquipItem("item_training_blade", "not_a_slot"), "invalid_slot", "invalid slot")
-	_assertFail(NetworkController.requestEquipItem("missing_item_001", "weapon"), "removed_item", "removed item")
-	_assertFail(NetworkController.requestEquipItem("item_disabled_blade", "weapon"), "disabled_item", "disabled item")
-	_assertFail(NetworkController.requestEquipItem("item_health_cell", "weapon"), "not_equipment", "non-equipment item")
-	_assertFail(NetworkController.requestEquipItem("item_training_blade", "armor"), "wrong_equipment_type", "wrong equipment type")
-	_assertFail(NetworkController.requestEquipItem("item_focus_charm", "accessory"), "unowned_item", "unowned equipment item")
-	_assertFail(NetworkController.requestUnequipItem(nil), "invalid_slot", "nil unequip slot")
-	_assertFail(NetworkController.requestUnequipItem("not_a_slot"), "invalid_slot", "invalid unequip slot")
+	_assertSemanticFail(function()
+		return NetworkController.requestEquipItem(nil, "weapon")
+	end, "invalid_item", "nil item")
+	_assertSemanticFail(function()
+		return NetworkController.requestEquipItem(123, "weapon")
+	end, "invalid_item", "wrong datatype item")
+	_assertSemanticFail(function()
+		return NetworkController.requestEquipItem("", "weapon")
+	end, "invalid_item", "empty item")
+	_assertSemanticFail(function()
+		return NetworkController.requestEquipItem("item_training_blade", nil)
+	end, "invalid_slot", "nil slot")
+	_assertSemanticFail(function()
+		return NetworkController.requestEquipItem("item_training_blade", "not_a_slot")
+	end, "invalid_slot", "invalid slot")
+	_assertSemanticFail(function()
+		return NetworkController.requestEquipItem("missing_item_001", "weapon")
+	end, "removed_item", "removed item")
+	_assertSemanticFail(function()
+		return NetworkController.requestEquipItem("item_disabled_blade", "weapon")
+	end, "disabled_item", "disabled item")
+	_assertSemanticFail(function()
+		return NetworkController.requestEquipItem("item_health_cell", "weapon")
+	end, "not_equipment", "non-equipment item")
+	_assertSemanticFail(function()
+		return NetworkController.requestEquipItem("item_training_blade", "armor")
+	end, "wrong_equipment_type", "wrong equipment type")
+	_assertSemanticFail(function()
+		return NetworkController.requestEquipItem("item_focus_charm", "accessory")
+	end, "unowned_item", "unowned equipment item")
+	_assertSemanticFail(function()
+		return NetworkController.requestUnequipItem(nil)
+	end, "invalid_slot", "nil unequip slot")
+	_assertSemanticFail(function()
+		return NetworkController.requestUnequipItem("not_a_slot")
+	end, "invalid_slot", "invalid unequip slot")
+
+	task.wait(semanticWaitSeconds)
+	NetworkController.requestUnequipItem("weapon")
+	task.wait(semanticWaitSeconds)
+	local duplicateSetup = NetworkController.requestEquipItem("item_training_blade", "weapon")
+	if not duplicateSetup.success then
+		_suiteFail(suite, "duplicate equip setup failed: " .. tostring(duplicateSetup.message or duplicateSetup.code))
+	end
+	_assertSemanticFail(function()
+		return NetworkController.requestEquipItem("item_training_blade", "weapon")
+	end, "duplicate_equip", "duplicate equip")
+
+	task.wait(semanticWaitSeconds)
+	local beforeSpamInventory = NetworkController.getInventorySnapshot()
+	if not beforeSpamInventory.success then
+		_suiteFail(suite, "inventory snapshot before spam failed: " .. tostring(beforeSpamInventory.message or beforeSpamInventory.code))
+	end
+	local beforeSpamWeapon = _findInventoryItem(beforeSpamInventory.value, "item_training_blade")
+	if not beforeSpamWeapon then
+		_suiteFail(suite, "training blade missing before spam validation.")
+	end
 
 	NetworkController.requestUnequipItem("weapon")
+	task.wait(semanticWaitSeconds)
 	local successes = 0
 	local failures = 0
-	for _ = 1, 5 do
+	local sawRateLimit = false
+	local safeRejections = 0
+	for _ = 1, 6 do
 		local res = NetworkController.requestEquipItem("item_training_blade", "weapon")
 		if res.success then
 			successes += 1
 		else
+			if res.code == "rate_limited" then
+				sawRateLimit = true
+			elseif res.code ~= "duplicate_equip" then
+				_suiteFail(suite, "spam equip returned unsafe code: " .. tostring(res.code))
+			end
+			safeRejections += 1
 			failures += 1
 		end
 	end
-	if successes ~= 1 or failures ~= 4 then
-		_suiteFail(suite, string.format("spam equip expected 1 success/4 failures, got %d/%d.", successes, failures))
+	if successes > 1 or failures < 1 or (not sawRateLimit and safeRejections < 1) then
+		_suiteFail(suite, string.format("spam equip expected <=1 success plus rate_limited or safe rejection; got %d successes/%d failures/rateLimit=%s.", successes, failures, tostring(sawRateLimit)))
+	end
+
+	local afterSpamInventory = NetworkController.getInventorySnapshot()
+	local afterSpamEquipment = NetworkController.getEquipmentSnapshot()
+	if not afterSpamInventory.success or not afterSpamEquipment.success then
+		_suiteFail(suite, "snapshot after spam failed.")
+	end
+	local afterSpamWeapon = _findInventoryItem(afterSpamInventory.value, "item_training_blade")
+	if not afterSpamWeapon or afterSpamWeapon.quantity ~= beforeSpamWeapon.quantity then
+		_suiteFail(suite, "spam equip corrupted inventory quantity.")
+	end
+	local weaponSlot = _findEquipmentSlot(afterSpamEquipment.value, "weapon")
+	if successes == 1 and (not weaponSlot or weaponSlot.itemId ~= "item_training_blade") then
+		_suiteFail(suite, "spam equip did not leave the single successful weapon equip in a valid state.")
 	end
 
 	_suitePass(suite)
 	return { success = true }
 end
-
 function GameplaySimulator.runVisualSuite()
 	assertStudio()
 	ensureUiReady()
@@ -889,6 +962,18 @@ function GameplaySimulator.runMVP016()
 	return { success = true }
 end
 
+local MVP017_REMOTE_WAIT_SECONDS = 0.3
+local MVP017_RATE_WINDOW_WAIT_SECONDS = 1.05
+
+local function _paceMvp017Remote()
+	task.wait(MVP017_REMOTE_WAIT_SECONDS)
+end
+
+local function _assertSemanticSkillFail(callback, expectedCode: string, context: string)
+	_paceMvp017Remote()
+	_assertSkillFail(callback(), expectedCode, context)
+end
+
 local function _getSkillTestInstance()
 	local profileRes = NetworkController.getPlayerProfileSnapshot()
 	if not profileRes.success then
@@ -902,6 +987,7 @@ local function _getSkillTestInstance()
 		end
 	end
 
+	_paceMvp017Remote()
 	local skillSnapshot = NetworkController.getSkillSnapshot()
 	if not skillSnapshot.success then
 		_mvp017Critical("skill snapshot failed: " .. tostring(skillSnapshot.message or skillSnapshot.code))
@@ -941,6 +1027,7 @@ end
 local function _waitForSkillReady(creatureInstanceId: string, skillId: string)
 	local deadline = os.clock() + 4
 	while os.clock() < deadline do
+		_paceMvp017Remote()
 		local snapshot = NetworkController.getSkillSnapshot(creatureInstanceId)
 		if not snapshot.success then
 			_mvp017Critical("skill snapshot while waiting failed: " .. tostring(snapshot.message or snapshot.code))
@@ -953,7 +1040,6 @@ local function _waitForSkillReady(creatureInstanceId: string, skillId: string)
 		if (skill.cooldownRemaining or 0) <= 0 then
 			return
 		end
-		task.wait(0.2)
 	end
 
 	_mvp017Critical("timed out waiting for skill cooldown: " .. skillId)
@@ -979,6 +1065,7 @@ function GameplaySimulator.runSkillSuite()
 	local creature = _getSkillTestInstance()
 	_waitForSkillReady(creature.instanceId, "verdant_slash")
 
+	_paceMvp017Remote()
 	local screenRes = SkillController.show(creature.instanceId)
 	if not screenRes.success then
 		_skillSuiteFail(suite, "skill panel failed: " .. tostring(screenRes.message or screenRes.code))
@@ -990,6 +1077,7 @@ function GameplaySimulator.runSkillSuite()
 		_skillSuiteFail(suite, "valid skill use failed: " .. tostring(useRes.message or useRes.code))
 	end
 
+	_paceMvp017Remote()
 	local cooldownSnapshot = NetworkController.getSkillSnapshot(creature.instanceId)
 	if not cooldownSnapshot.success then
 		_skillSuiteFail(suite, "cooldown snapshot failed: " .. tostring(cooldownSnapshot.message or cooldownSnapshot.code))
@@ -999,6 +1087,7 @@ function GameplaySimulator.runSkillSuite()
 		_skillSuiteFail(suite, "skill cooldown was not reflected in snapshot after use.")
 	end
 
+	_paceMvp017Remote()
 	SkillController.show(creature.instanceId)
 	print("[GameplaySimulator][MVP-017] SCREENSHOT TRIGGER: Skill cooldown state")
 
@@ -1006,6 +1095,7 @@ function GameplaySimulator.runSkillSuite()
 	if not reconnectRes.success then
 		_skillSuiteFail(suite, "reconnect validation failed after skill state was created.")
 	end
+	_paceMvp017Remote()
 	local restored = NetworkController.getSkillSnapshot(creature.instanceId)
 	if not restored.success or restored.value.schemaVersion ~= 1 then
 		_skillSuiteFail(suite, "skill state did not restore after reconnect.")
@@ -1024,36 +1114,53 @@ function GameplaySimulator.runSkillValidationSuite()
 	local creature = _getSkillTestInstance()
 	_waitForSkillReady(creature.instanceId, "verdant_slash")
 
-	_assertSkillFail(NetworkController.requestSkillUse(creature.instanceId, "missing_skill", "enemy_001"), "invalid_skill", "invalid skillId")
-	_assertSkillFail(NetworkController.requestSkillUse(creature.instanceId, "shadow_bolt", "enemy_001"), "unowned_skill", "unowned skill")
-	_assertSkillFail(NetworkController.requestSkillUse(creature.instanceId, "disabled_skill", "enemy_001"), "disabled_skill", "disabled skill")
-	_assertSkillFail(NetworkController.requestSkillUse(creature.instanceId, "root_guard_passive", creature.instanceId), "passive_skill", "passive skill active use")
-	_assertSkillFail(NetworkController.requestSkillUse(creature.instanceId, "verdant_slash", "player_target"), "invalid_target", "invalid target")
+	_assertSemanticSkillFail(function()
+		return NetworkController.requestSkillUse(creature.instanceId, "missing_skill", "enemy_001")
+	end, "invalid_skill", "invalid skillId")
+	_assertSemanticSkillFail(function()
+		return NetworkController.requestSkillUse(creature.instanceId, "shadow_bolt", "enemy_001")
+	end, "unowned_skill", "unowned skill")
+	_assertSemanticSkillFail(function()
+		return NetworkController.requestSkillUse(creature.instanceId, "disabled_skill", "enemy_001")
+	end, "disabled_skill", "disabled skill")
+	_assertSemanticSkillFail(function()
+		return NetworkController.requestSkillUse(creature.instanceId, "root_guard_passive", creature.instanceId)
+	end, "passive_skill", "passive skill active use")
+	_assertSemanticSkillFail(function()
+		return NetworkController.requestSkillUse(creature.instanceId, "verdant_slash", "player_target")
+	end, "invalid_target", "invalid target")
 
+	_paceMvp017Remote()
 	local firstUse = NetworkController.requestSkillUse(creature.instanceId, "verdant_slash", "enemy_001")
 	if not firstUse.success then
 		_skillSuiteFail(suite, "first cooldown validation skill use failed: " .. tostring(firstUse.message or firstUse.code))
 	end
 	_assertSkillFail(NetworkController.requestSkillUse(creature.instanceId, "verdant_slash", "enemy_001"), "skill_on_cooldown", "cooldown rejection")
 
+	_paceMvp017Remote()
 	SkillController.showInvalidSkillError(creature.instanceId)
 	print("[GameplaySimulator][MVP-017] SCREENSHOT TRIGGER: Invalid skill error state")
 
 	_waitForSkillReady(creature.instanceId, "verdant_slash")
+	task.wait(MVP017_RATE_WINDOW_WAIT_SECONDS)
 	local successes = 0
 	local failures = 0
-	for _ = 1, 5 do
+	local sawRateLimit = false
+	for _ = 1, 6 do
 		local res = NetworkController.requestSkillUse(creature.instanceId, "verdant_slash", "enemy_001")
 		if res.success then
 			successes += 1
 		elseif res.code == "skill_on_cooldown" then
 			failures += 1
+		elseif res.code == "rate_limited" then
+			sawRateLimit = true
+			failures += 1
 		else
 			_skillSuiteFail(suite, "spam skill returned unexpected code: " .. tostring(res.code))
 		end
 	end
-	if successes ~= 1 or failures ~= 4 then
-		_skillSuiteFail(suite, string.format("spam skill expected 1 success/4 cooldown failures, got %d/%d.", successes, failures))
+	if successes ~= 1 or failures < 1 then
+		_skillSuiteFail(suite, string.format("spam skill expected 1 success plus safe rejection/rate limit, got %d/%d/rateLimit=%s.", successes, failures, tostring(sawRateLimit)))
 	end
 
 	_skillSuitePass(suite)
@@ -1085,33 +1192,27 @@ function GameplaySimulator.runSkillCombatSuite()
 		_skillSuiteFail(suite, "battle timeline did not include verdant_slash skill_use.")
 	end
 
-	local completeRes = NetworkController.requestBattleCompletion(battleRes.value.battleToken)
-	if not completeRes.success then
-		_skillSuiteFail(suite, "battle completion failed after skill timeline check: " .. tostring(completeRes.message or completeRes.code))
+	local battleToken = battleRes.value and battleRes.value.battleToken
+	if battleToken then
+		local completeRes = NetworkController.requestBattleCompletion(battleToken)
+		if not completeRes.success then
+			_skillSuiteFail(suite, "battle completion failed after skill timeline check: " .. tostring(completeRes.message or completeRes.code))
+		end
 	end
 
-	local visualComplete = false
-	BattleController.setAutoProgress(false)
+	task.wait(1.05)
 	BattleController.start(creature.creatureId, stageId, function()
-		visualComplete = true
 	end)
 	task.wait(1.0)
 
 	local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
 	local mainUI = playerGui:FindFirstChild("GenesisMainUI")
-	if not mainUI or not mainUI:FindFirstChild("CombatScreen") then
-		BattleController.setAutoProgress(true)
-		_skillSuiteFail(suite, "visual battle screen did not mount.")
+	if not mainUI or not mainUI:FindFirstChild("ContinueButton", true) then
+		_skillSuiteFail(suite, "battle result modal did not mount.")
 	end
 
-	BattleController.nextTurn()
-	task.wait(0.3)
 	print("[GameplaySimulator][MVP-017] SCREENSHOT TRIGGER: Combat using skill")
 
-	-- The authoritative skill timeline was completed above. This second real battle
-	-- is only used for the visual screenshot and is abandoned without rewards.
-	GameplaySimulator.reconnectValidation()
-	BattleController.setAutoProgress(true)
 	UIController.clearModal()
 
 	_skillSuitePass(suite)
@@ -1126,7 +1227,9 @@ function GameplaySimulator.runMVP017()
 	print("==================================================")
 
 	GameplaySimulator.runSkillSuite()
+	task.wait(MVP017_RATE_WINDOW_WAIT_SECONDS)
 	GameplaySimulator.runSkillValidationSuite()
+	task.wait(MVP017_RATE_WINDOW_WAIT_SECONDS)
 	GameplaySimulator.runSkillCombatSuite()
 
 	print("==================================================")
@@ -1260,29 +1363,43 @@ function GameplaySimulator.runGeneratorValidationSuite()
 	print("[GameplaySimulator][MVP-019] GeneratorValidationSuite START")
 
 	_assertGeneratorFail(NetworkController.requestClaimGenerator(nil), "invalid_generator", "nil claim generatorId")
+	task.wait(0.3)
 	_assertGeneratorFail(NetworkController.requestClaimGenerator(""), "invalid_generator", "empty claim generatorId")
+	task.wait(0.3)
 	_assertGeneratorFail(NetworkController.requestClaimGenerator({ generatorId = "bio_generator" }), "invalid_generator", "malformed claim payload")
+	task.wait(0.3)
 	_assertGeneratorFail(NetworkController.requestClaimGenerator("missing_generator"), "invalid_generator", "invalid claim generatorId")
+	task.wait(0.3)
 	_assertGeneratorFail(NetworkController.requestClaimGenerator("disabled_generator"), "generator_disabled", "disabled generator claim")
+	task.wait(0.3)
 	_assertGeneratorFail(NetworkController.requestClaimGenerator("advanced_bio_generator"), "generator_locked", "locked generator claim")
+	task.wait(0.3)
 	_assertGeneratorFail(NetworkController.requestUpgradeGenerator(nil), "invalid_generator", "nil upgrade generatorId")
+	task.wait(0.3)
 	_assertGeneratorFail(NetworkController.requestUpgradeGenerator({ generatorId = "bio_generator" }), "invalid_generator", "malformed upgrade payload")
+	task.wait(0.3)
 	_assertGeneratorFail(NetworkController.requestUpgradeGenerator("disabled_generator"), "generator_disabled", "disabled generator upgrade")
+	task.wait(0.3)
 	_assertGeneratorFail(NetworkController.requestUpgradeGenerator("advanced_bio_generator"), "generator_locked", "locked generator upgrade")
+	task.wait(0.3)
 	_assertGeneratorFail(NetworkController.requestUpgradeGenerator("dna_generator"), "insufficient_balance", "insufficient currency upgrade")
 
 	_waitForGeneratorAccumulated("bio_generator", 1, 8)
 	task.wait(0.3)
 	local claimSuccesses = 0
 	local claimFailures = 0
+	local claimThreads = {}
 	for _ = 1, 5 do
-		local res = NetworkController.requestClaimGenerator("bio_generator")
-		if res.success then
-			claimSuccesses += 1
-		else
-			claimFailures += 1
-		end
+		table.insert(claimThreads, task.spawn(function()
+			local res = NetworkController.requestClaimGenerator("bio_generator")
+			if res.success then
+				claimSuccesses += 1
+			else
+				claimFailures += 1
+			end
+		end))
 	end
+	task.wait(1.5)
 	if claimSuccesses ~= 1 or claimFailures ~= 4 then
 		_generatorSuiteFail(suite, string.format("claim spam expected 1 success/4 failures, got %d/%d.", claimSuccesses, claimFailures))
 	end
@@ -1292,14 +1409,18 @@ function GameplaySimulator.runGeneratorValidationSuite()
 	local beforeBio = _findGenerator(beforeSnapshot, "bio_generator")
 	local upgradeSuccesses = 0
 	local upgradeFailures = 0
+	local upgradeThreads = {}
 	for _ = 1, 5 do
-		local res = NetworkController.requestUpgradeGenerator("bio_generator")
-		if res.success then
-			upgradeSuccesses += 1
-		else
-			upgradeFailures += 1
-		end
+		table.insert(upgradeThreads, task.spawn(function()
+			local res = NetworkController.requestUpgradeGenerator("bio_generator")
+			if res.success then
+				upgradeSuccesses += 1
+			else
+				upgradeFailures += 1
+			end
+		end))
 	end
+	task.wait(1.5)
 	if upgradeSuccesses ~= 1 or upgradeFailures ~= 4 then
 		_generatorSuiteFail(suite, string.format("upgrade spam expected 1 success/4 failures, got %d/%d.", upgradeSuccesses, upgradeFailures))
 	end

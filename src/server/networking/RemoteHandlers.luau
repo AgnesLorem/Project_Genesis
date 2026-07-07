@@ -6,6 +6,7 @@
 	Maps RemoteFunctions to internal Services with Middleware protections.
 --]]
 
+local Players = game:GetService("Players")
 local Network = require(game:GetService("ReplicatedStorage").Genesis.Shared.remotes.Network)
 local Result = require(game:GetService("ReplicatedStorage").Genesis.Shared.utilities.Result)
 
@@ -13,7 +14,13 @@ local SaveService = require(script.Parent.Parent.services.SaveService)
 local CreatureService = require(script.Parent.Parent.services.CreatureService)
 local CollectionService = require(script.Parent.Parent.services.CollectionService)
 local CurrencyService = require(script.Parent.Parent.services.CurrencyService)
+local EquipmentService = require(script.Parent.Parent.services.EquipmentService)
+local EvolutionService = require(script.Parent.Parent.services.EvolutionService)
+local GeneratorService = require(script.Parent.Parent.services.GeneratorService)
 local GameModeService = require(script.Parent.Parent.services.GameModeService)
+local ItemService = require(script.Parent.Parent.services.ItemService)
+local SkillService = require(script.Parent.Parent.services.SkillService)
+local TowerChallengeService = require(script.Parent.Parent.services.TowerChallengeService)
 local RemoteMiddleware = require(script.Parent.RemoteMiddleware)
 
 local CreatureRegistry = require(game:GetService("ReplicatedStorage").Genesis.Shared.data.CreatureRegistry)
@@ -41,6 +48,22 @@ local STAGE_ENCOUNTERS = {
 -- reward_combat source; final balance values remain TBD in docs/BALANCE.md.
 local STORY_VICTORY_BIOMASS = 50
 local STORY_VICTORY_DNA = 50
+local STORY_BATTLE_COOLDOWN_SECONDS = 1.0
+
+local storyBattleLastRequestByUserId: { [number]: number } = {}
+
+local function _tryReserveStoryBattle(player: Player)
+	local userId = player.UserId
+	local now = os.clock()
+	local lastRequestAt = storyBattleLastRequestByUserId[userId]
+
+	if lastRequestAt and now - lastRequestAt < STORY_BATTLE_COOLDOWN_SECONDS then
+		return Result.fail("battle_rate_limited", "Story battle requests are cooling down.")
+	end
+
+	storyBattleLastRequestByUserId[userId] = now
+	return Result.ok(now)
+end
 
 local function _buildPublicConfigsCache()
 	local all = CreatureRegistry.getAllCreatures()
@@ -79,6 +102,10 @@ function RemoteHandlers.init()
 	-- Pre-build caches
 	cachedPublicConfigs = _buildPublicConfigsCache()
 
+	Players.PlayerRemoving:Connect(function(player)
+		storyBattleLastRequestByUserId[player.UserId] = nil
+	end)
+
 	-- ─── Remotes ─────────────────────────────────────────────────────────────────
 	local GetPlayerProfileSnapshot = Network.getRemoteFunction("GetPlayerProfileSnapshot")
 	local GetStarterChoices = Network.getRemoteFunction("GetStarterChoices")
@@ -89,6 +116,19 @@ function RemoteHandlers.init()
 	local GetCreatureInventory = Network.getRemoteFunction("GetCreatureInventory")
 	local SetActiveCreature = Network.getRemoteFunction("SetActiveCreature")
 	local GetCreatureConfigsPublic = Network.getRemoteFunction("GetCreatureConfigsPublic")
+	local GetSkillSnapshot = Network.getRemoteFunction("GetSkillSnapshot")
+	local RequestSkillUse = Network.getRemoteFunction("RequestSkillUse")
+	local GetGeneratorSnapshot = Network.getRemoteFunction("GetGeneratorSnapshot")
+	local RequestClaimGenerator = Network.getRemoteFunction("RequestClaimGenerator")
+	local RequestUpgradeGenerator = Network.getRemoteFunction("RequestUpgradeGenerator")
+	local RequestEvolution = Network.getRemoteFunction("RequestEvolution")
+	local GetTowerChallengeSnapshot = Network.getRemoteFunction("GetTowerChallengeSnapshot")
+	local RequestTowerChallengeStart = Network.getRemoteFunction("RequestTowerChallengeStart")
+	local RequestTowerChallengeComplete = Network.getRemoteFunction("RequestTowerChallengeComplete")
+	local GetInventorySnapshot = Network.getRemoteFunction("GetInventorySnapshot")
+	local GetEquipmentSnapshot = Network.getRemoteFunction("GetEquipmentSnapshot")
+	local RequestEquipItem = Network.getRemoteFunction("RequestEquipItem")
+	local RequestUnequipItem = Network.getRemoteFunction("RequestUnequipItem")
 
 	-- ─── Handlers ────────────────────────────────────────────────────────────────
 
@@ -185,6 +225,9 @@ function RemoteHandlers.init()
 			return Result.fail("invalid_request", "Player has no active creature assigned.")
 		end
 
+		local cooldownRes = _tryReserveStoryBattle(player)
+		if not cooldownRes.success then return cooldownRes end
+
 		local battleRes = GameModeService.resolveModeBattle(player, {
 			modeId = "story",
 			playerCreatureId = activeCreatureId,
@@ -278,6 +321,57 @@ function RemoteHandlers.init()
 	GetCreatureConfigsPublic.OnServerInvoke = RemoteMiddleware.createHandler("GetCreatureConfigsPublic", function(player)
 		-- O(1) Cache hit
 		return Result.ok(cachedPublicConfigs)
+	end)
+	GetSkillSnapshot.OnServerInvoke = RemoteMiddleware.createHandler("GetSkillSnapshot", function(player, creatureInstanceId)
+		return SkillService.getSnapshot(player, creatureInstanceId)
+	end)
+
+	RequestSkillUse.OnServerInvoke = RemoteMiddleware.createHandler("RequestSkillUse", function(player, creatureInstanceId, skillId, targetId)
+		return SkillService.tryUseSkill(player, creatureInstanceId, skillId, targetId)
+	end)
+
+	GetGeneratorSnapshot.OnServerInvoke = RemoteMiddleware.createHandler("GetGeneratorSnapshot", function(player, generatorId)
+		return GeneratorService.getSnapshotResult(player, generatorId)
+	end)
+
+	RequestClaimGenerator.OnServerInvoke = RemoteMiddleware.createHandler("RequestClaimGenerator", function(player, generatorId)
+		return GeneratorService.tryClaim(player, generatorId)
+	end)
+
+	RequestUpgradeGenerator.OnServerInvoke = RemoteMiddleware.createHandler("RequestUpgradeGenerator", function(player, generatorId)
+		return GeneratorService.tryUpgrade(player, generatorId)
+	end)
+
+	RequestEvolution.OnServerInvoke = RemoteMiddleware.createHandler("RequestEvolution", function(player, instanceId, evolutionId)
+		return EvolutionService.tryEvolve(player, instanceId, evolutionId)
+	end)
+
+	GetTowerChallengeSnapshot.OnServerInvoke = RemoteMiddleware.createHandler("GetTowerChallengeSnapshot", function(player)
+		return TowerChallengeService.getSnapshot(player)
+	end)
+
+	RequestTowerChallengeStart.OnServerInvoke = RemoteMiddleware.createHandler("RequestTowerChallengeStart", function(player, challengeId, floorId, playerInstanceId)
+		return TowerChallengeService.startRun(player, challengeId, floorId, playerInstanceId)
+	end)
+
+	RequestTowerChallengeComplete.OnServerInvoke = RemoteMiddleware.createHandler("RequestTowerChallengeComplete", function(player, runToken)
+		return TowerChallengeService.completeRun(player, runToken)
+	end)
+
+	GetInventorySnapshot.OnServerInvoke = RemoteMiddleware.createHandler("GetInventorySnapshot", function(player)
+		return ItemService.getSnapshot(player)
+	end)
+
+	GetEquipmentSnapshot.OnServerInvoke = RemoteMiddleware.createHandler("GetEquipmentSnapshot", function(player)
+		return EquipmentService.getSnapshot(player)
+	end)
+
+	RequestEquipItem.OnServerInvoke = RemoteMiddleware.createHandler("RequestEquipItem", function(player, itemId, slotId)
+		return EquipmentService.tryEquip(player, itemId, slotId)
+	end)
+
+	RequestUnequipItem.OnServerInvoke = RemoteMiddleware.createHandler("RequestUnequipItem", function(player, slotId)
+		return EquipmentService.tryUnequip(player, slotId)
 	end)
 end
 
