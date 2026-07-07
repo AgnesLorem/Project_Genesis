@@ -7,7 +7,7 @@ local EquipmentRegistry = require(script.Parent.Parent.data.EquipmentRegistry)
 local ItemService = {}
 
 local INVENTORY_SCHEMA_VERSION = 1
-local INVENTORY_MIGRATION_VERSION = 2
+local INVENTORY_MIGRATION_VERSION = 3
 
 local DEFAULT_ITEM_GRANTS = {
 	item_training_blade = 1,
@@ -34,7 +34,7 @@ local function _ensureInventoryState(save: any): (any, boolean)
 	if type(save.inventoryState) ~= "table" then
 		save.inventoryState = {
 			schemaVersion = INVENTORY_SCHEMA_VERSION,
-			migrationVersion = INVENTORY_MIGRATION_VERSION,
+			migrationVersion = 0,
 			items = {},
 		}
 		migrated = true

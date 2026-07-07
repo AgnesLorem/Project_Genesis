@@ -104,6 +104,7 @@ function RemoteHandlers.init()
 
 	Players.PlayerRemoving:Connect(function(player)
 		storyBattleLastRequestByUserId[player.UserId] = nil
+		TowerChallengeService.abandonActiveRun(player)
 	end)
 
 	-- ─── Remotes ─────────────────────────────────────────────────────────────────
@@ -322,6 +323,7 @@ function RemoteHandlers.init()
 		-- O(1) Cache hit
 		return Result.ok(cachedPublicConfigs)
 	end)
+
 	GetSkillSnapshot.OnServerInvoke = RemoteMiddleware.createHandler("GetSkillSnapshot", function(player, creatureInstanceId)
 		return SkillService.getSnapshot(player, creatureInstanceId)
 	end)

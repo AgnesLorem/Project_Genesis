@@ -282,9 +282,10 @@ function SkillService.tryUseSkill(player: Player, creatureInstanceId: any, skill
 		stateResult.value.cooldowns[instanceResult.value.instanceId][skillId] = _now() + skill.cooldown
 	end
 
-	local saveResult = SaveService.savePlayer(player)
-	if not saveResult.success then
-		return saveResult
+	-- Keep the authoritative cooldown in the live server session; autosave/unload persists it.
+	local dirtyResult = SaveService.markDirty(player)
+	if not dirtyResult.success then
+		return dirtyResult
 	end
 
 	return Result.ok({

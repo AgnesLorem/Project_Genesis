@@ -968,11 +968,11 @@ Resolved on 2026-07-01. The Play Mode Grand Check rerun passed and validation ev
 
 Description
 
-The MVP-001 through MVP-019 task files currently show `Current Status: Review`. Release Candidate approval requires the dependency tasks to be approved or explicitly accepted by project leadership.
+The MVP-001 through MVP-019 task files previously showed `Current Status: Review`. Release Candidate approval requires the dependency tasks to be approved or explicitly accepted by project leadership.
 
 Current Status
 
-Blocked.
+Resolved.
 
 Possible Solutions
 
@@ -990,7 +990,7 @@ P0. Blocks Release Candidate.
 
 Resolution Notes
 
-Resolved when the dependency task approval state is updated or an explicit release exception is recorded.
+Resolved on 2026-07-07. The task files for MVP-001 through MVP-019 now record `Current Status: Approved`.
 
 ### KI-RELEASE-003 - SaveService Remains In-Memory Stub
 
@@ -1019,6 +1019,36 @@ P0 if production persistence is required for Release Candidate; otherwise P1 as 
 Resolution Notes
 
 Resolved on 2026-07-01. SaveService is fully integrated with DataStoreWrapper and successfully saves/loads player profiles dynamically to/from Roblox DataStores.
+
+### KI-RELEASE-004 - RC-001 Tower Simulator Pacing Failure
+
+Description
+
+MVP-020 RC-001 verification in Roblox Studio Play Mode found that `GameplaySimulator.runTowerChallengeFullFlow()` fails after `invalidTowerChallengeRequests()` because the simulator immediately starts a valid Tower run while `RequestTowerChallengeStart` is still inside the production middleware rate-limit window.
+
+The production remote guard behaved safely when tested with paced semantic cases: invalid Tower starts were rejected, duplicate Tower completion was rejected, and rapid Tower start spam produced one success and four safe rejections. The blocker is the release simulator pacing, not evidence of state corruption.
+
+Current Status
+
+Blocked.
+
+Possible Solutions
+
+1. Add small waits between semantic Tower validation requests inside `GameplaySimulator.runTowerChallengeFullFlow()` or its helper cases.
+2. Keep a separate Tower spam/rate-limit test where `rate_limited` or another safe rejection is expected.
+3. Rerun MVP-020 RC regression after the simulator pacing fix.
+
+Owner
+
+Technical Architecture / QA.
+
+Priority
+
+P0. Blocks RC-001.
+
+Resolution Notes
+
+Open as of 2026-07-07. Do not cut `v0.1.0-rc1` until the unpaced simulator failure is fixed and the full RC regression reruns clean.
 
 ---
 

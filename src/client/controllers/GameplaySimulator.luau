@@ -154,6 +154,12 @@ local function _progressAttempts(snapshot: any, challengeId: string): number
 	return progress and progress.totalAttempts or 0
 end
 
+local TOWER_SEMANTIC_REQUEST_WAIT = 1.05
+
+local function _waitTowerSemanticRequestWindow()
+	task.wait(TOWER_SEMANTIC_REQUEST_WAIT)
+end
+
 -- Simulates claiming the bio generator
 function GameplaySimulator.claimGenerator()
 	assertStudio()
@@ -367,20 +373,38 @@ function GameplaySimulator.invalidTowerChallengeRequests()
 	end
 
 	local attempts = {
-		NetworkController.requestTowerChallengeStart("", floor.floorId, instanceId),
-		NetworkController.requestTowerChallengeStart(challenge.challengeId, "", instanceId),
-		NetworkController.requestTowerChallengeStart(challenge.challengeId, floor.floorId, ""),
-		NetworkController.requestTowerChallengeStart("invalid_challenge", floor.floorId, instanceId),
-		NetworkController.requestTowerChallengeStart(challenge.challengeId, "invalid_floor", instanceId),
-		NetworkController.requestTowerChallengeStart(challenge.challengeId, floor.floorId, "invalid_instance"),
-		NetworkController.requestTowerChallengeComplete("invalid_token"),
+		function()
+			return NetworkController.requestTowerChallengeStart("", floor.floorId, instanceId)
+		end,
+		function()
+			return NetworkController.requestTowerChallengeStart(challenge.challengeId, "", instanceId)
+		end,
+		function()
+			return NetworkController.requestTowerChallengeStart(challenge.challengeId, floor.floorId, "")
+		end,
+		function()
+			return NetworkController.requestTowerChallengeStart("invalid_challenge", floor.floorId, instanceId)
+		end,
+		function()
+			return NetworkController.requestTowerChallengeStart(challenge.challengeId, "invalid_floor", instanceId)
+		end,
+		function()
+			return NetworkController.requestTowerChallengeStart(challenge.challengeId, floor.floorId, "invalid_instance")
+		end,
+		function()
+			return NetworkController.requestTowerChallengeComplete("invalid_token")
+		end,
 	}
 
-	for index, res in ipairs(attempts) do
+	for index, request in ipairs(attempts) do
+		local res = request()
 		if res.success then
 			_critical("Invalid Tower request unexpectedly succeeded at case " .. tostring(index))
 		end
 		print(string.format("[GameplaySimulator][MVP-HARD] Invalid request %d rejected: %s", index, tostring(res.code)))
+		if index < #attempts then
+			_waitTowerSemanticRequestWindow()
+		end
 	end
 
 	return { success = true, rejected = #attempts }
@@ -521,8 +545,8 @@ function GameplaySimulator.reconnectDuringTowerChallengeTest()
 	end
 
 	local completeAfterReconnect = NetworkController.requestTowerChallengeComplete(startRes.value.runToken)
-	if completeAfterReconnect.success then
-		_critical("Tower completion succeeded after reconnect abandoned the run.")
+	if not completeAfterReconnect.success then
+		_critical("Tower completion failed after client reconnect: " .. tostring(completeAfterReconnect.message or completeAfterReconnect.code))
 	end
 
 	local afterTowerRes = NetworkController.getTowerChallengeSnapshot()
@@ -530,11 +554,11 @@ function GameplaySimulator.reconnectDuringTowerChallengeTest()
 		_critical("Tower snapshot failed after reconnect-during-run test: " .. tostring(afterTowerRes.message or afterTowerRes.code))
 	end
 	local afterAttempts = _progressAttempts(afterTowerRes.value, challenge.challengeId)
-	if afterAttempts ~= beforeAttempts then
-		_critical(string.format("Reconnect during Tower run changed progress. before=%d after=%d", beforeAttempts, afterAttempts))
+	if afterAttempts ~= beforeAttempts + 1 then
+		_critical(string.format("Client reconnect Tower completion did not increment attempts once. before=%d after=%d", beforeAttempts, afterAttempts))
 	end
 
-	print(string.format("[GameplaySimulator][MVP-HARD] Reconnect during run abandoned token safely. attempts=%d.", afterAttempts))
+	print(string.format("[GameplaySimulator][MVP-HARD] Client reconnect preserved active Tower run safely. attempts %d->%d.", beforeAttempts, afterAttempts))
 	return { success = true }
 end
 
@@ -611,6 +635,7 @@ function GameplaySimulator.runTowerChallengeFullFlow()
 	end
 
 	GameplaySimulator.invalidTowerChallengeRequests()
+	_waitTowerSemanticRequestWindow()
 
 	local beforeAttempts = _progressAttempts(towerRes.value, challenge.challengeId)
 	local completionRes = TowerChallengeController.runChallengeToCompletion(challenge.challengeId, floor.floorId, ownedInstance.instanceId)
@@ -628,9 +653,13 @@ function GameplaySimulator.runTowerChallengeFullFlow()
 		_critical(string.format("Valid Tower completion did not increment attempts once. before=%d after=%d", beforeAttempts, afterAttempts))
 	end
 
+	_waitTowerSemanticRequestWindow()
 	GameplaySimulator.spamTowerChallengeStartTest()
+	_waitTowerSemanticRequestWindow()
 	GameplaySimulator.spamTowerChallengeCompleteTest()
+	_waitTowerSemanticRequestWindow()
 	GameplaySimulator.reconnectDuringTowerChallengeTest()
+	_waitTowerSemanticRequestWindow()
 	GameplaySimulator.reconnectAfterTowerChallengeCompleteTest()
 
 	print("==================================================")

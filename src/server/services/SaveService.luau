@@ -41,6 +41,7 @@ local BIND_TO_CLOSE_TIMEOUT_SECONDS    = 25
 local savesByUserId:      { [number]: any }     = {}
 local dirtyByUserId:      { [number]: boolean } = {}
 local loadFailedByUserId: { [number]: string }  = {}
+local loadingByUserId:    { [number]: boolean } = {}
 local initialized  = false
 local shuttingDown = false
 
@@ -90,10 +91,31 @@ local function _loadUserId(userId: number)
 		return Result.ok(savesByUserId[userId])
 	end
 
+	if loadingByUserId[userId] then
+		while loadingByUserId[userId] do
+			task.wait()
+		end
+
+		if savesByUserId[userId] then
+			return Result.ok(savesByUserId[userId])
+		end
+
+		local loadFailure = loadFailedByUserId[userId]
+		if loadFailure then
+			return Result.fail("load_failed", loadFailure)
+		end
+	end
+
+	loadingByUserId[userId] = true
+	local function finishLoad(result: any)
+		loadingByUserId[userId] = nil
+		return result
+	end
+
 	-- BUG FIX: Gọi trực tiếp SaveKeyBuilder.buildPlayerKey thay vì _buildKey (đã xoá).
 	local key = SaveKeyBuilder.buildPlayerKey(userId)
 	if not key then
-		return Result.fail("invalid_user_id", "Không thể tạo save key cho người chơi.")
+		return finishLoad(Result.fail("invalid_user_id", "Không thể tạo save key cho người chơi."))
 	end
 
 	-- ── Bước 1: Load + Claim Session Lock (atomic) ──
@@ -112,7 +134,7 @@ local function _loadUserId(userId: number)
 			warn(string.format("[SaveService] Load thất bại cho userId %d. Category: %s", userId, category))
 		end
 		-- Fail closed: không nạp session.
-		return Result.fail("load_failed", category)
+		return finishLoad(Result.fail("load_failed", category))
 	end
 
 	-- ── Bước 2: Người chơi mới (nil data) ──
@@ -125,7 +147,7 @@ local function _loadUserId(userId: number)
 			"[SaveService] Tạo save mới (schema v%d) cho userId %d.",
 			MigrationManager.getCurrentVersion(), userId
 		))
-		return Result.ok(defaultSave)
+		return finishLoad(Result.ok(defaultSave))
 	end
 
 	-- ── Bước 3: Migration (pcall để ngăn crash nếu logic lỗi) ──
@@ -141,7 +163,7 @@ local function _loadUserId(userId: number)
 			"[SaveService] Migration thất bại cho userId %d — KHÔNG nạp session. Lỗi: %s",
 			userId, errMsg
 		))
-		return Result.fail("migration_failed", errMsg)
+		return finishLoad(Result.fail("migration_failed", errMsg))
 	end
 
 	local save = migratedOrError
@@ -153,7 +175,7 @@ local function _loadUserId(userId: number)
 		"[SaveService] Đã tải và migrate save (schema v%d) cho userId %d.",
 		save.saveVersion or 0, userId
 	))
-	return Result.ok(save)
+	return finishLoad(Result.ok(save))
 end
 
 -- ─── Public API ───────────────────────────────────────────────────────────────
@@ -270,6 +292,7 @@ function SaveService.unloadPlayer(player: any)
 	savesByUserId[userId]      = nil
 	dirtyByUserId[userId]      = nil
 	loadFailedByUserId[userId] = nil
+	loadingByUserId[userId]    = nil
 
 	return Result.ok(nil)
 end
@@ -282,6 +305,7 @@ function SaveService.wipePlayerSave(player: any)
 	savesByUserId[userId]      = _createDefaultSave()
 	dirtyByUserId[userId]      = true
 	loadFailedByUserId[userId] = nil
+	loadingByUserId[userId]    = nil
 	return Result.ok(nil)
 end
 

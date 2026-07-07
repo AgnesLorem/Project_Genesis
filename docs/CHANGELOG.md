@@ -59,15 +59,17 @@ Do not use this changelog to approve new mechanics. New design decisions still r
 - Roblox Studio Edit-mode dependency audit passed for duplicate ModuleScripts, `*_Clone` objects, GUID-named objects, old require paths, and `restore_generated` references.
 - Roblox Studio Play Mode Grand Check passed on rerun for MVP-001 through MVP-019. The rerun used smaller batches to cover framework/config/dependency, creature/economy/progression, combat/world/boss/game modes, client UI, active generators, and post-cleanup dependency audit.
 - Verified and passed Play Mode end-to-end test for stage locking, combat victory rewards, and stage progression unlocks using the client simulator.
+- MVP-020 RC-001 verification was attempted in Roblox Studio Play Mode. MVP-016, MVP-017, MVP-019, core progression, restart/load snapshots, and paced Tower security checks passed, but RC-001 remains blocked because `GameplaySimulator.runTowerChallengeFullFlow()` hits the middleware rate limit during its unpaced Tower start validation sequence.
 
 ### Resolved
 
 - All milestones MVP-001 through MVP-019 task records are Approved.
 - `SaveService` is fully integrated with `DataStoreWrapper` for dynamic persistent DataStore saving/loading.
+- `KI-RELEASE-002` is resolved: task files for MVP-001 through MVP-019 now record `Current Status: Approved`.
 
 ## Release Entries
 
-No Release Candidate has been cut.
+No Release Candidate has been cut. RC-001 is documented as blocked pending the Tower simulator pacing fix.
 
 ## Decision Log
 
