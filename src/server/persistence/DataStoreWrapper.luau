@@ -32,6 +32,7 @@
 --]]
 
 local DataStoreService = game:GetService("DataStoreService")
+local RunService = game:GetService("RunService")
 
 -- ─── Session Identity ─────────────────────────────────────────────────────────
 -- game.JobId là "" trong Studio → dùng timestamp để tạo session ID duy nhất.
@@ -191,10 +192,16 @@ function DataStoreWrapper.loadAndClaim(storeName: string, key: string): LoadResu
 					and oldValue[SESSION_FIELD] ~= ""
 					and oldValue[SESSION_FIELD] ~= SESSION_JOB_ID
 				then
-					-- Server khác đang giữ lock → huỷ UpdateAsync bằng cách return nil.
-					-- Roblox sẽ không ghi gì vào DataStore khi transform trả về nil.
-					sessionWasLocked = true
-					return nil
+					-- Nếu lock thuộc về một Studio session cũ và hiện tại đang chạy trong Studio -> Cho phép claim đè
+					local isOldLockStudio = string.sub(oldValue[SESSION_FIELD], 1, 7) == "studio_"
+					local isCurrentStudio = RunService:IsStudio()
+
+					if not (isOldLockStudio and isCurrentStudio) then
+						-- Server khác thực sự đang giữ lock → huỷ UpdateAsync bằng cách return nil.
+						-- Roblox sẽ không ghi gì vào DataStore khi transform trả về nil.
+						sessionWasLocked = true
+						return nil
+					end
 				end
 
 				-- ── Lock còn trống hoặc là của server này → Claim ──
