@@ -13,13 +13,14 @@ return {
 	capacity = 240,
 	upgradeCost = {
 		currencyType = "biomass",
-		amount = 3,
+		amount = 200,
 	},
-	maxLevel = 20,
+	upgradeCostMultiplier = 1.2,
+	maxLevel = 100,
 	unlockRequirement = {
 		type = "generatorLevel",
 		generatorId = "bio_generator",
-		level = 1000,
+		level = 50,
 	},
 	isEnabled = true,
 }

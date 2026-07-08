@@ -11,6 +11,6 @@ return {
 	currencyType = "soft",
 	sourceRefs = { "bio_generator_claim", "generator_claim", "story" },
 	sinkRefs = { "spend_generic", "evolution", "generator_upgrade" },
-	cap = 999999,
+	cap = 9999999,
 	auditCategory = "progression_reward",
 }

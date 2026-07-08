@@ -14,9 +14,10 @@ return {
 	capacity = 120,
 	upgradeCost = {
 		currencyType = "biomass",
-		amount = 1,
+		amount = 10,
 	},
-	maxLevel = 999,
+	upgradeCostMultiplier = 1.15,
+	maxLevel = 100,
 	unlockRequirement = {
 		type = "always",
 	},

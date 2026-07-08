@@ -19,7 +19,7 @@ function EconomySimulator.runSimulation()
 	local dnaConfig = require(ServerStorage.Configs.generators.dna_generator_config)
 	local advBioConfig = require(ServerStorage.Configs.generators.advanced_bio_generator_config)
 	
-	local BIOMASS_CAP = 999999
+	local BIOMASS_CAP = 9999999
 	local DNA_CAP = 999999
 	
 	-- Helper formulas matching GeneratorService.luau
@@ -33,7 +33,14 @@ function EconomySimulator.runSimulation()
 	
 	local function getUpgradeCost(config, level)
 		local cost = config.upgradeCost or {}
-		return math.max(1, math.floor((cost.amount or 1) * level))
+		local baseAmount = cost.amount or 1
+		if config.upgradeCostExponent then
+			return math.max(1, math.floor(baseAmount * (level ^ config.upgradeCostExponent)))
+		elseif config.upgradeCostMultiplier then
+			return math.max(1, math.floor(baseAmount * (config.upgradeCostMultiplier ^ (level - 1))))
+		else
+			return math.max(1, math.floor(baseAmount * math.max(1, level)))
+		end
 	end
 	
 	-- ── Running Scenario 1: Active Play ──

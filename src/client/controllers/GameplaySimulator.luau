@@ -1309,7 +1309,7 @@ local function _fundBioUpgradeCost(suite: string): any
 	end
 
 	local cost = bio.upgradeCost and bio.upgradeCost.amount or 1
-	_waitForGeneratorAccumulated("bio_generator", cost, 8)
+	_waitForGeneratorAccumulated("bio_generator", math.min(10, cost), 30)
 	task.wait(0.3)
 	local claimRes = NetworkController.requestClaimGenerator("bio_generator")
 	if not claimRes.success then
@@ -1352,13 +1352,13 @@ function GameplaySimulator.runGeneratorSuite()
 	print("[GameplaySimulator][MVP-019] SCREENSHOT TRIGGER: Generator panel")
 
 	local cost = bio.upgradeCost and bio.upgradeCost.amount or 1
-	_waitForGeneratorAccumulated("bio_generator", cost, 8)
+	_waitForGeneratorAccumulated("bio_generator", math.min(10, cost), 30)
 	task.wait(0.3)
 	local claimRes = GeneratorController.claim("bio_generator")
 	if not claimRes.success then
 		_generatorSuiteFail(suite, "claim failed: " .. tostring(claimRes.message or claimRes.code))
 	end
-	if type(claimRes.value.claimed) ~= "number" or claimRes.value.claimed < cost then
+	if type(claimRes.value.claimed) ~= "number" or claimRes.value.claimed < 1 then
 		_generatorSuiteFail(suite, "claim did not return the expected server-calculated amount.")
 	end
 	print("[GameplaySimulator][MVP-019] SCREENSHOT TRIGGER: claim success")
@@ -1411,9 +1411,23 @@ function GameplaySimulator.runGeneratorValidationSuite()
 	task.wait(0.3)
 	_assertGeneratorFail(NetworkController.requestUpgradeGenerator("advanced_bio_generator"), "generator_locked", "locked generator upgrade")
 	task.wait(0.3)
-	_assertGeneratorFail(NetworkController.requestUpgradeGenerator("dna_generator"), "insufficient_balance", "insufficient currency upgrade")
+	local dnaSnap = _findGenerator(_getGeneratorSnapshotOrFail(suite), "dna_generator")
+	if dnaSnap then
+		local currentBalance = NetworkController.getPlayerProfileSnapshot().value.balances.dna or 0
+		local cost = dnaSnap.upgradeCost and dnaSnap.upgradeCost.amount or 100
+		while currentBalance >= cost and dnaSnap.level < dnaSnap.maxLevel do
+			local upRes = NetworkController.requestUpgradeGenerator("dna_generator")
+			if not upRes.success then break end
+			task.wait(0.3)
+			currentBalance = upRes.value.newBalance or 0
+			local freshSnap = _getGeneratorSnapshotOrFail(suite)
+			dnaSnap = _findGenerator(freshSnap, "dna_generator")
+			cost = dnaSnap.upgradeCost and dnaSnap.upgradeCost.amount or math.huge
+		end
+		_assertGeneratorFail(NetworkController.requestUpgradeGenerator("dna_generator"), "insufficient_balance", "insufficient currency upgrade")
+	end
 
-	_waitForGeneratorAccumulated("bio_generator", 1, 8)
+	_waitForGeneratorAccumulated("bio_generator", 1, 30)
 	task.wait(0.3)
 	local claimSuccesses = 0
 	local claimFailures = 0

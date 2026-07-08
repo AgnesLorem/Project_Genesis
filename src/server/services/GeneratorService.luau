@@ -76,7 +76,14 @@ end
 
 local function _upgradeCostAmount(config: any, level: number): number
 	local cost = config.upgradeCost or {}
-	return math.max(1, math.floor((cost.amount or 1) * math.max(1, level)))
+	local baseAmount = cost.amount or 1
+	if config.upgradeCostExponent then
+		return math.max(1, math.floor(baseAmount * (level ^ config.upgradeCostExponent)))
+	elseif config.upgradeCostMultiplier then
+		return math.max(1, math.floor(baseAmount * (config.upgradeCostMultiplier ^ (level - 1))))
+	else
+		return math.max(1, math.floor(baseAmount * math.max(1, level)))
+	end
 end
 
 local function _ensureGeneratorContainer(save: any)

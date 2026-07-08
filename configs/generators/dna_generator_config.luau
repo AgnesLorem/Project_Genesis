@@ -13,9 +13,10 @@ return {
 	capacity = 60,
 	upgradeCost = {
 		currencyType = "dna",
-		amount = 1000000,
+		amount = 100,
 	},
-	maxLevel = 10,
+	upgradeCostMultiplier = 1.35,
+	maxLevel = 50,
 	unlockRequirement = {
 		type = "always",
 	},
