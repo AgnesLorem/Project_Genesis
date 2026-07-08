@@ -20,7 +20,7 @@ Current Priority: P1
 
 # Goal
 
-Integrate the Tower and Challenge systems so they are fully accessible and playable directly from the User Interface, rather than requiring debug commands or console scripts.
+Integrate the Tower and Challenge systems so they are fully accessible and playable directly from the User Interface, ensuring a complete and secure progression flow: World ➔ Tower Hub ➔ Select Stage ➔ Battle ➔ Victory/Defeat ➔ Reward ➔ Unlock ➔ Save ➔ Reconnect ➔ State preserved.
 
 # Scope
 
@@ -29,6 +29,16 @@ Integrate the Tower and Challenge systems so they are fully accessible and playa
 - [ ] Connect play buttons on UI screens to invoke appropriate remote functions for starting Tower and Challenge battles.
 - [ ] Display player's current stage, clear records, and available rewards on the UI.
 - [ ] Show modal or UI feedback when rewards are collected or stage is locked.
+- [ ] Implement and verify the complete progression flow:
+  - World ➔ Tower Hub ➔ Select Stage ➔ Battle ➔ Victory/Defeat ➔ Reward ➔ Unlock ➔ Save ➔ Reconnect ➔ State preserved
+- [ ] Implement robust handling of network issues and player actions:
+  - **Resume session** if the player disconnects during battle/completion
+  - **Stage lock** validation (cannot select locked stages, server rejects invalid attempts)
+  - **Reward anti-double-claim** (rewards can never be claimed twice; server and client side checks)
+  - **Network retry** functionality for failing Remote requests
+  - **Error UI** displays appropriately when the server rejects a request
+  - **Loading states** (spinners) during active remote requests
+  - **Button spam cooldowns** to block double clicks on Start/Complete buttons
 
 # Out of Scope
 
@@ -46,7 +56,8 @@ Integrate the Tower and Challenge systems so they are fully accessible and playa
 # Deliverables
 
 - [ ] Modified `src/client/controllers/ScreenRouter.luau` and UI controllers.
-- [ ] New views for Tower and Challenge screens.
+- [ ] New views for Tower and Challenge screens showing locks, loading, and errors.
+- [ ] Tower Full Journey Test verification records.
 
 # Implementation Rules
 
@@ -56,9 +67,10 @@ Integrate the Tower and Challenge systems so they are fully accessible and playa
 
 # Testing Checklist
 
-- [ ] Tower battles can be entered and completed from UI.
-- [ ] Challenge battles can be entered and completed from UI.
-- [ ] UI correctly updates stage locks/unlocks.
+- [ ] Run a **Tower Full Journey Test** verifying the end-to-end flow from hub entrance to final reconnect restore, rather than just validating screens separately.
+- [ ] Verify stage locks correctly block access to subsequent floors.
+- [ ] Verify that double-claiming rewards is impossible and results in a safe rejection.
+- [ ] Verify loading states and button cooldowns function correctly under request latency.
 
 # Review Checklist
 

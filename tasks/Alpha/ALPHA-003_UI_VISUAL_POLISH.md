@@ -20,19 +20,34 @@ Current Priority: P1
 
 # Goal
 
-Elevate the UI from a functional/debug level to a polished, premium aesthetic. This includes updating layout designs, monster cards, progress bars, loading states, error states, and implementing smooth transition animations between screens.
+Elevate the UI from a functional/debug level to a polished, premium aesthetic. This task focuses on polishing layouts, card designs, progress bars, loading states, error states, and implementing smooth transition animations.
 
 # Scope
 
-- [ ] Complete the Monster Card visual design with rarity borders, stat displays, and clean typography.
-- [ ] Polish Collection UI layout, showing unlocked/locked state of creatures.
-- [ ] Upgrade Generator UI with level bars, production rates, and lock overlays.
-- [ ] Polish Battle Result screen with star rating, level-up bars, and reward previews.
-- [ ] Polish Evolution UI screen showcasing before/after forms and requirement checklists.
-- [ ] Polish Inventory and Equipment screens (clean grid spacing, tooltips, selection outlines).
-- [ ] Implement responsive UI elements supporting multiple aspect ratios and device scales.
-- [ ] Implement loading overlays and user-friendly error message banners.
-- [ ] Implement screen transition animations (e.g. fade, slide, or zoom) on routing.
+- [ ] Complete the UI Polish checklist categorized below:
+
+### Visual Polish
+- [ ] **Monster Card**: Full visual card layouts including stats and elemental labels.
+- [ ] **Borders**: Premium rarity borders (Common, Rare, Legendary) and selection outlines.
+- [ ] **Icons**: Custom/unified assets for items, skills, and currencies.
+- [ ] **Typography**: Consistent modern type scaling (e.g. font size hierarchy, no fallback fonts).
+- [ ] **Color System**: Curated color palette (hex/RGB tokens) instead of browser default colors.
+
+### UX Polish
+- [ ] **Loading**: Fullscreen loading screens and inline spinners.
+- [ ] **Toast**: Toast notification alerts sliding in when receiving rewards or completing achievements.
+- [ ] **Tooltip**: Detailed hovering tooltips showing creature or item stats.
+- [ ] **Confirmation**: Confirmation dialog modals before critical resource spending.
+- [ ] **Disabled button**: Blocked input visual states when requests are processing.
+- [ ] **Empty state**: Clean placeholders shown when inventories or collections are empty.
+- [ ] **Error state**: Banners or toasts clearly showing server rejection codes.
+
+### Technical UI Polish
+- [ ] **Responsive**: Dynamic scaling across mobile, tablet, and widescreen PC ratios.
+- [ ] **Safe Area**: Adherence to device notch margins and safe zone layouts.
+- [ ] **Animation**: Screen transition animations (e.g. fade, slide, or zoom) on routing.
+- [ ] **No layout overflow**: Ensuring labels and frames do not overlap.
+- [ ] **No clipped text**: Proper TextWrapped properties and size bounds.
 
 # Out of Scope
 
@@ -55,7 +70,7 @@ Elevate the UI from a functional/debug level to a polished, premium aesthetic. T
 # Implementation Rules
 
 - Do not use TailwindCSS unless explicitly confirmed.
-- Avoid browser defaults; use modern, premium typography and color palettes.
+- Avoid browser defaults; use premium theme tokens.
 - Keep layout logic responsive.
 
 # Testing Checklist
@@ -63,6 +78,7 @@ Elevate the UI from a functional/debug level to a polished, premium aesthetic. T
 - [ ] Verify UI layouts on phone, tablet, and PC screen ratios.
 - [ ] Verify transition animations do not cause script delay or yield errors.
 - [ ] Verify error states and loading overlays block interaction when active.
+- [ ] Check for text clipping on extremely small screen dimensions (e.g. mobile portrait).
 
 # Review Checklist
 

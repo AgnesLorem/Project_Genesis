@@ -29,8 +29,18 @@ Complete and verify the core gameplay loop: Generator ➔ Biomass ➔ Battle ➔
 - [ ] Ensure Battle victory awards appropriate rewards (Biomass, DNA, and experience).
 - [ ] Ensure DNA can be used to progress Creature stats, level caps, or Evolution.
 - [ ] Ensure Progression unlocks advanced Generator upgrades.
-- [ ] Review and audit pacing of resource generation and progression across early, mid, and end-game.
-- [ ] Implement checks to prevent economy inflation or locking states (dead-ends).
+- [ ] Review and audit pacing of resource generation and progression across:
+  - Early game (0–30 minutes)
+  - Mid game (30–120 minutes)
+  - End game (>120 minutes)
+- [ ] Implement and test edge cases:
+  - Biomass = 0
+  - DNA = 0
+  - Generator max level
+  - No soft locks (e.g. running out of resources before upgrading)
+  - No infinite resource loops (no free conversion cycles)
+  - No reward duplication (validation of battle results and claim states)
+- [ ] Perform a 30–60 minute soak test to detect and prevent economy inflation.
 
 # Out of Scope
 
@@ -50,6 +60,10 @@ Complete and verify the core gameplay loop: Generator ➔ Biomass ➔ Battle ➔
 
 - [ ] Updated `src/shared/configs/EconomyConfig.luau` or equivalent configuration files.
 - [ ] Validation tests checking resource transitions in GameplaySimulator.
+- [ ] **Economy Audit Report** detailing:
+  - Earn rate vs. Spend rate calculations
+  - Potential bottlenecks in progression
+  - Inflation risk analysis
 
 # Implementation Rules
 
@@ -59,14 +73,16 @@ Complete and verify the core gameplay loop: Generator ➔ Biomass ➔ Battle ➔
 
 # Testing Checklist
 
+- [ ] Verify the entire loop at **runtime** (not just mock tests in GameplaySimulator; must run live play sessions).
 - [ ] Happy path of the loop verified end-to-end.
-- [ ] Inflation checks run over long simulated periods.
+- [ ] Inflation checks run over long simulated periods (30–60 mins soak test).
+- [ ] Edge cases (zero balances, max level) successfully handled.
 - [ ] Verification evidence recorded in handoff notes.
 
 # Review Checklist
 
 - [ ] Task matches approved scope.
-- [ ] Deliverables are complete.
+- [ ] Deliverables and Economy Audit Report are complete.
 - [ ] Verification evidence is present.
 
 # Definition of Done
