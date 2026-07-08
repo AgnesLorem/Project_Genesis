@@ -17,7 +17,7 @@ local function _findItem(snapshot: any, itemId: string): any
 	return nil
 end
 
-function InventoryController.show()
+function InventoryController.show(onClose: () -> ())
 	UIController.init()
 	UIController.mountModal(StatePatterns.Loading(nil))
 
@@ -30,9 +30,12 @@ function InventoryController.show()
 
 	lastSnapshot = snapshotResult.value
 	local screen = InventoryScreen.create(snapshotResult.value, function()
-		InventoryController.show()
+		InventoryController.show(onClose)
 	end, function(item)
 		InventoryController.showTooltip(item.itemId)
+	end, function()
+		UIController.unmountScreen("InventoryScreen")
+		onClose()
 	end)
 	UIController.mountScreen(screen)
 	return snapshotResult

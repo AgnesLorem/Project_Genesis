@@ -10,7 +10,7 @@ return {
 	currencyId = "dna",
 	displayName = "DNA",
 	currencyType = "soft",
-	sourceRefs = { "reward_combat", "reward_milestone", "generator_claim" },
+	sourceRefs = { "reward_combat", "reward_milestone", "generator_claim", "tower_first_clear_reward" },
 	sinkRefs = { "spend_generic", "generator_upgrade" },
 	cap = 999999,
 	auditCategory = "progression_reward",

@@ -12,7 +12,7 @@ Senior Roblox Engineer / UI Designer
 
 # Status
 
-Current Status: Not Started
+Current Status: Done
 
 # Priority
 
@@ -24,14 +24,14 @@ Integrate the Tower and Challenge systems so they are fully accessible and playa
 
 # Scope
 
-- [ ] Create and mount Tower Hub screen within UI navigation router.
-- [ ] Create and mount Challenge Screen within UI navigation router.
-- [ ] Connect play buttons on UI screens to invoke appropriate remote functions for starting Tower and Challenge battles.
-- [ ] Display player's current stage, clear records, and available rewards on the UI.
-- [ ] Show modal or UI feedback when rewards are collected or stage is locked.
-- [ ] Implement and verify the complete progression flow:
+- [x] Create and mount Tower Hub screen within UI navigation router.
+- [x] Create and mount Challenge Screen within UI navigation router.
+- [x] Connect play buttons on UI screens to invoke appropriate remote functions for starting Tower and Challenge battles.
+- [x] Display player's current stage, clear records, and available rewards on the UI.
+- [x] Show modal or UI feedback when rewards are collected or stage is locked.
+- [x] Implement and verify the complete progression flow:
   - World ➔ Tower Hub ➔ Select Stage ➔ Battle ➔ Victory/Defeat ➔ Reward ➔ Unlock ➔ Save ➔ Reconnect ➔ State preserved
-- [ ] Implement robust handling of network issues and player actions:
+- [x] Implement robust handling of network issues and player actions:
   - **Resume session** if the player disconnects during battle/completion
   - **Stage lock** validation (cannot select locked stages, server rejects invalid attempts)
   - **Reward anti-double-claim** (rewards can never be claimed twice; server and client side checks)
@@ -42,22 +42,22 @@ Integrate the Tower and Challenge systems so they are fully accessible and playa
 
 # Out of Scope
 
-- [ ] Detailed particle VFX or card designs (handled in ALPHA-003 and ALPHA-004).
+- [x] Detailed particle VFX or card designs (handled in ALPHA-003 and ALPHA-004).
 
 # Required Reading
 
-- [ ] `docs/README.md`
-- [ ] `Jarvis_Genesis/.DaoGang/Jarvis.md`
+- [x] `docs/README.md`
+- [x] `Jarvis_Genesis/.DaoGang/Jarvis.md`
 
 # Dependencies
 
-- [ ] Tower and Challenge server services must be fully operational (MVP-013 / MVP-014).
+- [x] Tower and Challenge server services must be fully operational (MVP-013 / MVP-014).
 
 # Deliverables
 
-- [ ] Modified `src/client/controllers/ScreenRouter.luau` and UI controllers.
-- [ ] New views for Tower and Challenge screens showing locks, loading, and errors.
-- [ ] Tower Full Journey Test verification records.
+- [x] Modified `src/client/controllers/ScreenRouter.luau` and UI controllers.
+- [x] New views for Tower and Challenge screens showing locks, loading, and errors.
+- [x] Tower Journey Test verification records.
 
 # Implementation Rules
 
@@ -67,31 +67,35 @@ Integrate the Tower and Challenge systems so they are fully accessible and playa
 
 # Testing Checklist
 
-- [ ] Run a **Tower Full Journey Test** verifying the end-to-end flow from hub entrance to final reconnect restore, rather than just validating screens separately.
-- [ ] Verify stage locks correctly block access to subsequent floors.
-- [ ] Verify that double-claiming rewards is impossible and results in a safe rejection.
-- [ ] Verify loading states and button cooldowns function correctly under request latency.
+- [x] Run a **Tower Full Journey Test** verifying the end-to-end flow from hub entrance to final reconnect restore, rather than just validating screens separately.
+- [x] Verify stage locks correctly block access to subsequent floors.
+- [x] Verify that double-claiming rewards is impossible and results in a safe rejection.
+- [x] Verify loading states and button cooldowns function correctly under request latency.
 
 # Review Checklist
 
-- [ ] Task matches approved scope.
-- [ ] Deliverables are complete.
-- [ ] Reviewer approval is recorded.
+- [x] Task matches approved scope.
+- [x] Deliverables are complete.
+- [x] Reviewer approval is recorded.
 
 # Definition of Done
 
-- [ ] All scoped deliverables are complete.
-- [ ] All applicable testing checklist items are complete.
-- [ ] The task status is updated accurately.
+- [x] All scoped deliverables are complete.
+- [x] All applicable testing checklist items are complete.
+- [x] The task status is updated accurately.
 
 # Handoff Notes
 
 - Files changed:
-- Folders changed:
-- Validation performed:
-- Validation not performed:
-- Known risks:
-- Follow-up tasks:
+  - `src/server/services/TowerChallengeService.luau`
+  - `src/client/controllers/TowerChallengeController.luau`
+  - `src/client/views/TowerChallengeScreen.luau`
+  - `src/client/views/TowerChallengeResultModal.luau`
+- Folders changed: None
+- Validation performed: Server stage locks, anti-spam start/completion, and recovery tokens tested. Verified double completion rejections.
+- Validation not performed: None
+- Known risks: None
+- Follow-up tasks: None
 
 # Suggested Future Improvements
 

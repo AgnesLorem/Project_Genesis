@@ -13,6 +13,17 @@ local TowerChallengeService = {}
 
 local activeRuns: { [number]: any } = {}
 
+local function _checkActiveRunTTL(playerKey: number)
+	local activeRun = activeRuns[playerKey]
+	if activeRun then
+		local elapsed = os.time() - activeRun.startedAt
+		if elapsed > 900 then
+			print(string.format("[TowerChallengeService] Active run expired (TTL > 900s) for player=%d. Cleaning up.", playerKey))
+			activeRuns[playerKey] = nil
+		end
+	end
+end
+
 local function _playerKey(player: Player): number
 	return player.UserId
 end
@@ -144,6 +155,9 @@ local function _resolveBattle(playerInstanceId: string, playerCreatureId: string
 end
 
 function TowerChallengeService.getSnapshot(player: Player)
+	local playerKey = _playerKey(player)
+	_checkActiveRunTTL(playerKey)
+
 	local save = SaveService.getPlayerSave(player)
 	if not save then
 		return Result.fail("not_loaded", "Player save data not loaded.")
@@ -155,10 +169,28 @@ function TowerChallengeService.getSnapshot(player: Player)
 		progressByChallengeId[challenge.challengeId] = _copyProgress(_getProgress(save, challenge.challengeId))
 	end
 
+	local activeRun = activeRuns[playerKey]
+	local activeRunData = nil
+	if activeRun then
+		activeRunData = {
+			runToken = activeRun.runToken,
+			challengeId = activeRun.challengeId,
+			floorId = activeRun.floorId,
+			floorNumber = activeRun.floorNumber,
+			playerInstanceId = activeRun.playerInstanceId,
+			playerCreatureId = activeRun.playerCreatureId,
+			enemyCreatureId = activeRun.enemyCreatureId,
+			timeline = activeRun.battleValue.timeline,
+			playerUnitIds = { activeRun.playerInstanceId },
+			enemyUnitIds = { activeRun.enemyInstanceId },
+		}
+	end
+
 	return Result.ok({
 		challenges = challengeSnapshots,
 		progressByChallengeId = progressByChallengeId,
-		activeRun = activeRuns[_playerKey(player)] ~= nil,
+		activeRun = activeRun ~= nil,
+		activeRunData = activeRunData,
 	})
 end
 
@@ -174,6 +206,8 @@ function TowerChallengeService.startRun(player: Player, challengeId: any, floorI
 	end
 
 	local playerKey = _playerKey(player)
+	_checkActiveRunTTL(playerKey)
+
 	if activeRuns[playerKey] then
 		return Result.fail("active_tower_run_exists", "A tower challenge run is already active.")
 	end
@@ -191,6 +225,12 @@ function TowerChallengeService.startRun(player: Player, challengeId: any, floorI
 	local save = SaveService.getPlayerSave(player)
 	if not save then
 		return Result.fail("not_loaded", "Player save data not loaded.")
+	end
+
+	-- Stage lock checking
+	local progress = _getProgress(save, challengeId)
+	if floor.floorNumber > progress.bestFloor + 1 then
+		return Result.fail("floor_locked", "This floor is locked. Clear the previous floors first.")
 	end
 
 	local ownedInstance = _findOwnedInstance(save, playerInstanceId)
@@ -255,11 +295,14 @@ function TowerChallengeService.completeRun(player: Player, runToken: any)
 	end
 
 	local playerKey = _playerKey(player)
+	_checkActiveRunTTL(playerKey)
+
 	local activeRun = activeRuns[playerKey]
 	if not activeRun then
 		return Result.fail("no_active_tower_run", "No active tower challenge run is pending completion.")
 	end
 	if activeRun.runToken ~= runToken then
+		activeRuns[playerKey] = nil -- discard/abandon on mismatch to prevent stuck profiles
 		return Result.fail("invalid_tower_token", "Tower completion token does not match the active run.")
 	end
 
@@ -274,7 +317,26 @@ function TowerChallengeService.completeRun(player: Player, runToken: any)
 	progress.totalAttempts += 1
 
 	local outcome = activeRun.battleValue.isVictory and "Victory" or "Defeat"
+	local rewardsGranted = {}
+
 	if activeRun.battleValue.isVictory then
+		-- Check if first-time clear
+		if activeRun.floorNumber > progress.bestFloor then
+			local floor = TowerChallengeRegistry.getFloor(activeRun.challengeId, activeRun.floorId)
+			if floor and floor.rewards then
+				local CurrencyService = require(script.Parent.CurrencyService)
+				for _, reward in ipairs(floor.rewards) do
+					local grantRes = CurrencyService.tryGrant(player, reward.currencyType, reward.amount, "tower_first_clear_reward")
+					if grantRes.success then
+						table.insert(rewardsGranted, {
+							currencyType = reward.currencyType,
+							amount = reward.amount,
+						})
+					end
+				end
+			end
+		end
+
 		progress.totalClears += 1
 		progress.bestFloor = math.max(progress.bestFloor, activeRun.floorNumber)
 	end
@@ -303,6 +365,7 @@ function TowerChallengeService.completeRun(player: Player, runToken: any)
 		floorId = activeRun.floorId,
 		floorNumber = activeRun.floorNumber,
 		progress = _copyProgress(progress),
+		rewards = rewardsGranted,
 	})
 end
 

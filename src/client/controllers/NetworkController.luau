@@ -82,4 +82,16 @@ function NetworkController.requestSkillUse(creatureInstanceId, skillId, targetId
 	return Network.getRemoteFunction("RequestSkillUse"):InvokeServer(creatureInstanceId, skillId, targetId)
 end
 
+function NetworkController.getCollectionSnapshot()
+	return Network.getRemoteFunction("GetCollectionSnapshot"):InvokeServer()
+end
+
+function NetworkController.getCreatureConfigsPublic()
+	return Network.getRemoteFunction("GetCreatureConfigsPublic"):InvokeServer()
+end
+
+function NetworkController.requestSetActiveCreature(instanceId)
+	return Network.getRemoteFunction("SetActiveCreature"):InvokeServer(instanceId)
+end
+
 return NetworkController

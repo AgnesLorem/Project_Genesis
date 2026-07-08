@@ -8,6 +8,9 @@ local UIController = require(script.Parent.UIController)
 local BattleController = require(script.Parent.BattleController)
 local CollectionController = require(script.Parent.CollectionController)
 local InventoryController = require(script.Parent.InventoryController)
+local GeneratorController = require(script.Parent.GeneratorController)
+local CreatureInventoryController = require(script.Parent.CreatureInventoryController)
+local TowerChallengeController = require(script.Parent.TowerChallengeController)
 local WorldScreen = require(script.Parent.Parent.views.WorldScreen)
 local StatePatterns = require(script.Parent.Parent.views.StatePatterns)
 
@@ -30,9 +33,11 @@ function WorldController.start(snapshot: any)
 		end
 	end
 
-	screen = WorldScreen.create(snapshot, worldData, 
+	screen = WorldScreen.create(
+		snapshot,
+		worldData,
 		function(stageId)
-			-- On Start Stage Click
+			-- onStartStage
 			local playerCreatureId = snapshot.activeCreatureInstanceId
 
 			if not playerCreatureId then
@@ -45,20 +50,56 @@ function WorldController.start(snapshot: any)
 				_refreshAndRemount()
 			end)
 		end,
+		function(generatorId)
+			-- onClaimGenerator
+			UIController.mountModal(StatePatterns.Loading(nil))
+			local res = NetworkController.requestClaimGenerator(generatorId)
+			UIController.clearModal()
+			if res.success then
+				_refreshAndRemount()
+			else
+				UIController.mountModal(StatePatterns.Error(nil, "Claim failed: " .. tostring(res.message or res.code)))
+			end
+		end,
+		function(activeInstId, evolutionId)
+			-- onEvolve
+			UIController.mountModal(StatePatterns.Loading(nil))
+			local res = NetworkController.requestEvolution(activeInstId, evolutionId)
+			UIController.clearModal()
+			if res.success then
+				_refreshAndRemount()
+			else
+				UIController.mountModal(StatePatterns.Error(nil, "Evolution failed: " .. tostring(res.message or res.code)))
+			end
+		end,
 		function()
-			-- On Open Collection
-			CollectionController.openCollectionBook(function()
-				-- Optional refresh if collection could change, but it's read-only for now
+			-- onOpenGenerators
+			GeneratorController.show(nil, nil, function()
+				_refreshAndRemount()
 			end)
 		end,
 		function()
-			-- On Open Inventory
-			InventoryController.openInventory(function()
-				-- Inventory can change active creature
+			-- onOpenCreatures
+			CreatureInventoryController.show(function()
 				_refreshAndRemount()
-			end, function(newActiveId)
-				-- Optional: handle live active update without full remount
-				snapshot.activeCreatureInstanceId = newActiveId
+			end)
+		end,
+		function()
+			-- onOpenCollection
+			CollectionController.openCollectionBook(function()
+				_refreshAndRemount()
+			end)
+		end,
+		function()
+			-- onOpenTower
+			TowerChallengeController.show(function()
+				_refreshAndRemount()
+			end)
+		end,
+		function()
+			-- onOpenInventory
+			InventoryController.show(function()
+				_refreshAndRemount()
 			end)
 		end
 	)

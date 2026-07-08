@@ -9,7 +9,7 @@ return {
 	currencyId = "biomass",
 	displayName = "Biomass",
 	currencyType = "soft",
-	sourceRefs = { "bio_generator_claim", "generator_claim", "story" },
+	sourceRefs = { "bio_generator_claim", "generator_claim", "story", "tower_first_clear_reward" },
 	sinkRefs = { "spend_generic", "evolution", "generator_upgrade" },
 	cap = 9999999,
 	auditCategory = "progression_reward",

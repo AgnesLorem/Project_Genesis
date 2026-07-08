@@ -2,12 +2,13 @@
 	BattleResultModal
 	Location: src/client/views/BattleResultModal.luau
 
-	Displays the result of a story battle.
-	battleData shape: { isVictory: boolean, timeline: [{text}], summary: {turns, reason},
-	                    rewards: {biomass}, xpGained: number, creatureUpdates: {level, xp, leveledUp}? }
+	Displays the outcome of a story battle with timeline logs, rewards details,
+	and Theme token styling.
 --]]
 
+local Theme = require(script.Parent.Theme)
 local UIComponents = require(script.Parent.UIComponents)
+local AnimationService = require(script.Parent.AnimationService)
 
 local BattleResultModal = {}
 
@@ -18,15 +19,23 @@ function BattleResultModal.create(battleData: any, onClose: () -> ()): Frame
 	panel.Size = UDim2.new(0, 620, 0, 480)
 	panel.AnchorPoint = Vector2.new(0.5, 0.5)
 	panel.Position = UDim2.new(0.5, 0, 0.5, 0)
+	panel.ZIndex = Theme.ZIndex.Modal + 1
 	panel.Parent = modal
 
 	-- Header: VICTORY or DEFEAT
 	local resultText = (battleData.isVictory == true) and "⚔ VICTORY" or "💀 DEFEAT"
 	local header = UIComponents.createBaseLabel(resultText)
 	header.Size = UDim2.new(1, 0, 0, 50)
+	header.Font = Theme.Fonts.Header
 	header.TextXAlignment = Enum.TextXAlignment.Center
 	header.TextSize = 30
-	header.TextColor3 = battleData.isVictory and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 80, 80)
+	header.ZIndex = Theme.ZIndex.Modal + 2
+	
+	if battleData.isVictory then
+		header.TextColor3 = Theme.Colors.Success
+	else
+		header.TextColor3 = Theme.Colors.Error
+	end
 	header.Parent = panel
 
 	-- Rewards summary
@@ -41,9 +50,11 @@ function BattleResultModal.create(battleData: any, onClose: () -> ()): Frame
 	local rewardLabel = UIComponents.createBaseLabel(rewardText)
 	rewardLabel.Size = UDim2.new(1, -40, 0, 28)
 	rewardLabel.Position = UDim2.new(0, 20, 0, 52)
+	rewardLabel.Font = Theme.Fonts.Bold
 	rewardLabel.TextXAlignment = Enum.TextXAlignment.Center
 	rewardLabel.TextSize = 16
-	rewardLabel.TextColor3 = Color3.fromRGB(220, 220, 100)
+	rewardLabel.TextColor3 = Theme.Colors.Accent
+	rewardLabel.ZIndex = Theme.ZIndex.Modal + 2
 	rewardLabel.Parent = panel
 
 	-- Timeline scroll
@@ -52,6 +63,8 @@ function BattleResultModal.create(battleData: any, onClose: () -> ()): Frame
 	scroll.Position = UDim2.new(0, 20, 0, 90)
 	scroll.BackgroundTransparency = 1
 	scroll.ScrollBarThickness = 6
+	scroll.ScrollBarImageColor3 = Theme.Colors.Border
+	scroll.ZIndex = Theme.ZIndex.Modal + 2
 	scroll.Parent = panel
 
 	local layout = Instance.new("UIListLayout")
@@ -62,26 +75,35 @@ function BattleResultModal.create(battleData: any, onClose: () -> ()): Frame
 		for _, entry in ipairs(battleData.timeline) do
 			local label = UIComponents.createBaseLabel(tostring(entry.text))
 			label.Size = UDim2.new(1, -10, 0, 20)
+			label.Font = Theme.Fonts.Regular
 			label.TextSize = 13
-			label.TextColor3 = Color3.fromRGB(200, 200, 200)
+			label.TextColor3 = Theme.Colors.White
+			label.ZIndex = Theme.ZIndex.Modal + 2
 			label.Parent = scroll
 		end
 	end
 
-	layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+	local layoutConn = layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
 		scroll.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y)
+	end)
+
+	modal.Destroying:Connect(function()
+		layoutConn:Disconnect()
 	end)
 
 	-- Close button
 	local btn = UIComponents.createBaseButton("Close")
 	btn.Name = "ContinueButton"
 	btn.AnchorPoint = Vector2.new(0.5, 1)
-	btn.Position = UDim2.new(0.5, 0, 1, -15)
+	btn.Position = UDim2.new(0.5, 0, 1, -16)
+	btn.BackgroundColor3 = Theme.Colors.Success
+	btn.ZIndex = Theme.ZIndex.Modal + 2
 	btn.Parent = panel
 
-	btn.Activated:Connect(function()
-		onClose()
-	end)
+	btn.Activated:Connect(onClose)
+
+	-- Open Transition animation
+	AnimationService.scalePop(panel)
 
 	return modal
 end

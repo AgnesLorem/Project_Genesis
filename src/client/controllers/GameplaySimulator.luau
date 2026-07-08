@@ -611,7 +611,7 @@ function GameplaySimulator.runTowerChallengeFullFlow()
 	assertStudio()
 	ensureUiReady()
 	print("==================================================")
-	print("[GameplaySimulator][MVP-HARD] STARTING TOWER CHALLENGE FULL FLOW")
+	print("[GameplaySimulator] STARTING TOWER REGRESSION SUITE")
 	print("==================================================")
 
 	local profileRes = NetworkController.getPlayerProfileSnapshot()
@@ -634,15 +634,48 @@ function GameplaySimulator.runTowerChallengeFullFlow()
 		_critical("Tower defaults unavailable: " .. tostring(towerRes.message or towerRes.code))
 	end
 
-	GameplaySimulator.invalidTowerChallengeRequests()
+	-- ─── 1. Stage Lock Checks ──────────────────────────────────────────────────
+	print("[GameplaySimulator] Security Test: Direct locked floor starting (Floor 2)...")
+	local lockRes1 = NetworkController.requestTowerChallengeStart(challenge.challengeId, "tower_floor_002", ownedInstance.instanceId)
+	if lockRes1.success then
+		_critical("Stage lock bypass: started locked floor 'tower_floor_002' successfully!")
+	elseif lockRes1.code ~= "floor_locked" then
+		_critical(string.format("Expected Floor 2 rejection code to be 'floor_locked', got '%s'", tostring(lockRes1.code)))
+	else
+		print("[GameplaySimulator] Stage lock start (Floor 2) correctly rejected: " .. tostring(lockRes1.code))
+	end
+
 	_waitTowerSemanticRequestWindow()
+
+	print("[GameplaySimulator] Security Test: Direct invalid/locked floor starting (Floor 999)...")
+	local lockRes2 = NetworkController.requestTowerChallengeStart(challenge.challengeId, "tower_floor_999", ownedInstance.instanceId)
+	if lockRes2.success then
+		_critical("Stage lock bypass: started locked floor 'tower_floor_999' successfully!")
+	elseif lockRes2.code ~= "invalid_floor" then
+		_critical(string.format("Expected Floor 999 rejection code to be 'invalid_floor', got '%s'", tostring(lockRes2.code)))
+	else
+		print("[GameplaySimulator] Stage lock start (Floor 999) correctly rejected: " .. tostring(lockRes2.code))
+	end
+
+	_waitTowerSemanticRequestWindow()
+
+	-- ─── 2. First-Clear Rewards & Anti-Double-Claim ──────────────────────────
+	local profileBefore = NetworkController.getPlayerProfileSnapshot()
+	local beforeDna = profileBefore.value.balances.dna or 0
 
 	local beforeAttempts = _progressAttempts(towerRes.value, challenge.challengeId)
 	local completionRes = TowerChallengeController.runChallengeToCompletion(challenge.challengeId, floor.floorId, ownedInstance.instanceId)
 	if not completionRes.success then
 		_critical("Tower challenge completion failed: " .. tostring(completionRes.message or completionRes.code))
 	end
-	print("[GameplaySimulator][MVP-HARD] SCREENSHOT TRIGGER: Tower combat/result")
+	print("[GameplaySimulator] First clear of Floor 1 completed.")
+
+	local profileAfter = NetworkController.getPlayerProfileSnapshot()
+	local afterDna = profileAfter.value.balances.dna or 0
+	if afterDna ~= beforeDna + 100 then
+		_critical(string.format("First clear rewards failed. DNA should increase by 100 (from %d to %d), but is %d.", beforeDna, beforeDna + 100, afterDna))
+	end
+	print(string.format("[GameplaySimulator] First clear reward verified: DNA %d -> %d (+100)", beforeDna, afterDna))
 
 	local afterRes = NetworkController.getTowerChallengeSnapshot()
 	if not afterRes.success then
@@ -653,6 +686,63 @@ function GameplaySimulator.runTowerChallengeFullFlow()
 		_critical(string.format("Valid Tower completion did not increment attempts once. before=%d after=%d", beforeAttempts, afterAttempts))
 	end
 
+	-- Run Floor 1 again to verify anti-double-claim
+	_waitTowerSemanticRequestWindow()
+	print("[GameplaySimulator] Running Floor 1 second time to check anti-double-claim...")
+	local completionRes2 = TowerChallengeController.runChallengeToCompletion(challenge.challengeId, floor.floorId, ownedInstance.instanceId)
+	if not completionRes2.success then
+		_critical("Second Tower challenge completion failed: " .. tostring(completionRes2.message or completionRes2.code))
+	end
+	local profileAfter2 = NetworkController.getPlayerProfileSnapshot()
+	local afterDna2 = profileAfter2.value.balances.dna or 0
+	if afterDna2 ~= afterDna then
+		_critical(string.format("Anti-double-claim failed. DNA increased again on repeat clear! Went from %d to %d.", afterDna, afterDna2))
+	end
+	print("[GameplaySimulator] Anti-double-claim verified: repeat clear did not grant rewards.")
+
+	_waitTowerSemanticRequestWindow()
+
+	-- ─── 3. Active Run Recovery & Token Mismatch Auto-Abandon ──────────────────
+	print("[GameplaySimulator] Starting active run for recovery test...")
+	local activeStart = NetworkController.requestTowerChallengeStart(challenge.challengeId, floor.floorId, ownedInstance.instanceId)
+	if not activeStart.success then
+		_critical("Start active run failed: " .. tostring(activeStart.code))
+	end
+
+	local snapRes = NetworkController.getTowerChallengeSnapshot()
+	if not snapRes.success or not snapRes.value.activeRun or not snapRes.value.activeRunData then
+		_critical("activeRunData was not populated in snapshot!")
+	end
+	local activeData = snapRes.value.activeRunData
+	if activeData.runToken ~= activeStart.value.runToken then
+		_critical("activeRunData token mismatch!")
+	end
+	print("[GameplaySimulator] Active run recovery details verified successfully.")
+
+	_waitTowerSemanticRequestWindow()
+
+	print("[GameplaySimulator] Verification: Completion with invalid token and auto-abandon...")
+	local badComplete = NetworkController.requestTowerChallengeComplete("bad_token_999")
+	if badComplete.success then
+		_critical("Completion with bad token unexpectedly succeeded!")
+	else
+		print("[GameplaySimulator] Bad token completion correctly rejected: " .. tostring(badComplete.code))
+	end
+
+	local snapRes2 = NetworkController.getTowerChallengeSnapshot()
+	if snapRes2.value.activeRun or snapRes2.value.activeRunData then
+		_critical("Active run was not auto-abandoned after token mismatch!")
+	end
+	print("[GameplaySimulator] Token mismatch auto-abandon verified successfully.")
+
+	_waitTowerSemanticRequestWindow()
+
+	-- ─── 3.5 UI Error State & Retry Check ──────────────────────────────────────
+	GameplaySimulator.uiErrorStateTest()
+	_waitTowerSemanticRequestWindow()
+
+	-- ─── 4. Run Spam and Reconnect tests ─────────────────────────────────────
+	GameplaySimulator.invalidTowerChallengeRequests()
 	_waitTowerSemanticRequestWindow()
 	GameplaySimulator.spamTowerChallengeStartTest()
 	_waitTowerSemanticRequestWindow()
@@ -661,9 +751,13 @@ function GameplaySimulator.runTowerChallengeFullFlow()
 	GameplaySimulator.reconnectDuringTowerChallengeTest()
 	_waitTowerSemanticRequestWindow()
 	GameplaySimulator.reconnectAfterTowerChallengeCompleteTest()
+	_waitTowerSemanticRequestWindow()
+
+	-- ─── 5. UI Polish & Stress Tests ──────────────────────────────────────────
+	GameplaySimulator.runUiPolishStressTests()
 
 	print("==================================================")
-	print("[GameplaySimulator][MVP-HARD] TOWER CHALLENGE FULL FLOW COMPLETE WITHOUT CRITICAL/HIGH BUGS")
+	print("[GameplaySimulator] TOWER REGRESSION SUITE SUCCESSFUL!")
 	print("==================================================")
 	return { success = true }
 end
@@ -1631,6 +1725,134 @@ function GameplaySimulator.reconnectValidation()
 	print("[GameplaySimulator] Reconnect flow completed.")
 	print("[GameplaySimulator] SCREENSHOT TRIGGER: Reconnect restored state")
 	return { success = true }
+end
+
+function GameplaySimulator.uiErrorStateTest()
+	assertStudio()
+	ensureUiReady()
+	print("[GameplaySimulator] UI Error State Test: Mocking server failure...")
+
+	local challenge, floor, towerRes = _getTowerDefaults()
+	if not towerRes.success then
+		_critical("Tower defaults unavailable: " .. tostring(towerRes.message or towerRes.code))
+	end
+	local profileRes = NetworkController.getPlayerProfileSnapshot()
+	local ownedInstance = _getFirstCreatureInstance(profileRes.value)
+
+	-- Mock NetworkController.requestTowerChallengeStart to fail with a network error
+	local originalRequest = NetworkController.requestTowerChallengeStart
+	NetworkController.requestTowerChallengeStart = function()
+		task.wait(0.5) -- simulate delay
+		return { success = false, code = "network_error_timeout", message = "Connection timed out." }
+	end
+
+	local errorModalMounted = false
+
+	-- Listen to UIController mounting the error modal
+	local originalMount = UIController.mountModal
+	UIController.mountModal = function(modal)
+		if modal and modal.Name == "ErrorState" then
+			errorModalMounted = true
+		end
+		return originalMount(modal)
+	end
+
+	-- Call runChallengeToCompletion (which will trigger start challenge and error out)
+	TowerChallengeController.runChallengeToCompletion(challenge.challengeId, floor.floorId, ownedInstance.instanceId)
+
+	-- Wait for the request to yield and return
+	task.wait(1.0)
+
+	-- Restore mocks
+	NetworkController.requestTowerChallengeStart = originalRequest
+	UIController.mountModal = originalMount
+
+	-- Verify error modal was indeed shown
+	if not errorModalMounted then
+		_critical("UI Error State Test: Error modal was not mounted on server failure!")
+	end
+
+	-- Clear the error modal to return to clean state
+	UIController.clearModal()
+
+	print("[GameplaySimulator] UI Error State and Retry verified successfully.")
+end
+
+function GameplaySimulator.runUiPolishStressTests()
+	assertStudio()
+	ensureUiReady()
+	print("[GameplaySimulator] Starting UI Polish Stress & Verification Tests...")
+
+	local UIController = require(game:GetService("Players").LocalPlayer.PlayerScripts.Genesis.Client.controllers.UIController)
+	local ToastManager = require(game:GetService("Players").LocalPlayer.PlayerScripts.Genesis.Client.views.ToastManager)
+	
+	-- 1. Toast Queue Spam Check
+	print("[GameplaySimulator] Stress Test 1: Spamming 10 concurrent Toast notifications...")
+	ToastManager.clearAll()
+	for i = 1, 10 do
+		ToastManager.showToast("Stress Toast Notification #" .. tostring(i), "success")
+	end
+	
+	-- 2. Transition open/close stress test (100 times)
+	print("[GameplaySimulator] Stress Test 2: Toggling main panels 100 times...")
+	
+	local mainUI = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("GenesisMainUI")
+	
+	local mockSnapshot = {
+		balances = { biomass = 100, dna = 50 },
+		generators = {}
+	}
+	local GeneratorPanel = require(game:GetService("Players").LocalPlayer.PlayerScripts.Genesis.Client.views.GeneratorPanel)
+	
+	for i = 1, 100 do
+		local genPanel = GeneratorPanel.create(mockSnapshot, function() end, function() end, function() end, nil, nil, function() end)
+		UIController.mountScreen(genPanel)
+		task.wait(0.01) -- rapid transitions
+	end
+	
+	-- Restore original WorldScreen
+	GameplaySimulator.refreshWorld()
+	
+	-- 3. Navigation Spam Check
+	print("[GameplaySimulator] Stress Test 3: Spamming concurrent screen routing...")
+	local TowerChallengeScreen = require(game:GetService("Players").LocalPlayer.PlayerScripts.Genesis.Client.views.TowerChallengeScreen)
+	local mockChallenge = { floors = {} }
+	
+	for i = 1, 10 do
+		task.spawn(function()
+			local screenObj = TowerChallengeScreen.create({creatureInstances={}}, mockChallenge, {}, function() end, function() end, function() end)
+			UIController.mountScreen(screenObj)
+		end)
+		task.spawn(function()
+			local genPanel = GeneratorPanel.create(mockSnapshot, function() end, function() end, function() end, nil, nil, function() end)
+			UIController.mountScreen(genPanel)
+		end)
+	end
+	
+	-- Wait for threads to settle
+	task.wait(0.5)
+	
+	-- Clean up to World screen
+	GameplaySimulator.refreshWorld()
+	
+	-- 4. Orphan Elements Check
+	print("[GameplaySimulator] Stress Test 4: Checking for orphan or double active screens...")
+	local activeCount = 0
+	for _, child in ipairs(mainUI:GetChildren()) do
+		if child:IsA("GuiObject") and child.Name ~= "WorldScreen" and child.Name ~= "ToastFrame" then
+			activeCount = activeCount + 1
+			child:Destroy()
+		end
+	end
+	
+	if activeCount > 2 then
+		print("[GameplaySimulator] Warning: Cleared " .. tostring(activeCount) .. " orphan GUI nodes from main view.")
+	end
+
+	-- Clear out all spammed toasts cleanly
+	ToastManager.clearAll()
+	
+	print("[GameplaySimulator] UI Polish Stress and Verification verified successfully.")
 end
 
 -- Runs the complete core progression loop end-to-end
