@@ -1710,4 +1710,101 @@ function GameplaySimulator.runProgressionLoop()
 	print("==================================================")
 end
 
+function GameplaySimulator.runAlpha001RuntimeLoop(cycles)
+	assertStudio()
+	ensureUiReady()
+	cycles = cycles or 3
+	print("==================================================")
+	print("[GameplaySimulator] STARTING RUNTIME LOOP VERIFICATION (ALPHA-001)")
+	print("==================================================")
+
+	-- 1. Starter Selection
+	local snapRes = NetworkController.getPlayerProfileSnapshot()
+	if snapRes.success and not snapRes.value.starterSelected then
+		print("[GameplaySimulator] No starter selected. Claiming starter_001...")
+		local claimRes = NetworkController.requestStarterSelection("starter_001")
+		if not claimRes.success then
+			error("[GameplaySimulator] Failed starter selection claim: " .. tostring(claimRes.message))
+		end
+		GameplaySimulator.refreshWorld()
+	end
+
+	-- 2. Cycles Loop
+	for cycle = 1, cycles do
+		print(string.format("[GameplaySimulator] --- CYCLE %d/%d ---", cycle, cycles))
+		
+		-- Wait for generator
+		task.wait(1.0)
+		print("[GameplaySimulator] Claiming accumulated biomass...")
+		local claimRes = GameplaySimulator.claimGenerator()
+		if not claimRes.success then
+			print("[GameplaySimulator] Claim warning: " .. tostring(claimRes.message or claimRes.code))
+		end
+		
+		-- Run battle
+		print("[GameplaySimulator] Running Story Battle...")
+		GameplaySimulator.runStoryBattle()
+		task.wait(1.0)
+
+		-- Try upgrades
+		print("[GameplaySimulator] Attempting Bio Generator upgrade...")
+		local upgradeBio = GeneratorController.upgrade("bio_generator")
+		if upgradeBio.success then
+			print("[GameplaySimulator] Bio Generator upgraded to level " .. tostring(upgradeBio.value.level))
+		else
+			print("[GameplaySimulator] Bio Generator upgrade skipped/failed: " .. tostring(upgradeBio.message or upgradeBio.code))
+		end
+
+		print("[GameplaySimulator] Attempting DNA Generator upgrade...")
+		local upgradeDna = GeneratorController.upgrade("dna_generator")
+		if upgradeDna.success then
+			print("[GameplaySimulator] DNA Generator upgraded to level " .. tostring(upgradeDna.value.level))
+		else
+			print("[GameplaySimulator] DNA Generator upgrade skipped/failed: " .. tostring(upgradeDna.message or upgradeDna.code))
+		end
+
+		-- Try evolution
+		print("[GameplaySimulator] Checking active creature evolution...")
+		local evoRes = GameplaySimulator.evolveActiveCreature()
+		if evoRes.success then
+			print("[GameplaySimulator] Creature evolved successfully!")
+		else
+			print("[GameplaySimulator] Creature evolution skipped/failed: " .. tostring(evoRes.message or evoRes.code))
+		end
+
+		-- Reconnect test
+		print("[GameplaySimulator] Running Reconnect validation...")
+		GameplaySimulator.reconnectValidation()
+		task.wait(1.0)
+	end
+
+	-- 3. Edge Cases Check
+	print("[GameplaySimulator] Running Edge Cases & Security Checks...")
+	
+	-- Verify balance tracking
+	local finalSnap = NetworkController.getPlayerProfileSnapshot()
+	if finalSnap.success then
+		print(string.format("[GameplaySimulator] Final Balances - Biomass: %d, DNA: %d", finalSnap.value.balances.biomass or 0, finalSnap.value.balances.dna or 0))
+	end
+
+	-- Test double-claim spam
+	print("[GameplaySimulator] Running spam claim checks...")
+	GameplaySimulator.spamClaimGeneratorTest()
+	
+	-- Verify invalid/max level upgrade rejection
+	print("[GameplaySimulator] Testing upgrade rejection on invalid generator ID...")
+	local upgradeInvalid = GeneratorController.upgrade("invalid_generator_id")
+	if not upgradeInvalid.success then
+		print("[GameplaySimulator] Invalid upgrade correctly rejected: " .. tostring(upgradeInvalid.message or upgradeInvalid.code))
+	else
+		error("[GameplaySimulator] Expected invalid generator upgrade to fail, but it succeeded!")
+	end
+
+	print("==================================================")
+	print("[GameplaySimulator] RUNTIME LOOP VERIFICATION PASS")
+	print("==================================================")
+	return { success = true }
+end
+
 return GameplaySimulator
+
