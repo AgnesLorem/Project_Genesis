@@ -1,0 +1,26 @@
+{
+  "phase_a_telemetry": {
+    "bio_generator_lvl10_seconds": 33,
+    "bio_generator_lvl20_seconds": 51,
+    "bio_generator_max_level_reached": 999,
+    "advanced_bio_generator_unlock": "stuck",
+    "dna_generator_lvl2_seconds": "stuck",
+    "biomass_earn_rate_per_hour": 1498083,
+    "dna_earn_rate_per_hour": 15595,
+    "hard_lock_detected": true
+  },
+  "phase_b_telemetry": {
+    "bio_generator_lvl10_seconds": 62,
+    "bio_generator_lvl20_seconds": 121,
+    "bio_generator_level_24h": 86,
+    "advanced_bio_generator_unlock_seconds": 1620,
+    "advanced_bio_generator_level_24h": 50,
+    "dna_generator_level_24h": 31,
+    "dna_generator_lvl2_seconds": 30,
+    "biomass_balance_24h": 616624,
+    "dna_balance_24h": 305887,
+    "biomass_earn_rate_per_hour": 742512,
+    "dna_earn_rate_per_hour": 109501,
+    "hard_lock_detected": false
+  }
+}
