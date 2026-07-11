@@ -130,11 +130,18 @@ function WorldScreen.create(
 
 	if activeInst and activeCreatureId then
 		local config = CreatureRegistry.getCreature(activeCreatureId)
-		local scaledStats = StatCalculator.getScaledStats(config, activeInst.level, nil)
-		local maxHp = scaledStats.hp
-		local atk = scaledStats.atk
-		local def = scaledStats.def
-		local spd = scaledStats.spd
+		local maxHp = 100
+		local atk = 10
+		local def = 5
+		local spd = 10
+		
+		if config then
+			local scaledStats = StatCalculator.getScaledStats(config, activeInst.level, nil)
+			maxHp = scaledStats.hp
+			atk = scaledStats.atk
+			def = scaledStats.def
+			spd = scaledStats.spd
+		end
 
 		local xpNeeded = activeInst.level * 100
 

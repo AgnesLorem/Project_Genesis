@@ -84,15 +84,9 @@ local function _buildPublicConfigsCache()
 				end
 			end
 
-			publicConfigs[config.creatureId] = {
-				creatureId = config.creatureId,
-				displayName = config.displayName,
-				collectionCategory = config.collectionCategory,
-				sortOrder = config.sortOrder,
-				isEnabled = config.isEnabled,
-				evolutionLineId = config.evolutionLineId,
-				evolutionAvailable = evolutionAvailable,
-			}
+			local publicConfig = table.clone(config)
+			publicConfig.evolutionAvailable = evolutionAvailable
+			publicConfigs[config.creatureId] = publicConfig
 		end
 	end
 	return publicConfigs

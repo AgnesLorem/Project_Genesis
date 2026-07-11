@@ -1,7 +1,7 @@
 local HttpService = game:GetService("HttpService")
 
 local Result = require(game:GetService("ReplicatedStorage").Genesis.Shared.utilities.Result)
-local BalanceRegistry = require(game:GetService("ReplicatedStorage").Genesis.Shared.data.BalanceRegistry)
+local BalanceRegistry = require(script.Parent.Parent.data.BalanceRegistry)
 local StatCalculator = require(game:GetService("ReplicatedStorage").Genesis.Shared.utilities.StatCalculator)
 local CreatureRegistry = require(game:GetService("ReplicatedStorage").Genesis.Shared.data.CreatureRegistry)
 local SaveService = require(script.Parent.SaveService)

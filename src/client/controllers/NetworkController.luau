@@ -6,6 +6,10 @@ function NetworkController.getPlayerProfileSnapshot()
 	return Network.getRemoteFunction("GetPlayerProfileSnapshot"):InvokeServer() 
 end
 
+function NetworkController.getCreatureConfigsPublic()
+	return Network.getRemoteFunction("GetCreatureConfigsPublic"):InvokeServer()
+end
+
 function NetworkController.getStarterChoices() 
 	return Network.getRemoteFunction("GetStarterChoices"):InvokeServer() 
 end
