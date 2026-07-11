@@ -15,9 +15,10 @@ local Result = require(game:GetService("ReplicatedStorage").Genesis.Shared.utili
 local GameModeContract = require(game:GetService("ReplicatedStorage").Genesis.Shared.network.GameModeContract)
 local SaveService = require(script.Parent.SaveService)
 local EquipmentService = require(script.Parent.EquipmentService)
+local BalanceRegistry = require(game:GetService("ReplicatedStorage").Genesis.Shared.data.BalanceRegistry)
+local StatCalculator = require(game:GetService("ReplicatedStorage").Genesis.Shared.utilities.StatCalculator)
 local CreatureRegistry = require(game:GetService("ReplicatedStorage").Genesis.Shared.data.CreatureRegistry)
 local BossRegistry = require(script.Parent.Parent.data.BossRegistry)
-local BalanceRegistry = require(script.Parent.Parent.data.BalanceRegistry)
 local SkillRegistry = require(script.Parent.Parent.data.SkillRegistry)
 local BattleSession = require(script.Parent.Parent.combat.BattleSession)
 
@@ -51,24 +52,12 @@ local function _getArrayLength(value: any): number?
 end
 
 local function _buildUnit(instanceId: string, creatureId: string, config: any, level: number, bonuses: any): any
-	local lvl = level or 1
-	local scale = 1 + (lvl - 1) * 0.1
-	local spdScale = 1 + (lvl - 1) * 0.01
-
-	local hp = math.floor(config.baseStats.hp * scale) + (bonuses and bonuses.hp or 0)
-	local atk = math.floor(config.baseStats.atk * scale) + (bonuses and bonuses.atk or 0)
-	local def = math.floor(config.baseStats.def * scale) + (bonuses and bonuses.def or 0)
-	local spd = math.floor(config.baseStats.spd * spdScale) + (bonuses and bonuses.spd or 0)
+	local scaledStats = StatCalculator.getScaledStats(config, level, bonuses)
 
 	return {
 		instanceId = instanceId,
 		creatureId = creatureId,
-		stats = {
-			hp = hp,
-			atk = atk,
-			def = def,
-			spd = spd,
-		},
+		stats = scaledStats,
 		skillIds = config.skillIds,
 	}
 end
@@ -99,10 +88,10 @@ local function _buildPlayerTeam(player: Player, playerInstanceIds: any, expected
 	end
 
 	if length ~= expectedTeamSize then
-		return Result.fail("invalid_team_size", string.format(
-			"Expected exactly %d player creature instances.",
-			expectedTeamSize
-		))
+		return Result.fail(
+			"invalid_team_size",
+			string.format("Expected exactly %d player creature instances.", expectedTeamSize)
+		)
 	end
 
 	local save = SaveService.getPlayerSave(player)
@@ -147,10 +136,10 @@ local function _buildEnemyTeam(enemyRefs: any, expectedTeamSize: number, bossId:
 	end
 
 	if length ~= expectedTeamSize then
-		return Result.fail("invalid_enemy_team_size", string.format(
-			"Expected exactly %d enemy refs.",
-			expectedTeamSize
-		))
+		return Result.fail(
+			"invalid_enemy_team_size",
+			string.format("Expected exactly %d enemy refs.", expectedTeamSize)
+		)
 	end
 
 	local team = {}
@@ -165,13 +154,10 @@ local function _buildEnemyTeam(enemyRefs: any, expectedTeamSize: number, bossId:
 			return Result.fail("invalid_enemy", "Enemy creature config not found or disabled.")
 		end
 
-		table.insert(team, _buildUnit(
-			string.format("enemy_%s_%s_%d", battleMode, bossId, index),
-			enemyCreatureId,
-			config,
-			1,
-			nil
-		))
+		table.insert(
+			team,
+			_buildUnit(string.format("enemy_%s_%s_%d", battleMode, bossId, index), enemyCreatureId, config, 1, nil)
+		)
 	end
 
 	return Result.ok(team)
@@ -194,7 +180,12 @@ local function _runBattle(playerTeam: { any }, enemyTeam: { any })
 	return Result.ok(result)
 end
 
-local function _resolveConfiguredTeamBattle(player: Player, playerInstanceIds: any, bossId: string, expectedBattleMode: string)
+local function _resolveConfiguredTeamBattle(
+	player: Player,
+	playerInstanceIds: any,
+	bossId: string,
+	expectedBattleMode: string
+)
 	if type(bossId) ~= "string" or bossId == "" then
 		return Result.fail("invalid_boss", "Missing or invalid bossId.")
 	end
@@ -205,12 +196,15 @@ local function _resolveConfiguredTeamBattle(player: Player, playerInstanceIds: a
 	end
 
 	if bossConfig.battleMode ~= expectedBattleMode then
-		return Result.fail("invalid_battle_mode", string.format(
-			"Boss '%s' is configured for '%s', not '%s'.",
-			bossId,
-			tostring(bossConfig.battleMode),
-			expectedBattleMode
-		))
+		return Result.fail(
+			"invalid_battle_mode",
+			string.format(
+				"Boss '%s' is configured for '%s', not '%s'.",
+				bossId,
+				tostring(bossConfig.battleMode),
+				expectedBattleMode
+			)
+		)
 	end
 
 	if bossConfig.teamSize ~= MVP_BOSS_TEAM_SIZE then
@@ -242,33 +236,33 @@ function CombatService.resolveStoryBattle(player: Player, playerCreatureId: stri
 			break
 		end
 	end
-	
+
 	if not pInst then
 		return Result.fail("unowned_creature", "Player does not own this creature.")
 	end
-	
+
 	local pConfig = CreatureRegistry.getCreature(pInst.creatureId)
 	if not pConfig then
 		return Result.fail("invalid_creature", "Player creature config not found.")
 	end
-	
+
 	-- Validate Enemy Creature
 	local eConfig = CreatureRegistry.getCreature(enemyConfigId)
 	if not eConfig then
 		return Result.fail("invalid_enemy", "Enemy creature config not found.")
 	end
-	
+
 	-- Prepare isolated session stats
 	local level = pInst.level or 1
 	local eqResult = EquipmentService.calculateStatBonuses(player)
 	local bonuses = eqResult.success and eqResult.value or { hp = 0, atk = 0, def = 0, spd = 0 }
 
 	local playerTeam = {
-		_buildUnit(pInst.instanceId, pInst.creatureId, pConfig, level, bonuses)
+		_buildUnit(pInst.instanceId, pInst.creatureId, pConfig, level, bonuses),
 	}
 
 	local enemyTeam = {
-		_buildUnit("enemy_" .. enemyConfigId, enemyConfigId, eConfig, 1, nil)
+		_buildUnit("enemy_" .. enemyConfigId, enemyConfigId, eConfig, 1, nil),
 	}
 
 	-- Build & Execute Isolated Session

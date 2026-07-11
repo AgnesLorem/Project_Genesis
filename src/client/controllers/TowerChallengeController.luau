@@ -11,6 +11,7 @@ local TowerChallengeResultModal = require(script.Parent.Parent.views.TowerChalle
 local StatePatterns = require(script.Parent.Parent.views.StatePatterns)
 local CreatureRegistry = require(game:GetService("ReplicatedStorage").Genesis.Shared.data.CreatureRegistry)
 local PresentationPlayer = require(script.Parent.Parent.views.PresentationPlayer)
+local StatCalculator = require(game:GetService("ReplicatedStorage").Genesis.Shared.utilities.StatCalculator)
 
 local TowerChallengeController = {}
 
@@ -47,8 +48,12 @@ end
 local function _playBattleAndComplete(active: any, playerInstance: any, onClose: (() -> ())?)
 	local playerConfig = CreatureRegistry.getCreature(playerInstance.creatureId)
 	local enemyConfig = CreatureRegistry.getCreature(active.enemyCreatureId)
-	local maxPlayerHp = playerConfig and playerConfig.baseStats and playerConfig.baseStats.hp or 100
-	local maxEnemyHp = enemyConfig and enemyConfig.baseStats and enemyConfig.baseStats.hp or 100
+
+	local playerStats = StatCalculator.getScaledStats(playerConfig, playerInstance.level or 1, nil)
+	local enemyStats = StatCalculator.getScaledStats(enemyConfig, 1, nil)
+
+	local maxPlayerHp = playerStats.hp
+	local maxEnemyHp = enemyStats.hp
 
 	local screen, api = CombatScreen.create(
 		playerInstance.creatureId,
@@ -59,7 +64,9 @@ local function _playBattleAndComplete(active: any, playerInstance: any, onClose:
 		maxEnemyHp,
 		function()
 			UIController.unmountScreen("CombatScreen")
-			if onClose then onClose() end
+			if onClose then
+				onClose()
+			end
 		end
 	)
 	UIController.mountScreen(screen)
@@ -87,7 +94,12 @@ local function _playBattleAndComplete(active: any, playerInstance: any, onClose:
 
 	local completionRes = NetworkController.requestTowerChallengeComplete(active.runToken)
 	if not completionRes.success then
-		UIController.mountModal(StatePatterns.Error(nil, "Tower Completion Failed: " .. tostring(completionRes.message or completionRes.code)))
+		UIController.mountModal(
+			StatePatterns.Error(
+				nil,
+				"Tower Completion Failed: " .. tostring(completionRes.message or completionRes.code)
+			)
+		)
 		return completionRes
 	end
 
@@ -108,11 +120,15 @@ function TowerChallengeController.show(onClose: (() -> ())?)
 	UIController.clearModal()
 
 	if not profileRes.success then
-		UIController.mountModal(StatePatterns.Error(nil, "Profile Load Failed: " .. tostring(profileRes.message or profileRes.code)))
+		UIController.mountModal(
+			StatePatterns.Error(nil, "Profile Load Failed: " .. tostring(profileRes.message or profileRes.code))
+		)
 		return profileRes
 	end
 	if not towerRes.success then
-		UIController.mountModal(StatePatterns.Error(nil, "Tower Load Failed: " .. tostring(towerRes.message or towerRes.code)))
+		UIController.mountModal(
+			StatePatterns.Error(nil, "Tower Load Failed: " .. tostring(towerRes.message or towerRes.code))
+		)
 		return towerRes
 	end
 
@@ -132,37 +148,55 @@ function TowerChallengeController.show(onClose: (() -> ())?)
 		return fail
 	end
 
-	local progress = towerRes.value.progressByChallengeId and towerRes.value.progressByChallengeId[challenge.challengeId]
-	local screen = TowerChallengeScreen.create(profileRes.value, challenge, progress, function(challengeId, floorId, playerInstanceId)
-		task.spawn(function()
-			TowerChallengeController.runChallengeToCompletion(challengeId, floorId, playerInstanceId, onClose)
-		end)
-	end, function()
-		TowerChallengeController.show(onClose)
-	end, function()
-		UIController.unmountScreen("TowerChallengeScreen")
-		if onClose then onClose() end
-	end)
+	local progress = towerRes.value.progressByChallengeId
+		and towerRes.value.progressByChallengeId[challenge.challengeId]
+	local screen = TowerChallengeScreen.create(
+		profileRes.value,
+		challenge,
+		progress,
+		function(challengeId, floorId, playerInstanceId)
+			task.spawn(function()
+				TowerChallengeController.runChallengeToCompletion(challengeId, floorId, playerInstanceId, onClose)
+			end)
+		end,
+		function()
+			TowerChallengeController.show(onClose)
+		end,
+		function()
+			UIController.unmountScreen("TowerChallengeScreen")
+			if onClose then
+				onClose()
+			end
+		end
+	)
 	UIController.mountScreen(screen)
 
 	return towerRes
 end
 
-function TowerChallengeController.runChallengeToCompletion(challengeId: string, floorId: string, playerInstanceId: string, onClose: (() -> ())?)
+function TowerChallengeController.runChallengeToCompletion(
+	challengeId: string,
+	floorId: string,
+	playerInstanceId: string,
+	onClose: (() -> ())?
+)
 	UIController.init()
 	UIController.mountModal(StatePatterns.Loading(nil))
 
 	local profileRes = NetworkController.getPlayerProfileSnapshot()
 	if not profileRes.success then
 		UIController.clearModal()
-		UIController.mountModal(StatePatterns.Error(nil, "Profile Load Failed: " .. tostring(profileRes.message or profileRes.code)))
+		UIController.mountModal(
+			StatePatterns.Error(nil, "Profile Load Failed: " .. tostring(profileRes.message or profileRes.code))
+		)
 		return profileRes
 	end
 
 	local playerInstance = _findInstance(profileRes.value, playerInstanceId)
 	if not playerInstance then
 		UIController.clearModal()
-		local fail = { success = false, code = "missing_creature_instance", message = "Creature instance not found in profile." }
+		local fail =
+			{ success = false, code = "missing_creature_instance", message = "Creature instance not found in profile." }
 		UIController.mountModal(StatePatterns.Error(nil, fail.message))
 		return fail
 	end
@@ -170,7 +204,9 @@ function TowerChallengeController.runChallengeToCompletion(challengeId: string, 
 	local startRes = NetworkController.requestTowerChallengeStart(challengeId, floorId, playerInstanceId)
 	UIController.clearModal()
 	if not startRes.success then
-		UIController.mountModal(StatePatterns.Error(nil, "Tower Start Failed: " .. tostring(startRes.message or startRes.code)))
+		UIController.mountModal(
+			StatePatterns.Error(nil, "Tower Start Failed: " .. tostring(startRes.message or startRes.code))
+		)
 		return startRes
 	end
 
@@ -194,13 +230,16 @@ function TowerChallengeController.resumeChallenge(active: any, onClose: (() -> (
 	UIController.clearModal()
 
 	if not profileRes.success then
-		UIController.mountModal(StatePatterns.Error(nil, "Profile Load Failed: " .. tostring(profileRes.message or profileRes.code)))
+		UIController.mountModal(
+			StatePatterns.Error(nil, "Profile Load Failed: " .. tostring(profileRes.message or profileRes.code))
+		)
 		return profileRes
 	end
 
 	local playerInstance = _findInstance(profileRes.value, active.playerInstanceId)
 	if not playerInstance then
-		local fail = { success = false, code = "missing_creature_instance", message = "Creature instance not found in profile." }
+		local fail =
+			{ success = false, code = "missing_creature_instance", message = "Creature instance not found in profile." }
 		UIController.mountModal(StatePatterns.Error(nil, fail.message))
 		return fail
 	end

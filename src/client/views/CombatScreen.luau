@@ -8,15 +8,22 @@
 
 local Theme = require(script.Parent.Theme)
 local UIComponents = require(script.Parent.UIComponents)
-local AnimationService = require(script.Parent.AnimationService)
 local VFXHelper = require(script.Parent.Parent.effects.VFXHelper)
 
 local CombatScreen = {}
 
-function CombatScreen.create(playerCreatureId, playerLevel, enemyCreatureId, enemyLevel, maxPlayerHp, maxEnemyHp, onExit)
+function CombatScreen.create(
+	playerCreatureId,
+	playerLevel,
+	enemyCreatureId,
+	enemyLevel,
+	maxPlayerHp,
+	maxEnemyHp,
+	onExit
+)
 	local screen = UIComponents.createBaseContainer()
 	screen.Name = "CombatScreen"
-	
+
 	local panel = UIComponents.createBasePanel()
 	panel.BackgroundTransparency = 0.8 -- Make it semi-transparent so the 3D workspace behind is visible
 	panel.Parent = screen
@@ -191,7 +198,8 @@ function CombatScreen.create(playerCreatureId, playerLevel, enemyCreatureId, ene
 
 	local logConn = logLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
 		scroll.CanvasSize = UDim2.new(0, 0, 0, logLayout.AbsoluteContentSize.Y)
-		scroll.CanvasPosition = Vector2.new(0, math.max(0, logLayout.AbsoluteContentSize.Y - scroll.AbsoluteWindowSize.Y))
+		scroll.CanvasPosition =
+			Vector2.new(0, math.max(0, logLayout.AbsoluteContentSize.Y - scroll.AbsoluteWindowSize.Y))
 	end)
 
 	screen.Destroying:Connect(function()
@@ -204,15 +212,17 @@ function CombatScreen.create(playerCreatureId, playerLevel, enemyCreatureId, ene
 	api.enemyCard = enemyCard
 
 	function api.updatePlayerHp(currentHp)
-		local ratio = math.clamp(currentHp / maxPlayerHp, 0, 1)
+		local clampedHp = math.clamp(currentHp, 0, maxPlayerHp)
+		local ratio = math.clamp(clampedHp / maxPlayerHp, 0, 1)
 		pBarFill.Size = UDim2.new(ratio, 0, 1, 0)
-		pHpText.Text = string.format("%d / %d", currentHp, maxPlayerHp)
+		pHpText.Text = string.format("%d / %d", clampedHp, maxPlayerHp)
 	end
 
 	function api.updateEnemyHp(currentHp)
-		local ratio = math.clamp(currentHp / maxEnemyHp, 0, 1)
+		local clampedHp = math.clamp(currentHp, 0, maxEnemyHp)
+		local ratio = math.clamp(clampedHp / maxEnemyHp, 0, 1)
 		eBarFill.Size = UDim2.new(ratio, 0, 1, 0)
-		eHpText.Text = string.format("%d / %d", currentHp, maxEnemyHp)
+		eHpText.Text = string.format("%d / %d", clampedHp, maxEnemyHp)
 	end
 
 	function api.setCurrentTurn(turnNumber)

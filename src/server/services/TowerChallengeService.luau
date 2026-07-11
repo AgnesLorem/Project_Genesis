@@ -1,11 +1,12 @@
 local HttpService = game:GetService("HttpService")
 
 local Result = require(game:GetService("ReplicatedStorage").Genesis.Shared.utilities.Result)
+local BalanceRegistry = require(game:GetService("ReplicatedStorage").Genesis.Shared.data.BalanceRegistry)
+local StatCalculator = require(game:GetService("ReplicatedStorage").Genesis.Shared.utilities.StatCalculator)
 local CreatureRegistry = require(game:GetService("ReplicatedStorage").Genesis.Shared.data.CreatureRegistry)
 local SaveService = require(script.Parent.SaveService)
 local EquipmentService = require(script.Parent.EquipmentService)
 local TowerChallengeRegistry = require(script.Parent.Parent.data.TowerChallengeRegistry)
-local BalanceRegistry = require(script.Parent.Parent.data.BalanceRegistry)
 local SkillRegistry = require(script.Parent.Parent.data.SkillRegistry)
 local BattleSession = require(script.Parent.Parent.combat.BattleSession)
 
@@ -18,7 +19,12 @@ local function _checkActiveRunTTL(playerKey: number)
 	if activeRun then
 		local elapsed = os.time() - activeRun.startedAt
 		if elapsed > 900 then
-			print(string.format("[TowerChallengeService] Active run expired (TTL > 900s) for player=%d. Cleaning up.", playerKey))
+			print(
+				string.format(
+					"[TowerChallengeService] Active run expired (TTL > 900s) for player=%d. Cleaning up.",
+					playerKey
+				)
+			)
 			activeRuns[playerKey] = nil
 		end
 	end
@@ -100,29 +106,24 @@ local function _findOwnedInstance(save: any, playerInstanceId: string): any
 end
 
 local function _buildUnit(instanceId: string, creatureId: string, config: any, level: number, bonuses: any): any
-	local lvl = level or 1
-	local scale = 1 + (lvl - 1) * 0.1
-	local spdScale = 1 + (lvl - 1) * 0.01
-
-	local hp = math.floor(config.baseStats.hp * scale) + (bonuses and bonuses.hp or 0)
-	local atk = math.floor(config.baseStats.atk * scale) + (bonuses and bonuses.atk or 0)
-	local def = math.floor(config.baseStats.def * scale) + (bonuses and bonuses.def or 0)
-	local spd = math.floor(config.baseStats.spd * spdScale) + (bonuses and bonuses.spd or 0)
+	local scaledStats = StatCalculator.getScaledStats(config, level, bonuses)
 
 	return {
 		instanceId = instanceId,
 		creatureId = creatureId,
-		stats = {
-			hp = hp,
-			atk = atk,
-			def = def,
-			spd = spd,
-		},
+		stats = scaledStats,
 		skillIds = config.skillIds,
 	}
 end
 
-local function _resolveBattle(playerInstanceId: string, playerCreatureId: string, enemyInstanceId: string, enemyCreatureId: string, level: number, bonuses: any)
+local function _resolveBattle(
+	playerInstanceId: string,
+	playerCreatureId: string,
+	enemyInstanceId: string,
+	enemyCreatureId: string,
+	level: number,
+	bonuses: any
+)
 	local playerConfig = CreatureRegistry.getCreature(playerCreatureId)
 	if not playerConfig or not playerConfig.isEnabled then
 		return Result.fail("invalid_creature", "Player creature config not found or disabled.")
@@ -146,7 +147,7 @@ local function _resolveBattle(playerInstanceId: string, playerCreatureId: string
 	)
 	local battleValue = session:simulate()
 	session = nil
-	
+
 	if battleValue.isStalled and enemyCreatureId ~= "dummy_immortal" then
 		return Result.fail("simulation_stalled", "The tower battle simulation timed out or stalled.")
 	end
@@ -248,7 +249,8 @@ function TowerChallengeService.startRun(player: Player, challengeId: any, floorI
 	end
 
 	local enemyInstanceId = string.format("enemy_tower_%s_%s", challengeId, floorId)
-	local battleResult = _resolveBattle(playerInstanceId, playerCreatureId, enemyInstanceId, floor.enemyCreatureId, level, bonuses)
+	local battleResult =
+		_resolveBattle(playerInstanceId, playerCreatureId, enemyInstanceId, floor.enemyCreatureId, level, bonuses)
 	if not battleResult.success then
 		return battleResult
 	end
@@ -267,13 +269,15 @@ function TowerChallengeService.startRun(player: Player, challengeId: any, floorI
 		startedAt = os.time(),
 	}
 
-	print(string.format(
-		"[TowerChallengeService] Started run challenge=%s floor=%s player=%d token=%s.",
-		challengeId,
-		floorId,
-		player.UserId,
-		runToken
-	))
+	print(
+		string.format(
+			"[TowerChallengeService] Started run challenge=%s floor=%s player=%d token=%s.",
+			challengeId,
+			floorId,
+			player.UserId,
+			runToken
+		)
+	)
 
 	return Result.ok({
 		runToken = runToken,
@@ -326,7 +330,8 @@ function TowerChallengeService.completeRun(player: Player, runToken: any)
 			if floor and floor.rewards then
 				local CurrencyService = require(script.Parent.CurrencyService)
 				for _, reward in ipairs(floor.rewards) do
-					local grantRes = CurrencyService.tryGrant(player, reward.currencyType, reward.amount, "tower_first_clear_reward")
+					local grantRes =
+						CurrencyService.tryGrant(player, reward.currencyType, reward.amount, "tower_first_clear_reward")
 					if grantRes.success then
 						table.insert(rewardsGranted, {
 							currencyType = reward.currencyType,
@@ -349,15 +354,17 @@ function TowerChallengeService.completeRun(player: Player, runToken: any)
 		return saveResult
 	end
 
-	print(string.format(
-		"[TowerChallengeService] Completed run challenge=%s floor=%s player=%d outcome=%s attempts=%d clears=%d.",
-		activeRun.challengeId,
-		activeRun.floorId,
-		player.UserId,
-		outcome,
-		progress.totalAttempts,
-		progress.totalClears
-	))
+	print(
+		string.format(
+			"[TowerChallengeService] Completed run challenge=%s floor=%s player=%d outcome=%s attempts=%d clears=%d.",
+			activeRun.challengeId,
+			activeRun.floorId,
+			player.UserId,
+			outcome,
+			progress.totalAttempts,
+			progress.totalClears
+		)
+	)
 
 	return Result.ok({
 		outcome = outcome,

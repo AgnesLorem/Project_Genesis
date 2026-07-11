@@ -10,6 +10,7 @@
 local Theme = require(script.Parent.Theme)
 local UIComponents = require(script.Parent.UIComponents)
 local CreatureRegistry = require(game:GetService("ReplicatedStorage").Genesis.Shared.data.CreatureRegistry)
+local StatCalculator = require(game:GetService("ReplicatedStorage").Genesis.Shared.utilities.StatCalculator)
 
 local WorldScreen = {}
 
@@ -25,7 +26,6 @@ function WorldScreen.create(
 	onOpenTower: () -> (),
 	onOpenInventory: () -> ()
 ): Frame
-
 	local screen = UIComponents.createBaseContainer()
 	screen.Name = "WorldScreen"
 
@@ -130,17 +130,28 @@ function WorldScreen.create(
 
 	if activeInst and activeCreatureId then
 		local config = CreatureRegistry.getCreature(activeCreatureId)
-		local maxHp = config and config.baseStats and config.baseStats.hp or 100
-		local atk = config and config.baseStats and config.baseStats.atk or 10
-		local def = config and config.baseStats and config.baseStats.def or 5
-		local spd = config and config.baseStats and config.baseStats.spd or 10
+		local scaledStats = StatCalculator.getScaledStats(config, activeInst.level, nil)
+		local maxHp = scaledStats.hp
+		local atk = scaledStats.atk
+		local def = scaledStats.def
+		local spd = scaledStats.spd
 
 		local xpNeeded = activeInst.level * 100
 
-		local cInfo = UIComponents.createBaseLabel(string.format(
-			"Species: %s\nLevel: %d\nXP: %d / %d\nHP: %d / %d\nATK: %d  DEF: %d  SPD: %d",
-			activeCreatureId, activeInst.level, activeInst.xp, xpNeeded, maxHp, maxHp, atk, def, spd
-		))
+		local cInfo = UIComponents.createBaseLabel(
+			string.format(
+				"Species: %s\nLevel: %d\nXP: %d / %d\nHP: %d / %d\nATK: %d  DEF: %d  SPD: %d",
+				activeCreatureId,
+				activeInst.level,
+				activeInst.xp,
+				xpNeeded,
+				maxHp,
+				maxHp,
+				atk,
+				def,
+				spd
+			)
+		)
 		cInfo.Position = UDim2.new(0, 16, 0, 44)
 		cInfo.Size = UDim2.new(1, -32, 0.5, 0)
 		cInfo.TextColor3 = Theme.Colors.Muted
@@ -149,10 +160,14 @@ function WorldScreen.create(
 		-- Check if evolution options exist
 		local evoOpt = snapshot.evolutionOptions and snapshot.evolutionOptions[activeInstId]
 		if evoOpt then
-			local evolveBtn = UIComponents.createBaseButton(string.format(
-				"Evolve to %s (Req. Lv. %d, %d Biomass)", 
-				evoOpt.toCreatureId, evoOpt.requiredLevel, evoOpt.biomassCost
-			))
+			local evolveBtn = UIComponents.createBaseButton(
+				string.format(
+					"Evolve to %s (Req. Lv. %d, %d Biomass)",
+					evoOpt.toCreatureId,
+					evoOpt.requiredLevel,
+					evoOpt.biomassCost
+				)
+			)
 			evolveBtn.Name = "EvolveButton"
 			evolveBtn.Size = UDim2.new(1, -32, 0, 44)
 			evolveBtn.Position = UDim2.new(0, 16, 1, -60)
@@ -163,7 +178,9 @@ function WorldScreen.create(
 			if levelMet and biomassMet then
 				evolveBtn.BackgroundColor3 = Theme.Colors.Success
 				evolveBtn.Activated:Connect(function()
-					if isProcessingEvolve then return end
+					if isProcessingEvolve then
+						return
+					end
 					isProcessingEvolve = true
 					onEvolve(activeInstId, evoOpt.evolutionId)
 				end)
@@ -204,7 +221,9 @@ function WorldScreen.create(
 	local serverAccumulated = genSnapshot and genSnapshot.accumulated or 0
 
 	local function getAccumulatedAmount()
-		if not lastClaimedAt or rate <= 0 then return serverAccumulated end
+		if not lastClaimedAt or rate <= 0 then
+			return serverAccumulated
+		end
 		local elapsed = math.max(0, os.time() - lastClaimedAt)
 		return math.min(maxAcc, math.floor(elapsed * rate))
 	end
@@ -222,7 +241,7 @@ function WorldScreen.create(
 	claimBtn.Size = UDim2.new(0.8, 0, 0, 44)
 	claimBtn.Position = UDim2.new(0.1, 0, 1, -56)
 	claimBtn.Parent = generatorPanel
-	
+
 	if initialAcc >= 1 then
 		claimBtn.BackgroundColor3 = Theme.Colors.Success
 	else
@@ -231,7 +250,9 @@ function WorldScreen.create(
 
 	local isProcessingClaim = false
 	claimBtn.Activated:Connect(function()
-		if isProcessingClaim then return end
+		if isProcessingClaim then
+			return
+		end
 		if genSnapshot and genSnapshot.generatorId then
 			isProcessingClaim = true
 			onClaimGenerator(genSnapshot.generatorId)
@@ -293,7 +314,7 @@ function WorldScreen.create(
 	stagesList.Position = UDim2.new(0.5, 24, 0, 160)
 	stagesList.Size = UDim2.new(0.46, 0, 0.7, 0)
 	stagesList.Parent = panel
-	
+
 	local layout = Instance.new("UIListLayout")
 	layout.Padding = UDim.new(0, 12)
 	layout.Parent = stagesList
@@ -305,10 +326,12 @@ function WorldScreen.create(
 		stageBtn.Size = UDim2.new(1, 0, 0, 48)
 		stageBtn.BackgroundColor3 = Theme.Colors.Primary
 		stageBtn.Parent = stagesList
-		stageBtn.Activated:Connect(function() 
-			if isProcessingStage then return end
+		stageBtn.Activated:Connect(function()
+			if isProcessingStage then
+				return
+			end
 			isProcessingStage = true
-			onStartStage(stageId) 
+			onStartStage(stageId)
 		end)
 	end
 

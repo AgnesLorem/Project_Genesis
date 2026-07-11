@@ -30,7 +30,7 @@ function BattleResultModal.create(battleData: any, onClose: () -> ()): Frame
 	header.TextXAlignment = Enum.TextXAlignment.Center
 	header.TextSize = 30
 	header.ZIndex = Theme.ZIndex.Modal + 2
-	
+
 	if battleData.isVictory then
 		header.TextColor3 = Theme.Colors.Success
 	else
@@ -73,13 +73,15 @@ function BattleResultModal.create(battleData: any, onClose: () -> ()): Frame
 
 	if battleData.timeline then
 		for _, entry in ipairs(battleData.timeline) do
-			local label = UIComponents.createBaseLabel(tostring(entry.text))
-			label.Size = UDim2.new(1, -10, 0, 20)
-			label.Font = Theme.Fonts.Regular
-			label.TextSize = 13
-			label.TextColor3 = Theme.Colors.White
-			label.ZIndex = Theme.ZIndex.Modal + 2
-			label.Parent = scroll
+			if entry.text ~= nil then
+				local label = UIComponents.createBaseLabel(tostring(entry.text))
+				label.Size = UDim2.new(1, -10, 0, 20)
+				label.Font = Theme.Fonts.Regular
+				label.TextSize = 13
+				label.TextColor3 = Theme.Colors.White
+				label.ZIndex = Theme.ZIndex.Modal + 2
+				label.Parent = scroll
+			end
 		end
 	end
 
