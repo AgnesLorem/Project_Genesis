@@ -9,6 +9,8 @@
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local UIController = require(script.Parent.UIController)
+local NetworkController = require(script.Parent.NetworkController)
+local WorldController = require(script.Parent.WorldController)
 local StarterSelectionScreen = require(script.Parent.Parent.views.StarterSelectionScreen)
 local GeneratorPanel = require(script.Parent.Parent.views.GeneratorPanel)
 local WorldScreen = require(script.Parent.Parent.views.WorldScreen)
@@ -41,6 +43,20 @@ local testResults = {
 -- Callback counter for leak detection
 local callbackCount = 0
 local expectedCallbackCount = 0
+
+local function resetTestResults()
+	testResults.screensTested = 0
+	testResults.totalMountCycles = 0
+	table.clear(testResults.failures)
+	testResults.memoryLeakDetected = false
+	testResults.callbackLeaks = false
+	testResults.orphanUI = false
+	testResults.connectionCleanupFailed = false
+	testResults.totalMountTime = 0
+	testResults.totalCleanupTime = 0
+	callbackCount = 0
+	expectedCallbackCount = 0
+end
 
 local function assertStudio()
 	if not RunService:IsStudio() then
@@ -612,6 +628,7 @@ end
 
 function UISmokeTester.runAllTests()
 	assertStudio()
+	resetTestResults()
 
 	print("=========================")
 	print("UI SMOKE TEST STARTING")
@@ -619,12 +636,9 @@ function UISmokeTester.runAllTests()
 
 	local suiteStartTime = tick()
 	local mainUI = getGenesisMainUI()
-	local preservedWorldScreen = mainUI and mainUI:FindFirstChild("WorldScreen")
-	if preservedWorldScreen and preservedWorldScreen:IsA("Frame") then
-		preservedWorldScreen.Parent = nil
-	else
-		preservedWorldScreen = nil
-	end
+	local shouldRestoreWorldScreen = mainUI and mainUI:FindFirstChild("WorldScreen") ~= nil
+	local profileResult = shouldRestoreWorldScreen and NetworkController.getPlayerProfileSnapshot() or nil
+	local persistentSnapshot = profileResult and profileResult.success and profileResult.value or nil
 
 	local suiteOk, suiteResult = xpcall(function()
 		UIController.cleanup()
@@ -725,8 +739,11 @@ function UISmokeTester.runAllTests()
 		}
 	end, debug.traceback)
 
-	if preservedWorldScreen then
-		preservedWorldScreen.Parent = mainUI
+	if shouldRestoreWorldScreen then
+		if not persistentSnapshot then
+			error("[UISmokeTester] Failed to capture persistent WorldScreen state.")
+		end
+		WorldController.start(persistentSnapshot)
 	end
 	if not suiteOk then
 		error(suiteResult)

@@ -9,6 +9,7 @@
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local AnimationService = require(script.Parent.Parent.views.AnimationService)
+local Theme = require(script.Parent.Parent.views.Theme)
 
 local UIController = {}
 
@@ -18,6 +19,44 @@ local activeModalCloseCallback: (() -> ())? = nil
 local activeOverlays: { [string]: Frame } = {}
 local screenContainer: ScreenGui
 local uisConnection: RBXScriptConnection? = nil
+local pendingReleases: { [GuiObject]: { tween: Tween?, released: boolean } } = setmetatable({}, { __mode = "k" })
+
+local function releaseNow(instance: GuiObject)
+	local record = pendingReleases[instance]
+	if record then
+		if record.released then
+			return
+		end
+		record.released = true
+		if record.tween and record.tween.PlaybackState == Enum.PlaybackState.Playing then
+			record.tween:Cancel()
+		end
+	end
+	instance:Destroy()
+end
+
+local function releaseAfterFade(instance: GuiObject)
+	local record = { tween = nil, released = false }
+	pendingReleases[instance] = record
+	local tween = AnimationService.fadeOut(instance, Theme.AnimationDuration)
+	record.tween = tween
+	tween.Completed:Once(function()
+		releaseNow(instance)
+	end)
+	task.delay(Theme.AnimationDuration, function()
+		releaseNow(instance)
+	end)
+end
+
+local function releaseAllPending()
+	local instances = {}
+	for instance in pairs(pendingReleases) do
+		table.insert(instances, instance)
+	end
+	for _, instance in ipairs(instances) do
+		releaseNow(instance)
+	end
+end
 
 function UIController.init()
 	local player = Players.LocalPlayer
@@ -30,7 +69,7 @@ function UIController.init()
 		screenContainer.ResetOnSpawn = false
 		screenContainer.Parent = playerGui
 	end
-	
+
 	-- Enforce single ESC key close modal listener
 	if not uisConnection then
 		uisConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
@@ -51,11 +90,7 @@ function UIController.mountScreen(screenInstance: Frame)
 	if activeScreen then
 		local oldScreen = activeScreen
 		activeScreen = nil
-		task.spawn(function()
-			local tween = AnimationService.fadeOut(oldScreen)
-			tween.Completed:Wait()
-			oldScreen:Destroy()
-		end)
+		releaseAfterFade(oldScreen)
 	end
 	activeScreen = screenInstance
 	activeScreen.Parent = screenContainer
@@ -66,11 +101,7 @@ function UIController.mountOverlay(overlayInstance: Frame, overlayId: string)
 	if activeOverlays[overlayId] then
 		local oldOverlay = activeOverlays[overlayId]
 		activeOverlays[overlayId] = nil
-		task.spawn(function()
-			local tween = AnimationService.fadeOut(oldOverlay)
-			tween.Completed:Wait()
-			oldOverlay:Destroy()
-		end)
+		releaseAfterFade(oldOverlay)
 	end
 	activeOverlays[overlayId] = overlayInstance
 	overlayInstance.Parent = screenContainer
@@ -81,11 +112,7 @@ function UIController.unmountOverlay(overlayId: string)
 	if activeOverlays[overlayId] then
 		local oldOverlay = activeOverlays[overlayId]
 		activeOverlays[overlayId] = nil
-		task.spawn(function()
-			local tween = AnimationService.fadeOut(oldOverlay)
-			tween.Completed:Wait()
-			oldOverlay:Destroy()
-		end)
+		releaseAfterFade(oldOverlay)
 	end
 end
 
@@ -109,16 +136,13 @@ function UIController.clearModal()
 		local current = activeModal
 		activeModal = nil
 		activeModalCloseCallback = nil
-		task.spawn(function()
-			local tween = AnimationService.fadeOut(current)
-			tween.Completed:Wait()
-			current:Destroy()
-		end)
+		releaseAfterFade(current)
 	end
 end
 
 -- Cleanup method for testing / resetting state
 function UIController.cleanup()
+	releaseAllPending()
 	if uisConnection then
 		uisConnection:Disconnect()
 		uisConnection = nil
