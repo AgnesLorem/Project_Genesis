@@ -59,6 +59,12 @@ Do not use this changelog to approve new mechanics. New design decisions still r
 - Bug 4: Corrected `CombatService` player creature config lookup to key off `pInst.creatureId` instead of the instance GUID.
 - Bug 5: Set continue button name to `ContinueButton` in `BattleResultModal` to prevent playtest timeout.
 - Bug 6: Fixed `SaveService` session ownership leak where concurrent load timeouts failed to clear the `loadingByUserId` flag (F-001).
+- Consolidated duplicate checks and added unit tests in `SkillService.luau` to prevent lint warnings.
+- Replaced incorrect `getPlayerProfileSnapshot` call with `getGeneratorSnapshot` in generator claim tests.
+- Formatted timeline combat events via `formatTimelineEntry` in `BattleResultModal.luau` to prevent literal "nil" row renders.
+- Safely handled missing creature configurations in `TowerChallengeController.luau` using cache refresh, graceful aborts, and transient Error states.
+- Asserted zero visible "nil" TextLabels under `GenesisMainUI` in `UISmokeTester.luau` to verify aesthetic correctness.
+- Enabled concurrent thread spawning in `GameplaySimulator.spamClaimGeneratorTest` using `task.spawn` to trigger spam rate limits correctly.
 
 ### Validation
 
