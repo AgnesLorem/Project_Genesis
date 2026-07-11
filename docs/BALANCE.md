@@ -12,10 +12,10 @@ The purpose of this document is to define how balance should be approached once 
 
 ## Status
 
-- Status: Active Draft
+- Status: Active (Alpha Phase)
 - Scope: MVP balance philosophy and future balance placeholders
 - Owner: Design and Balance
-- Last Updated: 2026-06-28
+- Last Updated: 2026-07-09
 - Review Cadence: Before any tuning pass, formula change, reward change, economy change, progression change, or combat balance change
 - Authority Level: Balance philosophy reference
 

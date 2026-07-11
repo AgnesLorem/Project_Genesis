@@ -31,12 +31,12 @@ The project prioritizes:
 ## Current Development Phase
 
 - Current Project Phase: Alpha Release
-- Current Milestone: MVP-019 - Generator Biomass & Expansion Gate (Approved)
-- Current Sprint: MVP Release Candidate Completed
-- Current Repository State: MVP-001 through MVP-019 task records are Approved and fully integrated
-- Implementation Status: All core gameplay, configuration, save, and validation systems are verified and Approved
+- Current Milestone: ALPHA-005 - Biomass & DNA Economy Audit and Balancing (Done)
+- Current Sprint: Alpha Core Loop & Polish
+- Current Repository State: MVP-001 through MVP-019 Approved; ALPHA-001, ALPHA-002, ALPHA-003, ALPHA-005 Done
+- Implementation Status: Core gameplay loop, Tower/Challenge UI, UI visual polish, and economy balance verified.
 
-The Play Mode Grand Check has passed. SaveService has been fully integrated with DataStoreWrapper for dynamic persistent saving/loading. The project has satisfied all Definition of Done requirements and is now promoted to a Release Candidate.
+The Play Mode Grand Check has passed for MVP foundation. SaveService is fully integrated with DataStoreWrapper. Alpha tasks have completed core gameplay loop verification, Tower/Challenge UI integration, UI visual polish, and economy balance audits.
 
 ## Repository Structure
 

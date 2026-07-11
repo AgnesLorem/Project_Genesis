@@ -23,5 +23,12 @@ return {
 			recommendedLevel = 5,
 			isEnabled = true,
 		},
+		{
+			floorId = "tower_floor_dummy",
+			floorNumber = 3,
+			enemyCreatureId = "dummy_immortal",
+			recommendedLevel = 1,
+			isEnabled = true,
+		},
 	},
 }

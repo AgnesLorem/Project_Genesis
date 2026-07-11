@@ -6,9 +6,9 @@ This document defines player-facing creature leveling progression, collection sy
 
 ## Status
 
-- Status: Active Draft (MVP-007)
+- Status: Active (Alpha-002 Verified)
 - Owner: Technical Architecture
-- Last Updated: 2026-06-29
+- Last Updated: 2026-07-09
 - Review Cadence: Before any progression, collection, or evolution changes
 
 ## Table of Contents

@@ -11,6 +11,7 @@ local InventoryController = require(script.Parent.InventoryController)
 local EquipmentController = require(script.Parent.EquipmentController)
 local SkillController = require(script.Parent.SkillController)
 local GeneratorController = require(script.Parent.GeneratorController)
+local UISmokeTester = require(script.Parent.UISmokeTester)
 local Players = game:GetService("Players")
 
 local GameplaySimulator = {}

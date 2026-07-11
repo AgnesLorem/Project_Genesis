@@ -10,6 +10,7 @@ local TowerChallengeScreen = require(script.Parent.Parent.views.TowerChallengeSc
 local TowerChallengeResultModal = require(script.Parent.Parent.views.TowerChallengeResultModal)
 local StatePatterns = require(script.Parent.Parent.views.StatePatterns)
 local CreatureRegistry = require(game:GetService("ReplicatedStorage").Genesis.Shared.data.CreatureRegistry)
+local PresentationPlayer = require(script.Parent.Parent.views.PresentationPlayer)
 
 local TowerChallengeController = {}
 
@@ -55,7 +56,11 @@ local function _playBattleAndComplete(active: any, playerInstance: any, onClose:
 		active.enemyCreatureId,
 		1,
 		maxPlayerHp,
-		maxEnemyHp
+		maxEnemyHp,
+		function()
+			UIController.unmountScreen("CombatScreen")
+			if onClose then onClose() end
+		end
 	)
 	UIController.mountScreen(screen)
 	api.updatePlayerHp(maxPlayerHp)
@@ -66,29 +71,18 @@ local function _playBattleAndComplete(active: any, playerInstance: any, onClose:
 	local playerUnitIds = active.playerUnitIds or {}
 	local enemyUnitIds = active.enemyUnitIds or {}
 
+	PresentationPlayer.setCombatActive(true)
+
 	for _, event in ipairs(timeline) do
-		api.setCurrentTurn(event.turn or 0)
-		local data = event.data or {}
-		if event.type == "skill_use" or event.type == "fallback_attack" then
-			local targetId = data.targetId
-			local isEnemyTarget = _containsUnitId(enemyUnitIds, targetId)
-			local isPlayerTarget = _containsUnitId(playerUnitIds, targetId)
-
-			if isEnemyTarget then
-				api.updateEnemyHp(data.targetHp or 0)
-				api.showDamage(true, data.damage or 0)
-			elseif isPlayerTarget then
-				api.updatePlayerHp(data.targetHp or 0)
-				api.showDamage(false, data.damage or 0)
-			end
-
-			if event.type == "skill_use" then
-				api.appendLog(string.format("[Turn %d] %s used %s on %s for %d.", event.turn or 0, tostring(data.actorId), tostring(data.skillId), tostring(targetId), data.damage or 0))
-			else
-				api.appendLog(string.format("[Turn %d] %s attacked %s for %d.", event.turn or 0, tostring(data.actorId), tostring(targetId), data.damage or 0))
-			end
+		if not PresentationPlayer.isCombatActive() then
+			break
 		end
-		task.wait(0.3)
+		api.setCurrentTurn(event.turn or 0)
+		if event.type == "skill_use" or event.type == "fallback_attack" then
+			PresentationPlayer.playEvent(event, playerUnitIds, enemyUnitIds, api)
+		else
+			task.wait(0.3)
+		end
 	end
 
 	local completionRes = NetworkController.requestTowerChallengeComplete(active.runToken)

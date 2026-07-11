@@ -6,9 +6,9 @@ This document will record approved documentation, design, production, and techni
 
 ## Status
 
-- Status: Active Draft
+- Status: Active (Alpha Phase)
 - Owner: Production
-- Last Updated: 2026-06-29
+- Last Updated: 2026-07-09
 - Review Cadence: Every MVP milestone, release gate, and approved scope change
 
 ## Table of Contents
@@ -39,6 +39,10 @@ Do not use this changelog to approve new mechanics. New design decisions still r
 - Persistent world stage progression and save migrations from v0 to v3 inside `MigrationManager.luau` and `SaveService.luau`.
 - Server-authoritative stage-lock checks and next-stage unlocking on victory inside `RemoteHandlers.luau` (`RequestStoryBattle` / `RequestWorldSnapshot`).
 - DNA victory rewards: grants 50 DNA (story), 100 DNA (boss), and 150 DNA (challenge) on player victory, returning reward details in client payloads.
+- ALPHA-001 completed core gameplay loop verification: Generator ➔ Biomass ➔ Battle ➔ Reward ➔ DNA ➔ Progression ➔ Generator Upgrade with economy audit report.
+- ALPHA-002 integrated Tower and Challenge UI with full progression flow, network retry, anti-double-claim, and error handling.
+- ALPHA-003 completed UI visual polish including monster cards, borders, icons, typography, color system, loading states, toasts, tooltips, and responsive layouts.
+- ALPHA-005 completed read-only economy verification audit: 24h EconomySimulator run in Studio Edit mode matched ALPHA-001 Phase B baseline (PASS). Deliverables: `docs/balance/ECONOMY_BALANCE_REPORT.md`, `docs/balance/ECONOMY_VERIFICATION.json`.
 
 ### Changed
 

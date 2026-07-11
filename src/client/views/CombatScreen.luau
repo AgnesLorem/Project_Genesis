@@ -9,14 +9,16 @@
 local Theme = require(script.Parent.Theme)
 local UIComponents = require(script.Parent.UIComponents)
 local AnimationService = require(script.Parent.AnimationService)
+local VFXHelper = require(script.Parent.Parent.effects.VFXHelper)
 
 local CombatScreen = {}
 
-function CombatScreen.create(playerCreatureId, playerLevel, enemyCreatureId, enemyLevel, maxPlayerHp, maxEnemyHp)
+function CombatScreen.create(playerCreatureId, playerLevel, enemyCreatureId, enemyLevel, maxPlayerHp, maxEnemyHp, onExit)
 	local screen = UIComponents.createBaseContainer()
 	screen.Name = "CombatScreen"
 	
 	local panel = UIComponents.createBasePanel()
+	panel.BackgroundTransparency = 0.8 -- Make it semi-transparent so the 3D workspace behind is visible
 	panel.Parent = screen
 
 	-- Safe area padding
@@ -26,6 +28,18 @@ function CombatScreen.create(playerCreatureId, playerLevel, enemyCreatureId, ene
 	safeArea.PaddingTop = UDim.new(0, 24)
 	safeArea.PaddingBottom = UDim.new(0, 24)
 	safeArea.Parent = panel
+
+	-- Return Button
+	if onExit then
+		local returnBtn = UIComponents.createBaseButton("Return")
+		returnBtn.Name = "ReturnButton"
+		returnBtn.Size = UDim2.new(0, 100, 0, 36)
+		returnBtn.Position = UDim2.new(0, 0, 0, 0)
+		returnBtn.BackgroundColor3 = Theme.Colors.Error
+		returnBtn.ZIndex = Theme.ZIndex.Overlay
+		returnBtn.Parent = panel
+		returnBtn.Activated:Connect(onExit)
+	end
 
 	-- Turn Indicator
 	local turnLabel = UIComponents.createBaseLabel("Combat Initializing...")
@@ -42,6 +56,7 @@ function CombatScreen.create(playerCreatureId, playerLevel, enemyCreatureId, ene
 	playerCard.Name = "PlayerCard"
 	playerCard.Size = UDim2.new(0, 250, 0, 220)
 	playerCard.Position = UDim2.new(0.08, 0, 0.14, 0)
+	playerCard.BackgroundTransparency = 0.5 -- Semi-transparent
 	playerCard.Parent = panel
 	UIComponents.applyRarityBorder(playerCard, "Rare")
 
@@ -55,6 +70,7 @@ function CombatScreen.create(playerCreatureId, playerLevel, enemyCreatureId, ene
 	local pImagePlaceholder = UIComponents.createBasePanel()
 	pImagePlaceholder.Size = UDim2.new(1, -20, 0, 100)
 	pImagePlaceholder.Position = UDim2.new(0, 10, 0, 45)
+	pImagePlaceholder.BackgroundTransparency = 1 -- Fully transparent to show 3D VFX behind it
 	pImagePlaceholder.Parent = playerCard
 
 	local pImageText = UIComponents.createBaseLabel("🦎")
@@ -96,6 +112,7 @@ function CombatScreen.create(playerCreatureId, playerLevel, enemyCreatureId, ene
 	enemyCard.Name = "EnemyCard"
 	enemyCard.Size = UDim2.new(0, 250, 0, 220)
 	enemyCard.Position = UDim2.new(0.92, -250, 0.14, 0)
+	enemyCard.BackgroundTransparency = 0.5 -- Semi-transparent
 	enemyCard.Parent = panel
 	UIComponents.applyRarityBorder(enemyCard, "Legendary")
 
@@ -109,6 +126,7 @@ function CombatScreen.create(playerCreatureId, playerLevel, enemyCreatureId, ene
 	local eImagePlaceholder = UIComponents.createBasePanel()
 	eImagePlaceholder.Size = UDim2.new(1, -20, 0, 100)
 	eImagePlaceholder.Position = UDim2.new(0, 10, 0, 45)
+	eImagePlaceholder.BackgroundTransparency = 1 -- Fully transparent to show 3D VFX behind it
 	eImagePlaceholder.Parent = enemyCard
 
 	local eImageText = UIComponents.createBaseLabel("😈")
@@ -182,6 +200,8 @@ function CombatScreen.create(playerCreatureId, playerLevel, enemyCreatureId, ene
 
 	-- Interface API
 	local api = {}
+	api.playerCard = playerCard
+	api.enemyCard = enemyCard
 
 	function api.updatePlayerHp(currentHp)
 		local ratio = math.clamp(currentHp / maxPlayerHp, 0, 1)
@@ -210,36 +230,11 @@ function CombatScreen.create(playerCreatureId, playerLevel, enemyCreatureId, ene
 
 	function api.showDamage(isEnemyTarget, damageAmount)
 		local targetCard = isEnemyTarget and enemyCard or playerCard
-		
-		-- Create floating damage text
-		local dmgText = Instance.new("TextLabel")
-		dmgText.BackgroundTransparency = 1
-		dmgText.Size = UDim2.new(0, 100, 0, 40)
-		dmgText.Position = UDim2.new(0.5, -50, 0.2, 0)
-		dmgText.Font = Theme.Fonts.Bold
-		dmgText.TextSize = 36
-		dmgText.TextColor3 = Theme.Colors.Error
-		dmgText.Text = tostring(-damageAmount)
-		dmgText.TextXAlignment = Enum.TextXAlignment.Center
-		dmgText.TextYAlignment = Enum.TextYAlignment.Center
-		dmgText.Parent = targetCard
-
-		-- Simple float up and fade out animation
-		task.spawn(function()
-			local duration = 0.8
-			local steps = 24
-			local waitTime = duration / steps
-			for i = 1, steps do
-				task.wait(waitTime)
-				if dmgText.Parent then
-					dmgText.Position = UDim2.new(0.5, -50, 0.2 - (0.2 * (i / steps)), 0)
-					dmgText.TextTransparency = i / steps
-				else
-					break
-				end
-			end
-			dmgText:Destroy()
-		end)
+		VFXHelper.floatingText(targetCard, tostring(-damageAmount), Theme.Colors.Error, {
+			font = Theme.Fonts.Bold,
+			textSize = 36,
+		})
+		VFXHelper.hitFlash(targetCard, Theme.Colors.Error)
 	end
 
 	return screen, api

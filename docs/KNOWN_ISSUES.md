@@ -10,10 +10,10 @@ It stores questions that still require design decisions, technical decisions, pr
 
 ## Status
 
-- Status: Active Draft
+- Status: Active (Alpha Phase)
 - Scope: Unresolved design and technical decision tracking
 - Owner: Production
-- Last Updated: 2026-06-29
+- Last Updated: 2026-07-09
 - Review Cadence: Before sprint planning, before implementation of blocked systems, and after major design decisions
 - Authority Level: Open issue tracking reference
 

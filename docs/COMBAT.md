@@ -6,9 +6,9 @@ This document defines the combat principles, formulas, automation rules, and bou
 
 ## Status
 
-- Status: Active Draft (MVP-006)
+- Status: Active (Alpha-001/002 Verified)
 - Owner: Antigravity (Gemini 3.1 Pro)
-- Last Updated: 2026-06-29
+- Last Updated: 2026-07-09
 - Review Cadence: Before any combat system change
 
 ## Table of Contents

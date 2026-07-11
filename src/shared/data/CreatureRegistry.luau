@@ -11,7 +11,7 @@ function CreatureRegistry.loadConfig(configs: { [string]: any })
         if result.success then
             registry[id] = result.value
         else
-            warn(string.format("Failed to validate creature config %s: %s", id, result.error))
+            warn(string.format("Failed to validate creature config %s: %s", id, result.message or result.code or "unknown error"))
         end
     end
 end

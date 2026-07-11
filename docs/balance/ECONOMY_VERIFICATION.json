@@ -1,0 +1,39 @@
+{
+  "timestamp": "2026-07-09T14:01:22Z",
+  "status": "PASS",
+  "simulatedHours": 24,
+  "battlesPlayed": 5760,
+  "hardLock": {
+    "detected": false,
+    "reason": null
+  },
+  "levels": {
+    "bio": 86,
+    "dna": 31,
+    "adv": 50
+  },
+  "milestones": {
+    "bioLvl10": 62,
+    "bioLvl20": 121,
+    "advBioUnlock": 1620,
+    "dnaLvl2": 30
+  },
+  "telemetry": {
+    "totalBiomassEarned": 17820302,
+    "totalDnaEarned": 2628030,
+    "biomassPerHour": 742512.5833333334,
+    "dnaPerHour": 109501.25
+  },
+  "balances": {
+    "biomass": 616624,
+    "dna": 305887
+  },
+  "caps": {
+    "biomass": 9999999,
+    "dna": 999999
+  },
+  "utilization": {
+    "biomass": 0.06166240616624062,
+    "dna": 0.3058873058873059
+  }
+}

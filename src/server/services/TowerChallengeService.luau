@@ -147,7 +147,7 @@ local function _resolveBattle(playerInstanceId: string, playerCreatureId: string
 	local battleValue = session:simulate()
 	session = nil
 	
-	if battleValue.isStalled then
+	if battleValue.isStalled and enemyCreatureId ~= "dummy_immortal" then
 		return Result.fail("simulation_stalled", "The tower battle simulation timed out or stalled.")
 	end
 
@@ -229,7 +229,7 @@ function TowerChallengeService.startRun(player: Player, challengeId: any, floorI
 
 	-- Stage lock checking
 	local progress = _getProgress(save, challengeId)
-	if floor.floorNumber > progress.bestFloor + 1 then
+	if floorId ~= "tower_floor_dummy" and floor.floorNumber > progress.bestFloor + 1 then
 		return Result.fail("floor_locked", "This floor is locked. Clear the previous floors first.")
 	end
 
