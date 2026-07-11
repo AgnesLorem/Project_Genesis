@@ -58,6 +58,7 @@ Do not use this changelog to approve new mechanics. New design decisions still r
 - Bug 2: Fixed `SaveService` player-added event race condition in Roblox Studio Play Solo mode.
 - Bug 4: Corrected `CombatService` player creature config lookup to key off `pInst.creatureId` instead of the instance GUID.
 - Bug 5: Set continue button name to `ContinueButton` in `BattleResultModal` to prevent playtest timeout.
+- Bug 6: Fixed `SaveService` session ownership leak where concurrent load timeouts failed to clear the `loadingByUserId` flag (F-001).
 
 ### Validation
 
@@ -65,7 +66,10 @@ Do not use this changelog to approve new mechanics. New design decisions still r
 - Roblox Studio Edit-mode dependency audit passed for duplicate ModuleScripts, `*_Clone` objects, GUID-named objects, old require paths, and `restore_generated` references.
 - Roblox Studio Play Mode Grand Check passed on rerun for MVP-001 through MVP-019. The rerun used smaller batches to cover framework/config/dependency, creature/economy/progression, combat/world/boss/game modes, client UI, active generators, and post-cleanup dependency audit.
 - Verified and passed Play Mode end-to-end test for stage locking, combat victory rewards, and stage progression unlocks using the client simulator.
-- MVP-020 RC-001 verification was attempted in Roblox Studio Play Mode. MVP-016, MVP-017, MVP-019, core progression, restart/load snapshots, and paced Tower security checks passed, but RC-001 remains blocked because `GameplaySimulator.runTowerChallengeFullFlow()` hits the middleware rate limit during its unpaced Tower start validation sequence.
+- MVP-020 RC-001 and ALPHA-007 Stabilization runtime validation completed in Play Solo. 
+  - `runProgressionLoop`, `runMVP017`, `runMVP019`, and `runTowerChallengeFullFlow` E2E suites passed without error.
+  - UI Smoke Tests executed successfully (9 screens, 180 mount cycles, no memory or callback leaks).
+  - Snapshot reconnect integrity and concurrent logic verified successfully.
 
 ### Resolved
 

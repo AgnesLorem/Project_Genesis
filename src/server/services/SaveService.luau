@@ -105,6 +105,7 @@ local function _loadUserId(userId: number)
 
 		if guard:shouldStop() then
 			guard:logDiagnostic({ userId = userId })
+			loadingByUserId[userId] = nil
 			return Result.fail("load_timeout", "Tiến trình chờ nạp dữ liệu bị treo.")
 		end
 
