@@ -43,6 +43,7 @@ Do not use this changelog to approve new mechanics. New design decisions still r
 - ALPHA-002 integrated Tower and Challenge UI with full progression flow, network retry, anti-double-claim, and error handling.
 - ALPHA-003 completed UI visual polish including monster cards, borders, icons, typography, color system, loading states, toasts, tooltips, and responsive layouts.
 - ALPHA-005 completed read-only economy verification audit: 24h EconomySimulator run in Studio Edit mode matched ALPHA-001 Phase B baseline (PASS). Deliverables: `docs/balance/ECONOMY_BALANCE_REPORT.md`, `docs/balance/ECONOMY_VERIFICATION.json`.
+- ALPHA-006 completed automated UI smoke testing suite verifying mounting, unmounting, and memory leak/callback isolation across all 9 main UI screens.
 
 ### Changed
 
