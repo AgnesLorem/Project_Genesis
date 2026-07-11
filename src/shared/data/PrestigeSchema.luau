@@ -22,7 +22,11 @@ function PrestigeSchema.validate(data: any)
 		return Result.fail("validation_failed", "Missing or invalid schemaVersion.")
 	end
 
-	if type(data.prestigeLevel) ~= "number" or data.prestigeLevel < 0 or data.prestigeLevel ~= math.floor(data.prestigeLevel) then
+	if
+		type(data.prestigeLevel) ~= "number"
+		or data.prestigeLevel < 0
+		or data.prestigeLevel ~= math.floor(data.prestigeLevel)
+	then
 		return Result.fail("validation_failed", "Missing or invalid prestigeLevel.")
 	end
 

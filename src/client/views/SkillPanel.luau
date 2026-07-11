@@ -12,7 +12,12 @@ local function _cooldownText(skill: any): string
 	return "Ready"
 end
 
-function SkillPanel.create(snapshot: any, selectedCreatureInstanceId: string?, onRefresh: () -> (), onUseSkill: (string, string) -> ())
+function SkillPanel.create(
+	snapshot: any,
+	selectedCreatureInstanceId: string?,
+	onRefresh: () -> (),
+	onUseSkill: (string, string) -> ()
+)
 	local screen = UIComponents.createBaseContainer()
 	screen.Name = "SkillPanel"
 
@@ -41,7 +46,9 @@ function SkillPanel.create(snapshot: any, selectedCreatureInstanceId: string?, o
 		end
 	end
 
-	local subtitle = UIComponents.createBaseLabel(creature and string.format("%s | %s", creature.creatureId, creature.instanceId) or "No creature selected")
+	local subtitle = UIComponents.createBaseLabel(
+		creature and string.format("%s | %s", creature.creatureId, creature.instanceId) or "No creature selected"
+	)
 	subtitle.Name = "CreatureLabel"
 	subtitle.Size = UDim2.new(1, -72, 0, 28)
 	subtitle.Position = UDim2.new(0, 36, 0, 82)
@@ -92,7 +99,15 @@ function SkillPanel.create(snapshot: any, selectedCreatureInstanceId: string?, o
 		nameLabel.TextSize = 20
 		nameLabel.Parent = row
 
-		local metaLabel = UIComponents.createBaseLabel(string.format("%s | %s | %s | %.2fx", skill.rarity, skill.skillType, skill.elementType, skill.damageMultiplier))
+		local metaLabel = UIComponents.createBaseLabel(
+			string.format(
+				"%s | %s | %s | %.2fx",
+				skill.rarity,
+				skill.skillType,
+				skill.elementType,
+				skill.damageMultiplier
+			)
+		)
 		metaLabel.Name = "MetaLabel"
 		metaLabel.Size = UDim2.new(1, -330, 0, 22)
 		metaLabel.Position = UDim2.new(0, 82, 0, 38)

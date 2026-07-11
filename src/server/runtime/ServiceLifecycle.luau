@@ -28,9 +28,9 @@
 
 -- Type alias: all services must implement this interface.
 export type ServiceContract = {
-	name: string,          -- Stable service identifier for logging and debugging.
-	init: () -> (),        -- Phase 1: initialize internal state.
-	start: () -> (),       -- Phase 2: begin active operation.
+	name: string, -- Stable service identifier for logging and debugging.
+	init: () -> (), -- Phase 1: initialize internal state.
+	start: () -> (), -- Phase 2: begin active operation.
 }
 
 -- Internal: ordered list of registered services.
@@ -55,10 +55,7 @@ local ServiceLifecycle = {}
 	  - Registration happens after init() has already run.
 --]]
 function ServiceLifecycle.register(service: ServiceContract)
-	assert(
-		type(service) == "table",
-		"[ServiceLifecycle] register: service must be a table."
-	)
+	assert(type(service) == "table", "[ServiceLifecycle] register: service must be a table.")
 	assert(
 		type(service.name) == "string" and service.name ~= "",
 		"[ServiceLifecycle] register: service.name must be a non-empty string."
@@ -82,10 +79,9 @@ function ServiceLifecycle.register(service: ServiceContract)
 	-- Check for duplicate names.
 	for _, existing in ipairs(_registeredServices) do
 		if existing.name == service.name then
-			error(string.format(
-				"[ServiceLifecycle] register: A service named '%s' is already registered.",
-				service.name
-			))
+			error(
+				string.format("[ServiceLifecycle] register: A service named '%s' is already registered.", service.name)
+			)
 		end
 	end
 
@@ -112,11 +108,7 @@ function ServiceLifecycle.init()
 	for _, service in ipairs(_registeredServices) do
 		local ok, err = pcall(service.init)
 		if not ok then
-			warn(string.format(
-				"[ServiceLifecycle] init() FAILED for service '%s': %s",
-				service.name,
-				tostring(err)
-			))
+			warn(string.format("[ServiceLifecycle] init() FAILED for service '%s': %s", service.name, tostring(err)))
 		else
 			print(string.format("[ServiceLifecycle] init() OK — '%s'", service.name))
 		end
@@ -139,11 +131,7 @@ function ServiceLifecycle.start()
 	for _, service in ipairs(_registeredServices) do
 		local ok, err = pcall(service.start)
 		if not ok then
-			warn(string.format(
-				"[ServiceLifecycle] start() FAILED for service '%s': %s",
-				service.name,
-				tostring(err)
-			))
+			warn(string.format("[ServiceLifecycle] start() FAILED for service '%s': %s", service.name, tostring(err)))
 		else
 			print(string.format("[ServiceLifecycle] start() OK — '%s'", service.name))
 		end

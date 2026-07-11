@@ -14,7 +14,7 @@ function BattleController.start(playerCreatureId: string, stageId: string, onCom
 	UIController.mountModal(StatePatterns.Loading(nil))
 
 	local res = NetworkController.requestStoryBattle(playerCreatureId, stageId)
-	
+
 	UIController.clearModal()
 
 	if res.success then

@@ -27,12 +27,12 @@ local function createToastFrame(message: string, toastType: string?): Frame
 	-- Start offscreen below the viewport
 	panel.Position = UDim2.new(0.5, -160, 1, 100)
 	panel.ZIndex = Theme.ZIndex.Toast
-	
+
 	-- Apply corner
 	local corner = Instance.new("UICorner")
 	corner.CornerRadius = Theme.CornerRadius
 	corner.Parent = panel
-	
+
 	-- Apply toast type colors
 	local typeColor = Theme.Colors.Primary
 	if toastType == "success" then
@@ -42,12 +42,12 @@ local function createToastFrame(message: string, toastType: string?): Frame
 	elseif toastType == "reward" then
 		typeColor = Theme.Colors.Accent
 	end
-	
+
 	local stroke = Instance.new("UIStroke")
 	stroke.Thickness = Theme.StrokeThickness
 	stroke.Color = typeColor
 	stroke.Parent = panel
-	
+
 	-- Text Label
 	local label = UIComponents.createBaseLabel(message)
 	label.Size = UDim2.new(1, -20, 1, 0)
@@ -58,7 +58,7 @@ local function createToastFrame(message: string, toastType: string?): Frame
 	label.TextSize = 16
 	label.TextWrapped = true
 	label.Parent = panel
-	
+
 	return panel
 end
 
@@ -66,37 +66,37 @@ local function processQueue()
 	if isProcessing or #queue == 0 then
 		return
 	end
-	
+
 	isProcessing = true
 	local item = table.remove(queue, 1)
-	
+
 	local container = getContainer()
 	if not container then
 		isProcessing = false
 		task.spawn(processQueue)
 		return
 	end
-	
+
 	local toast = createToastFrame(item.message, item.toastType)
 	toast.Parent = container
-	
+
 	-- Slide in to bottom-center of screen
 	local startPos = UDim2.new(0.5, -160, 1, 100)
 	local targetPos = UDim2.new(0.5, -160, 1, -80)
-	
+
 	local inTween = AnimationService.slideIn(toast, startPos, targetPos, 0.3)
 	inTween.Completed:Wait()
-	
+
 	-- Hold for 2.2 seconds
 	task.wait(2.2)
-	
+
 	-- Slide out offscreen
 	local outTween = AnimationService.slideOut(toast, startPos, 0.3)
 	outTween.Completed:Wait()
-	
+
 	toast:Destroy()
 	isProcessing = false
-	
+
 	-- Process next toast
 	task.spawn(processQueue)
 end

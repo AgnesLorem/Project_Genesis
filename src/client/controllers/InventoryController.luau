@@ -24,7 +24,12 @@ function InventoryController.show(onClose: () -> ())
 	local snapshotResult = NetworkController.getInventorySnapshot()
 	UIController.clearModal()
 	if not snapshotResult.success then
-		UIController.mountModal(StatePatterns.Error(nil, "Inventory Load Failed: " .. tostring(snapshotResult.message or snapshotResult.code)))
+		UIController.mountModal(
+			StatePatterns.Error(
+				nil,
+				"Inventory Load Failed: " .. tostring(snapshotResult.message or snapshotResult.code)
+			)
+		)
 		return snapshotResult
 	end
 

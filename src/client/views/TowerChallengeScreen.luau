@@ -32,7 +32,14 @@ local function _formatProgress(progress: any): string
 	)
 end
 
-function TowerChallengeScreen.create(profileSnapshot: any, challengeSnapshot: any, progress: any, onStart: (string, string, string) -> (), onRefresh: () -> (), onClose: () -> ())
+function TowerChallengeScreen.create(
+	profileSnapshot: any,
+	challengeSnapshot: any,
+	progress: any,
+	onStart: (string, string, string) -> (),
+	onRefresh: () -> (),
+	onClose: () -> ()
+)
 	local screen = UIComponents.createBaseContainer()
 	screen.Name = "TowerChallengeScreen"
 
@@ -94,7 +101,11 @@ function TowerChallengeScreen.create(profileSnapshot: any, challengeSnapshot: an
 
 	local ownedInstance = _firstOwnedInstance(profileSnapshot)
 	local creatureText = ownedInstance
-		and string.format("Selected Fighter: %s Lv. %d", tostring(ownedInstance.creatureId), ownedInstance.level or 1)
+			and string.format(
+				"Selected Fighter: %s Lv. %d",
+				tostring(ownedInstance.creatureId),
+				ownedInstance.level or 1
+			)
 		or "No eligible creature found"
 
 	local creatureLabel = UIComponents.createBaseLabel(creatureText)
@@ -129,7 +140,7 @@ function TowerChallengeScreen.create(profileSnapshot: any, challengeSnapshot: an
 		-- Highlight current floor
 		local bestFloor = progress and progress.bestFloor or 0
 		local isUnlocked = floor.floorNumber <= bestFloor + 1
-		
+
 		if isUnlocked and floor.floorNumber == bestFloor + 1 then
 			row.BackgroundColor3 = Theme.Colors.FrostedGlass
 			local activeOutline = Instance.new("UIStroke")
@@ -147,7 +158,8 @@ function TowerChallengeScreen.create(profileSnapshot: any, challengeSnapshot: an
 		floorLabel.TextSize = 20
 		floorLabel.Parent = row
 
-		local requirementLabel = UIComponents.createBaseLabel(string.format("Recommended Lv. %d", floor.recommendedLevel or 1))
+		local requirementLabel =
+			UIComponents.createBaseLabel(string.format("Recommended Lv. %d", floor.recommendedLevel or 1))
 		requirementLabel.Name = "RequirementLabel"
 		requirementLabel.Size = UDim2.new(0.4, 0, 0, 22)
 		requirementLabel.Position = UDim2.new(0, 18, 0, 40)
@@ -166,7 +178,7 @@ function TowerChallengeScreen.create(profileSnapshot: any, challengeSnapshot: an
 		startButton.Parent = row
 		startButton.Active = canClick
 		startButton.AutoButtonColor = canClick
-		
+
 		if not canClick then
 			startButton.BackgroundColor3 = Theme.Colors.Border
 			startButton.TextTransparency = 0.5

@@ -40,7 +40,7 @@ function TowerChallengeResultModal.create(resultValue: any, onContinue: () -> ()
 	outcome.TextSize = 24
 	outcome.TextXAlignment = Enum.TextXAlignment.Center
 	outcome.ZIndex = Theme.ZIndex.Modal + 2
-	
+
 	if resultValue.outcome == "Victory" then
 		outcome.TextColor3 = Theme.Colors.Success
 	else

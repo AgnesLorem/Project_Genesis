@@ -72,21 +72,39 @@ function TowerChallengeRegistry.init()
 						local challenge = result.value
 						if challenge.isEnabled then
 							if _registry[challenge.challengeId] then
-								warn(string.format("[TowerChallengeRegistry] Duplicate challengeId '%s' - skipping.", challenge.challengeId))
+								warn(
+									string.format(
+										"[TowerChallengeRegistry] Duplicate challengeId '%s' - skipping.",
+										challenge.challengeId
+									)
+								)
 							else
 								_registry[challenge.challengeId] = challenge
-								print(string.format("[TowerChallengeRegistry] Loaded challenge '%s'.", challenge.challengeId))
+								print(
+									string.format(
+										"[TowerChallengeRegistry] Loaded challenge '%s'.",
+										challenge.challengeId
+									)
+								)
 							end
 						end
 					else
-						warn(string.format(
-							"[TowerChallengeRegistry] Validation failed for '%s': %s",
-							tostring(record.challengeId or record.id or child.Name),
-							result.message or result.code
-						))
+						warn(
+							string.format(
+								"[TowerChallengeRegistry] Validation failed for '%s': %s",
+								tostring(record.challengeId or record.id or child.Name),
+								result.message or result.code
+							)
+						)
 					end
 				else
-					warn(string.format("[TowerChallengeRegistry] Failed to require '%s': %s", child:GetFullName(), tostring(record)))
+					warn(
+						string.format(
+							"[TowerChallengeRegistry] Failed to require '%s': %s",
+							child:GetFullName(),
+							tostring(record)
+						)
+					)
 				end
 			end
 		end

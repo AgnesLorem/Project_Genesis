@@ -81,10 +81,10 @@ function CurrencyService.tryGrant(player: any, currencyId: string, amount: numbe
 		end
 	end
 	if not sourceApproved then
-		return Result.fail("unapproved_source", string.format(
-			"Source '%s' is not approved for currency '%s'.",
-			sourceRef, currencyId
-		))
+		return Result.fail(
+			"unapproved_source",
+			string.format("Source '%s' is not approved for currency '%s'.", sourceRef, currencyId)
+		)
 	end
 
 	-- Cap check
@@ -93,10 +93,7 @@ function CurrencyService.tryGrant(player: any, currencyId: string, amount: numbe
 	local remaining = cap - balance
 
 	if remaining <= 0 then
-		return Result.fail("CAP_REACHED", string.format(
-			"Currency '%s' is at cap (%d).",
-			currencyId, cap
-		))
+		return Result.fail("CAP_REACHED", string.format("Currency '%s' is at cap (%d).", currencyId, cap))
 	end
 
 	-- Grant only remaining capacity (never exceed cap)
@@ -148,19 +145,19 @@ function CurrencyService.trySpend(player: any, currencyId: string, amount: numbe
 		end
 	end
 	if not sinkApproved then
-		return Result.fail("unapproved_sink", string.format(
-			"Sink '%s' is not approved for currency '%s'.",
-			sinkRef, currencyId
-		))
+		return Result.fail(
+			"unapproved_sink",
+			string.format("Sink '%s' is not approved for currency '%s'.", sinkRef, currencyId)
+		)
 	end
 
 	-- Affordability check
 	local balance = CurrencyService.getBalance(player, currencyId)
 	if balance < amount then
-		return Result.fail("insufficient_balance", string.format(
-			"Cannot spend %d '%s'. Current balance: %d.",
-			amount, currencyId, balance
-		))
+		return Result.fail(
+			"insufficient_balance",
+			string.format("Cannot spend %d '%s'. Current balance: %d.", amount, currencyId, balance)
+		)
 	end
 
 	-- Apply

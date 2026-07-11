@@ -73,17 +73,17 @@ local function _loadCategoryFolder(categoryFolder: Folder): { [string]: any }
 				if type(result) == "table" then
 					table.insert(records, result)
 				else
-					warn(string.format(
-						"[ConfigRegistry] ModuleScript '%s' did not return a table — skipped.",
-						child:GetFullName()
-					))
+					warn(
+						string.format(
+							"[ConfigRegistry] ModuleScript '%s' did not return a table — skipped.",
+							child:GetFullName()
+						)
+					)
 				end
 			else
-				warn(string.format(
-					"[ConfigRegistry] Failed to require '%s': %s",
-					child:GetFullName(),
-					tostring(result)
-				))
+				warn(
+					string.format("[ConfigRegistry] Failed to require '%s': %s", child:GetFullName(), tostring(result))
+				)
 			end
 		end
 	end
@@ -103,10 +103,12 @@ function ConfigRegistry.load(category: string): { [string]: any }
 
 	-- Block reserved categories from active use.
 	if RESERVED_SET[category] then
-		warn(string.format(
-			"[ConfigRegistry] Category '%s' is reserved and must not be loaded as active gameplay. Returning empty.",
-			category
-		))
+		warn(
+			string.format(
+				"[ConfigRegistry] Category '%s' is reserved and must not be loaded as active gameplay. Returning empty.",
+				category
+			)
+		)
 		return {}
 	end
 
@@ -124,19 +126,18 @@ function ConfigRegistry.load(category: string): { [string]: any }
 
 	local categoryFolder = configsRoot:FindFirstChild(category)
 	if not categoryFolder then
-		warn(string.format(
-			"[ConfigRegistry] Category folder '%s' not found in ServerStorage.Configs. Returning empty.",
-			category
-		))
+		warn(
+			string.format(
+				"[ConfigRegistry] Category folder '%s' not found in ServerStorage.Configs. Returning empty.",
+				category
+			)
+		)
 		_cache[category] = {}
 		return {}
 	end
 
 	if not categoryFolder:IsA("Folder") then
-		warn(string.format(
-			"[ConfigRegistry] '%s' in ServerStorage.Configs is not a Folder — skipped.",
-			category
-		))
+		warn(string.format("[ConfigRegistry] '%s' in ServerStorage.Configs is not a Folder — skipped.", category))
 		_cache[category] = {}
 		return {}
 	end

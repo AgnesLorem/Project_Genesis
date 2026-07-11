@@ -83,7 +83,11 @@ local function _ensureInventoryState(save: any): (any, boolean)
 				entry.itemId = itemId
 				migrated = true
 			end
-			if type(entry.quantity) ~= "number" or entry.quantity < 0 or entry.quantity ~= math.floor(entry.quantity) then
+			if
+				type(entry.quantity) ~= "number"
+				or entry.quantity < 0
+				or entry.quantity ~= math.floor(entry.quantity)
+			then
 				entry.quantity = 0
 				migrated = true
 			end

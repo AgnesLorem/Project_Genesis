@@ -25,7 +25,7 @@ function WorldController.start(snapshot: any)
 	local worldData = worldRes.value
 
 	local screen
-	
+
 	local function _refreshAndRemount()
 		local newSnapRes = NetworkController.getPlayerProfileSnapshot()
 		if newSnapRes.success then
@@ -33,76 +33,72 @@ function WorldController.start(snapshot: any)
 		end
 	end
 
-	screen = WorldScreen.create(
-		snapshot,
-		worldData,
-		function(stageId)
-			-- onStartStage
-			local playerCreatureId = snapshot.activeCreatureInstanceId
+	screen = WorldScreen.create(snapshot, worldData, function(stageId)
+		-- onStartStage
+		local playerCreatureId = snapshot.activeCreatureInstanceId
 
-			if not playerCreatureId then
-				UIController.mountModal(StatePatterns.Error(nil, "No active creature found to battle with.\nPlease select one from your inventory."))
-				task.delay(3, function() UIController.clearModal() end)
-				return
-			end
-
-			BattleController.start(playerCreatureId, stageId, function()
-				_refreshAndRemount()
+		if not playerCreatureId then
+			UIController.mountModal(
+				StatePatterns.Error(
+					nil,
+					"No active creature found to battle with.\nPlease select one from your inventory."
+				)
+			)
+			task.delay(3, function()
+				UIController.clearModal()
 			end)
-		end,
-		function(generatorId)
-			-- onClaimGenerator
-			UIController.mountModal(StatePatterns.Loading(nil))
-			local res = NetworkController.requestClaimGenerator(generatorId)
-			UIController.clearModal()
-			if res.success then
-				_refreshAndRemount()
-			else
-				UIController.mountModal(StatePatterns.Error(nil, "Claim failed: " .. tostring(res.message or res.code)))
-			end
-		end,
-		function(activeInstId, evolutionId)
-			-- onEvolve
-			UIController.mountModal(StatePatterns.Loading(nil))
-			local res = NetworkController.requestEvolution(activeInstId, evolutionId)
-			UIController.clearModal()
-			if res.success then
-				_refreshAndRemount()
-			else
-				UIController.mountModal(StatePatterns.Error(nil, "Evolution failed: " .. tostring(res.message or res.code)))
-			end
-		end,
-		function()
-			-- onOpenGenerators
-			GeneratorController.show(nil, nil, function()
-				_refreshAndRemount()
-			end)
-		end,
-		function()
-			-- onOpenCreatures
-			CreatureInventoryController.show(function()
-				_refreshAndRemount()
-			end)
-		end,
-		function()
-			-- onOpenCollection
-			CollectionController.openCollectionBook(function()
-				_refreshAndRemount()
-			end)
-		end,
-		function()
-			-- onOpenTower
-			TowerChallengeController.show(function()
-				_refreshAndRemount()
-			end)
-		end,
-		function()
-			-- onOpenInventory
-			InventoryController.show(function()
-				_refreshAndRemount()
-			end)
+			return
 		end
-	)
+
+		BattleController.start(playerCreatureId, stageId, function()
+			_refreshAndRemount()
+		end)
+	end, function(generatorId)
+		-- onClaimGenerator
+		UIController.mountModal(StatePatterns.Loading(nil))
+		local res = NetworkController.requestClaimGenerator(generatorId)
+		UIController.clearModal()
+		if res.success then
+			_refreshAndRemount()
+		else
+			UIController.mountModal(StatePatterns.Error(nil, "Claim failed: " .. tostring(res.message or res.code)))
+		end
+	end, function(activeInstId, evolutionId)
+		-- onEvolve
+		UIController.mountModal(StatePatterns.Loading(nil))
+		local res = NetworkController.requestEvolution(activeInstId, evolutionId)
+		UIController.clearModal()
+		if res.success then
+			_refreshAndRemount()
+		else
+			UIController.mountModal(StatePatterns.Error(nil, "Evolution failed: " .. tostring(res.message or res.code)))
+		end
+	end, function()
+		-- onOpenGenerators
+		GeneratorController.show(nil, nil, function()
+			_refreshAndRemount()
+		end)
+	end, function()
+		-- onOpenCreatures
+		CreatureInventoryController.show(function()
+			_refreshAndRemount()
+		end)
+	end, function()
+		-- onOpenCollection
+		CollectionController.openCollectionBook(function()
+			_refreshAndRemount()
+		end)
+	end, function()
+		-- onOpenTower
+		TowerChallengeController.show(function()
+			_refreshAndRemount()
+		end)
+	end, function()
+		-- onOpenInventory
+		InventoryController.show(function()
+			_refreshAndRemount()
+		end)
+	end)
 
 	UIController.mountScreen(screen)
 end

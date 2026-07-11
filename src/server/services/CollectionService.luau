@@ -33,11 +33,11 @@ function CollectionService.getCollectionSnapshot(player: Player)
 	local save = SaveService.getPlayerSave(player)
 	local discovered = save.collectionState.discoveredCreatureIds
 	local allCreatures = CreatureRegistry.getAllCreatures()
-	
+
 	local total = 0
 	local completionCount = 0
 	local entries = {}
-	
+
 	for _, creature in ipairs(allCreatures) do
 		-- Only count enabled creatures in the total available checklist
 		if creature.isEnabled then
@@ -50,11 +50,11 @@ function CollectionService.getCollectionSnapshot(player: Player)
 			end
 		end
 	end
-	
+
 	return Result.ok({
 		completionCount = completionCount,
 		total = total,
-		entries = entries
+		entries = entries,
 	})
 end
 

@@ -22,7 +22,14 @@ local function _bonusText(bonuses: any): string
 	)
 end
 
-function EquipmentScreen.create(equipmentSnapshot: any, inventorySnapshot: any, onEquip: (string, string) -> (), onUnequip: (string) -> (), onRefresh: () -> (), onTooltip: (any) -> ())
+function EquipmentScreen.create(
+	equipmentSnapshot: any,
+	inventorySnapshot: any,
+	onEquip: (string, string) -> (),
+	onUnequip: (string) -> (),
+	onRefresh: () -> (),
+	onTooltip: (any) -> ()
+)
 	local screen = UIComponents.createBaseContainer()
 	screen.Name = "EquipmentScreen"
 

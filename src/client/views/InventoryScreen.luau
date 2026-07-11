@@ -64,11 +64,11 @@ function InventoryScreen.create(snapshot: any, onRefresh: () -> (), onSelectItem
 	local layout = Instance.new("UIListLayout")
 	layout.Padding = UDim.new(0, 12)
 	layout.Parent = list
-	
+
 	local layoutConn = layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
 		list.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 12)
 	end)
-	
+
 	screen.Destroying:Connect(function()
 		layoutConn:Disconnect()
 	end)
@@ -82,10 +82,15 @@ function InventoryScreen.create(snapshot: any, onRefresh: () -> (), onSelectItem
 		local rarity = "Common"
 		if item.rarity == "rare" or item.rarity == "Rare" then
 			rarity = "Rare"
-		elseif item.rarity == "epic" or item.rarity == "Epic" or item.rarity == "legendary" or item.rarity == "Legendary" then
+		elseif
+			item.rarity == "epic"
+			or item.rarity == "Epic"
+			or item.rarity == "legendary"
+			or item.rarity == "Legendary"
+		then
 			rarity = "Legendary"
 		end
-		
+
 		UIComponents.applyRarityBorder(row, rarity)
 
 		local icon = UIComponents.createBasePanel()
@@ -102,7 +107,14 @@ function InventoryScreen.create(snapshot: any, onRefresh: () -> (), onSelectItem
 		nameLabel.TextSize = 18
 		nameLabel.Parent = row
 
-		local metaLabel = UIComponents.createBaseLabel(string.format("%s   |   %s   |   Qty %d", tostring(item.rarity or "Common"), tostring(item.itemType or "item"), item.quantity or 1))
+		local metaLabel = UIComponents.createBaseLabel(
+			string.format(
+				"%s   |   %s   |   Qty %d",
+				tostring(item.rarity or "Common"),
+				tostring(item.itemType or "item"),
+				item.quantity or 1
+			)
+		)
 		metaLabel.Name = "MetaLabel"
 		metaLabel.Size = UDim2.new(0.6, 0, 0, 22)
 		metaLabel.Position = UDim2.new(0, 76, 0, 38)

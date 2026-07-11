@@ -50,12 +50,7 @@ function PersistenceReporter.reportLoadFailure(userId: any, errorCategory: strin
 		safeCategory = "unknown_error"
 	end
 
-	warn(string.format(
-		"%s LOAD FAILURE | userId: %s | errorCategory: %s",
-		LOG_PREFIX,
-		safeUserId,
-		safeCategory
-	))
+	warn(string.format("%s LOAD FAILURE | userId: %s | errorCategory: %s", LOG_PREFIX, safeUserId, safeCategory))
 end
 
 --[[
@@ -85,12 +80,7 @@ function PersistenceReporter.reportSaveFailure(userId: any, errorCategory: strin
 		safeCategory = "unknown_error"
 	end
 
-	warn(string.format(
-		"%s SAVE FAILURE | userId: %s | errorCategory: %s",
-		LOG_PREFIX,
-		safeUserId,
-		safeCategory
-	))
+	warn(string.format("%s SAVE FAILURE | userId: %s | errorCategory: %s", LOG_PREFIX, safeUserId, safeCategory))
 end
 
 --[[

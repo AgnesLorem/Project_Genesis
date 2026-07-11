@@ -15,6 +15,21 @@ local StatCalculator = require(game:GetService("ReplicatedStorage").Genesis.Shar
 
 local TowerChallengeController = {}
 
+local function _getOrRefreshConfig(creatureId: string): any?
+	local config = CreatureRegistry.getCreature(creatureId)
+	if config then
+		return config
+	end
+
+	-- Attempt one bounded refresh through the existing public config API
+	local configRes = NetworkController.getCreatureConfigsPublic()
+	if configRes and configRes.success and CreatureRegistry.loadConfig then
+		CreatureRegistry.loadConfig(configRes.value)
+		config = CreatureRegistry.getCreature(creatureId)
+	end
+	return config
+end
+
 local function _containsUnitId(unitIds: { string }, targetId: string): boolean
 	for _, unitId in ipairs(unitIds or {}) do
 		if unitId == targetId then
@@ -46,8 +61,29 @@ local function _getFirstChallenge(snapshot: any): any
 end
 
 local function _playBattleAndComplete(active: any, playerInstance: any, onClose: (() -> ())?)
-	local playerConfig = CreatureRegistry.getCreature(playerInstance.creatureId)
-	local enemyConfig = CreatureRegistry.getCreature(active.enemyCreatureId)
+	local playerConfig = _getOrRefreshConfig(playerInstance.creatureId)
+	local enemyConfig = _getOrRefreshConfig(active.enemyCreatureId)
+
+	if not playerConfig or not enemyConfig then
+		local missingId = not playerConfig and playerInstance.creatureId or active.enemyCreatureId
+		if game:GetService("RunService"):IsStudio() then
+			warn("[TowerChallengeController] Config missing diagnostic - Missing creature ID: " .. tostring(missingId))
+		end
+
+		UIController.mountModal(StatePatterns.Error(nil, "Creature config unavailable: " .. tostring(missingId)))
+		task.delay(3, function()
+			UIController.clearModal()
+			if onClose then
+				onClose()
+			end
+		end)
+
+		return {
+			success = false,
+			code = "creature_config_unavailable",
+			message = "Creature config unavailable: " .. tostring(missingId),
+		}
+	end
 
 	local playerStats = StatCalculator.getScaledStats(playerConfig, playerInstance.level or 1, nil)
 	local enemyStats = StatCalculator.getScaledStats(enemyConfig, 1, nil)

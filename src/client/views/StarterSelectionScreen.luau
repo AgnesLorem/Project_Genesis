@@ -60,8 +60,8 @@ function StarterSelectionScreen.create(choices, onSelect)
 		btn.Position = UDim2.new(0.5, 0, 0, 240)
 		btn.Parent = card
 
-		btn.Activated:Connect(function() 
-			onSelect(creatureId) 
+		btn.Activated:Connect(function()
+			onSelect(creatureId)
 		end)
 	end
 	return screen

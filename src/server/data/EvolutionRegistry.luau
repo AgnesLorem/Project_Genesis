@@ -13,8 +13,10 @@ local _registry: { [string]: any } = {}
 local _initialized = false
 
 function EvolutionRegistry.init()
-	if _initialized then return end
-	
+	if _initialized then
+		return
+	end
+
 	local records = ConfigRegistry.load("evolutions")
 	for _, record in ipairs(records) do
 		local result = EvolutionSchema.validate(record)
@@ -26,10 +28,16 @@ function EvolutionRegistry.init()
 				_registry[id] = result.value
 			end
 		else
-			warn(string.format("[EvolutionRegistry] Validation failed for '%s': %s", tostring(record.evolutionId or "unknown"), result.message or result.code))
+			warn(
+				string.format(
+					"[EvolutionRegistry] Validation failed for '%s': %s",
+					tostring(record.evolutionId or "unknown"),
+					result.message or result.code
+				)
+			)
 		end
 	end
-	
+
 	_initialized = true
 end
 

@@ -64,11 +64,13 @@ end
 --]]
 function SaveKeyBuilder.buildPlayerKey(userId: any): string?
 	if not SaveKeyBuilder.validateUserId(userId) then
-		warn(string.format(
-			"[SaveKeyBuilder] buildPlayerKey received invalid userId: '%s' (type: %s). Returning nil.",
-			tostring(userId),
-			type(userId)
-		))
+		warn(
+			string.format(
+				"[SaveKeyBuilder] buildPlayerKey received invalid userId: '%s' (type: %s). Returning nil.",
+				tostring(userId),
+				type(userId)
+			)
+		)
 		return nil
 	end
 

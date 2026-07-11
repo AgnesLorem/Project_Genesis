@@ -22,7 +22,6 @@ function CreatureInventoryScreen.create(
 	onSetActive: (string) -> (),
 	onOpenDetail: (string) -> ()
 ): Frame
-
 	local screen = UIComponents.createBaseContainer()
 	screen.Name = "CreatureInventoryScreen"
 
@@ -89,7 +88,9 @@ function CreatureInventoryScreen.create(
 		local cb = publicConfigs and publicConfigs[b.creatureId]
 		local pa = ca and ca.sortOrder or 999
 		local pb = cb and cb.sortOrder or 999
-		if pa ~= pb then return pa < pb end
+		if pa ~= pb then
+			return pa < pb
+		end
 		return (a.creatureId or "") < (b.creatureId or "")
 	end)
 
@@ -125,13 +126,13 @@ function CreatureInventoryScreen.create(
 		elseif cfg and cfg.collectionCategory == "rare" then
 			rarity = "Rare"
 		end
-		
+
 		UIComponents.applyRarityBorder(card, rarity)
 
 		-- Active border highlight
 		if isActive then
 			UIComponents.applySelectionOutline(card)
-			
+
 			local badge = Instance.new("TextLabel")
 			badge.Name = "ActiveBadge"
 			badge.Size = UDim2.new(0, 80, 0, 22)
@@ -152,9 +153,7 @@ function CreatureInventoryScreen.create(
 
 		-- Creature name
 		local nameY = isActive and 32 or 12
-		local nameLabel = UIComponents.createBaseLabel(
-			cfg and cfg.displayName or inst.creatureId
-		)
+		local nameLabel = UIComponents.createBaseLabel(cfg and cfg.displayName or inst.creatureId)
 		nameLabel.Size = UDim2.new(0.4, 0, 0, 24)
 		nameLabel.Position = UDim2.new(0, 12, 0, nameY)
 		nameLabel.Font = Theme.Fonts.Bold
@@ -162,9 +161,7 @@ function CreatureInventoryScreen.create(
 		nameLabel.Parent = card
 
 		-- Level label
-		local levelLabel = UIComponents.createBaseLabel(
-			string.format("Lv. %d", inst.level or 1)
-		)
+		local levelLabel = UIComponents.createBaseLabel(string.format("Lv. %d", inst.level or 1))
 		levelLabel.Size = UDim2.new(0, 70, 0, 22)
 		levelLabel.Position = UDim2.new(0, 12, 0, nameY + 26)
 		levelLabel.TextSize = 14
@@ -197,9 +194,7 @@ function CreatureInventoryScreen.create(
 		xpFillCorner.CornerRadius = UDim.new(1, 0)
 		xpFillCorner.Parent = xpFill
 
-		local xpText = UIComponents.createBaseLabel(
-			string.format("XP %d/%d", xp, _xpNeededForLevel(lvl))
-		)
+		local xpText = UIComponents.createBaseLabel(string.format("XP %d/%d", xp, _xpNeededForLevel(lvl)))
 		xpText.Size = UDim2.new(0, 120, 0, 18)
 		xpText.Position = UDim2.new(0, 85, 0, nameY + 43)
 		xpText.TextSize = 11
@@ -215,7 +210,9 @@ function CreatureInventoryScreen.create(
 		detailBtn.BackgroundColor3 = Theme.Colors.Primary
 		detailBtn.Parent = card
 		detailBtn.Activated:Connect(function()
-			if onOpenDetail then onOpenDetail(instanceId) end
+			if onOpenDetail then
+				onOpenDetail(instanceId)
+			end
 		end)
 
 		if not isActive then
@@ -226,7 +223,9 @@ function CreatureInventoryScreen.create(
 			setActiveBtn.BackgroundColor3 = Theme.Colors.Success
 			setActiveBtn.Parent = card
 			setActiveBtn.Activated:Connect(function()
-				if onSetActive then onSetActive(instanceId) end
+				if onSetActive then
+					onSetActive(instanceId)
+				end
 			end)
 		end
 	end

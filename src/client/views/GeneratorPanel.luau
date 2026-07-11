@@ -51,7 +51,7 @@ local function _makeButton(text: string, enabled: boolean, parent: Instance, pos
 	button.Parent = parent
 	button.Active = enabled
 	button.AutoButtonColor = enabled
-	
+
 	if enabled then
 		button.BackgroundColor3 = Theme.Colors.Success
 	else
@@ -61,7 +61,15 @@ local function _makeButton(text: string, enabled: boolean, parent: Instance, pos
 	return button
 end
 
-function GeneratorPanel.create(snapshot: any, onClaim: (string) -> (), onUpgrade: (string) -> (), onRefresh: () -> (), selectedGeneratorId: string?, statusText: string?, onClose: () -> ())
+function GeneratorPanel.create(
+	snapshot: any,
+	onClaim: (string) -> (),
+	onUpgrade: (string) -> (),
+	onRefresh: () -> (),
+	selectedGeneratorId: string?,
+	statusText: string?,
+	onClose: () -> ()
+)
 	local screen = UIComponents.createBaseContainer()
 	screen.Name = "GeneratorPanel"
 
@@ -102,11 +110,9 @@ function GeneratorPanel.create(snapshot: any, onClaim: (string) -> (), onUpgrade
 	refreshButton.MouseButton1Click:Connect(onRefresh)
 
 	local balances = snapshot.balances or {}
-	local balanceLabel = UIComponents.createBaseLabel(string.format(
-		"Biomass: %d   |   DNA: %d",
-		balances.biomass or 0,
-		balances.dna or 0
-	))
+	local balanceLabel = UIComponents.createBaseLabel(
+		string.format("Biomass: %d   |   DNA: %d", balances.biomass or 0, balances.dna or 0)
+	)
 	balanceLabel.Name = "GeneratorBalances"
 	balanceLabel.Size = UDim2.new(1, 0, 0, 24)
 	balanceLabel.Position = UDim2.new(0, 0, 0, 56)
@@ -136,11 +142,11 @@ function GeneratorPanel.create(snapshot: any, onClaim: (string) -> (), onUpgrade
 	local layout = Instance.new("UIListLayout")
 	layout.Padding = UDim.new(0, 12)
 	layout.Parent = list
-	
+
 	local layoutConn = layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
 		list.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 12)
 	end)
-	
+
 	screen.Destroying:Connect(function()
 		layoutConn:Disconnect()
 	end)
@@ -173,15 +179,17 @@ function GeneratorPanel.create(snapshot: any, onClaim: (string) -> (), onUpgrade
 		stateLabel.TextColor3 = generator.isUnlocked and Theme.Colors.Success or Theme.Colors.Accent
 		stateLabel.Parent = row
 
-		local infoLabel = UIComponents.createBaseLabel(string.format(
-			"Lv %d / %d   %d / %d %s   Rate %d/s",
-			generator.level or 1,
-			generator.maxLevel or 1,
-			generator.accumulated or 0,
-			generator.capacity or generator.maxAccumulated or 0,
-			_currencyLabel(generator.currencyType),
-			generator.ratePerSecond or 0
-		))
+		local infoLabel = UIComponents.createBaseLabel(
+			string.format(
+				"Lv %d / %d   %d / %d %s   Rate %d/s",
+				generator.level or 1,
+				generator.maxLevel or 1,
+				generator.accumulated or 0,
+				generator.capacity or generator.maxAccumulated or 0,
+				_currencyLabel(generator.currencyType),
+				generator.ratePerSecond or 0
+			)
+		)
 		infoLabel.Name = "GeneratorInfo"
 		infoLabel.Size = UDim2.new(0.6, 0, 0, 22)
 		infoLabel.Position = UDim2.new(0, 16, 0, 62)
@@ -191,11 +199,9 @@ function GeneratorPanel.create(snapshot: any, onClaim: (string) -> (), onUpgrade
 		infoLabel.Parent = row
 
 		local cost = generator.upgradeCost or {}
-		local costLabel = UIComponents.createBaseLabel(string.format(
-			"Upgrade Cost: %d %s",
-			cost.amount or 0,
-			_currencyLabel(cost.currencyType)
-		))
+		local costLabel = UIComponents.createBaseLabel(
+			string.format("Upgrade Cost: %d %s", cost.amount or 0, _currencyLabel(cost.currencyType))
+		)
 		costLabel.Name = "GeneratorUpgradeCost"
 		costLabel.Size = UDim2.new(0.6, 0, 0, 22)
 		costLabel.Position = UDim2.new(0, 16, 0, 84)
@@ -219,7 +225,8 @@ function GeneratorPanel.create(snapshot: any, onClaim: (string) -> (), onUpgrade
 			if generator.canUpgrade then
 				-- Trigger confirmation modal dialog
 				local confirmModal = UIComponents.createConfirmationModal(
-					string.format("Upgrade %s to Level %d for %d %s?", 
+					string.format(
+						"Upgrade %s to Level %d for %d %s?",
 						generator.displayName or generator.generatorId,
 						(generator.level or 1) + 1,
 						cost.amount or 0,

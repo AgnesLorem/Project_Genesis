@@ -19,7 +19,9 @@ function SkillController.show(creatureInstanceId: string?)
 	local snapshotResult = NetworkController.getSkillSnapshot(creatureInstanceId)
 	UIController.clearModal()
 	if not snapshotResult.success then
-		UIController.mountModal(StatePatterns.Error(nil, "Skill Load Failed: " .. tostring(snapshotResult.message or snapshotResult.code)))
+		UIController.mountModal(
+			StatePatterns.Error(nil, "Skill Load Failed: " .. tostring(snapshotResult.message or snapshotResult.code))
+		)
 		return snapshotResult
 	end
 

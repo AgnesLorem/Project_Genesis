@@ -42,7 +42,9 @@ end
 
 -- Releases a sound instance
 function AudioPool.Release(sound: Sound, soundId: string)
-	if not sound then return end
+	if not sound then
+		return
+	end
 	sound:Stop()
 	sound.Parent = getPoolFolder()
 

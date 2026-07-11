@@ -10,7 +10,12 @@ local function _isInteger(value: any): boolean
 	return type(value) == "number" and value == math.floor(value)
 end
 
-local function _validateFloor(floor: any, index: number, seenFloorIds: { [string]: boolean }, seenFloorNumbers: { [number]: boolean })
+local function _validateFloor(
+	floor: any,
+	index: number,
+	seenFloorIds: { [string]: boolean },
+	seenFloorNumbers: { [number]: boolean }
+)
 	if type(floor) ~= "table" then
 		return Result.fail("invalid_floor", string.format("floors[%d] must be a table.", index))
 	end
@@ -25,7 +30,10 @@ local function _validateFloor(floor: any, index: number, seenFloorIds: { [string
 	seenFloorIds[floor.floorId] = true
 
 	if not _isInteger(floor.floorNumber) or floor.floorNumber < 1 then
-		return Result.fail("invalid_floor_number", string.format("floors[%d].floorNumber must be a positive integer.", index))
+		return Result.fail(
+			"invalid_floor_number",
+			string.format("floors[%d].floorNumber must be a positive integer.", index)
+		)
 	end
 
 	if seenFloorNumbers[floor.floorNumber] then
@@ -34,11 +42,17 @@ local function _validateFloor(floor: any, index: number, seenFloorIds: { [string
 	seenFloorNumbers[floor.floorNumber] = true
 
 	if not _isNonEmptyString(floor.enemyCreatureId) then
-		return Result.fail("invalid_enemy_creature_id", string.format("floors[%d].enemyCreatureId must be a non-empty string.", index))
+		return Result.fail(
+			"invalid_enemy_creature_id",
+			string.format("floors[%d].enemyCreatureId must be a non-empty string.", index)
+		)
 	end
 
 	if type(floor.recommendedLevel) ~= "number" or floor.recommendedLevel < 0 then
-		return Result.fail("invalid_recommended_level", string.format("floors[%d].recommendedLevel must be a non-negative number.", index))
+		return Result.fail(
+			"invalid_recommended_level",
+			string.format("floors[%d].recommendedLevel must be a non-negative number.", index)
+		)
 	end
 
 	if type(floor.isEnabled) ~= "boolean" then

@@ -29,12 +29,15 @@ ScreenRouter.OnScreenChanged = _screenChangedEvent.Event
 --]]
 function ScreenRouter.registerScreen(screenId: string, screenGui: Instance)
 	assert(type(screenId) == "string" and screenId ~= "", "[ScreenRouter] screenId must be a non-empty string.")
-	assert(typeof(screenGui) == "Instance" and screenGui:IsA("ScreenGui"), "[ScreenRouter] screenGui must be a ScreenGui.")
-	
+	assert(
+		typeof(screenGui) == "Instance" and screenGui:IsA("ScreenGui"),
+		"[ScreenRouter] screenGui must be a ScreenGui."
+	)
+
 	if _screens[screenId] then
 		warn(string.format("[ScreenRouter] Screen '%s' is already registered. Overwriting.", screenId))
 	end
-	
+
 	-- Ensure the screen is hidden initially
 	screenGui.Enabled = false
 	_screens[screenId] = screenGui
@@ -48,21 +51,21 @@ end
 --]]
 function ScreenRouter.switchScreen(screenId: string)
 	assert(type(screenId) == "string" and screenId ~= "", "[ScreenRouter] screenId must be a non-empty string.")
-	
+
 	if not _screens[screenId] then
 		warn(string.format("[ScreenRouter] Rejected unknown screen ID: '%s'", screenId))
 		return false
 	end
-	
+
 	-- Hide current screen if any
 	if _activeScreenId and _screens[_activeScreenId] then
 		_screens[_activeScreenId].Enabled = false
 	end
-	
+
 	-- Show new screen
 	_activeScreenId = screenId
 	_screens[_activeScreenId].Enabled = true
-	
+
 	-- Broadcast change
 	_screenChangedEvent:Fire(_activeScreenId)
 	return true

@@ -15,7 +15,9 @@ local AudioPlayer = {}
 
 -- Plays a sound configuration
 function AudioPlayer.play(soundConfig: any)
-	if not soundConfig or not soundConfig.id then return end
+	if not soundConfig or not soundConfig.id then
+		return
+	end
 
 	local soundId = soundConfig.id
 	local volume = soundConfig.volume or 0.5
@@ -30,7 +32,9 @@ function AudioPlayer.play(soundConfig: any)
 	local released = false
 
 	local function releaseSound()
-		if released then return end
+		if released then
+			return
+		end
 		released = true
 		if connection then
 			connection:Disconnect()

@@ -2,28 +2,28 @@ local Network = require(game:GetService("ReplicatedStorage").Genesis.Shared.remo
 
 local NetworkController = {}
 
-function NetworkController.getPlayerProfileSnapshot() 
-	return Network.getRemoteFunction("GetPlayerProfileSnapshot"):InvokeServer() 
+function NetworkController.getPlayerProfileSnapshot()
+	return Network.getRemoteFunction("GetPlayerProfileSnapshot"):InvokeServer()
 end
 
 function NetworkController.getCreatureConfigsPublic()
 	return Network.getRemoteFunction("GetCreatureConfigsPublic"):InvokeServer()
 end
 
-function NetworkController.getStarterChoices() 
-	return Network.getRemoteFunction("GetStarterChoices"):InvokeServer() 
+function NetworkController.getStarterChoices()
+	return Network.getRemoteFunction("GetStarterChoices"):InvokeServer()
 end
 
-function NetworkController.requestStarterSelection(creatureId) 
-	return Network.getRemoteFunction("RequestStarterSelection"):InvokeServer(creatureId) 
+function NetworkController.requestStarterSelection(creatureId)
+	return Network.getRemoteFunction("RequestStarterSelection"):InvokeServer(creatureId)
 end
 
-function NetworkController.requestWorldSnapshot() 
-	return Network.getRemoteFunction("RequestWorldSnapshot"):InvokeServer() 
+function NetworkController.requestWorldSnapshot()
+	return Network.getRemoteFunction("RequestWorldSnapshot"):InvokeServer()
 end
 
-function NetworkController.requestStoryBattle(playerCreatureId, stageId) 
-	return Network.getRemoteFunction("RequestStoryBattle"):InvokeServer(playerCreatureId, stageId) 
+function NetworkController.requestStoryBattle(playerCreatureId, stageId)
+	return Network.getRemoteFunction("RequestStoryBattle"):InvokeServer(playerCreatureId, stageId)
 end
 
 function NetworkController.requestBattleCompletion(battleToken)

@@ -43,8 +43,8 @@ local SESSION_JOB_ID: string = (game.JobId ~= "" and game.JobId)
 local SESSION_FIELD = "_sessionJobId"
 
 -- ─── Retry Config ─────────────────────────────────────────────────────────────
-local MAX_RETRIES      = 3
-local RETRY_BASE_DELAY = 2   -- giây; delay = 2^attempt * base → 2s, 4s, 8s
+local MAX_RETRIES = 3
+local RETRY_BASE_DELAY = 2 -- giây; delay = 2^attempt * base → 2s, 4s, 8s
 
 -- ─── Pending Save Tracker ────────────────────────────────────────────────────
 local _pendingSaveCount = 0
@@ -63,13 +63,13 @@ export type SaveResult = {
 
 -- ─── Safe Error Categories ────────────────────────────────────────────────────
 local ERROR_CATEGORIES = {
-	DATASTORE_UNAVAILABLE   = "datastore_unavailable",
+	DATASTORE_UNAVAILABLE = "datastore_unavailable",
 	REQUEST_BUDGET_EXCEEDED = "request_budget_exceeded",
-	SERIALIZATION_FAILED    = "serialization_failed",
-	KEY_INVALID             = "key_invalid",
-	UNKNOWN_ERROR           = "unknown_error",
-	SESSION_LOCKED          = "session_locked",   -- Server khác đang giữ lock
-	SESSION_STOLEN          = "session_stolen",   -- Lock bị mất giữa chừng (rejoin quá nhanh)
+	SERIALIZATION_FAILED = "serialization_failed",
+	KEY_INVALID = "key_invalid",
+	UNKNOWN_ERROR = "unknown_error",
+	SESSION_LOCKED = "session_locked", -- Server khác đang giữ lock
+	SESSION_STOLEN = "session_stolen", -- Lock bị mất giữa chừng (rejoin quá nhanh)
 }
 
 -- ─── Internal Helpers ────────────────────────────────────────────────────────
@@ -128,15 +128,27 @@ local function _withRetry(label: string, callback: () -> (boolean, any)): (boole
 		end
 		local category = _categorizeError(tostring(lastResult))
 		if not _isTransientError(category) then
-			warn(string.format("[DataStoreWrapper] %s — lỗi cố định, không retry. Category: %s", label, category))
+			warn(
+				string.format(
+					"[DataStoreWrapper] %s — lỗi cố định, không retry. Category: %s",
+					label,
+					category
+				)
+			)
 			return false, lastResult
 		end
 		if attempt < MAX_RETRIES then
 			local delay = RETRY_BASE_DELAY * (2 ^ (attempt - 1))
-			warn(string.format(
-				"[DataStoreWrapper] %s — lần %d/%d thất bại (%s). Thử lại sau %.0fs...",
-				label, attempt, MAX_RETRIES, category, delay
-			))
+			warn(
+				string.format(
+					"[DataStoreWrapper] %s — lần %d/%d thất bại (%s). Thử lại sau %.0fs...",
+					label,
+					attempt,
+					MAX_RETRIES,
+					category,
+					delay
+				)
+			)
 			task.wait(delay)
 		end
 	end
@@ -166,13 +178,22 @@ local DataStoreWrapper = {}
 	  { ok = false, errorCategory = <other> }          — Lỗi DataStore.
 --]]
 function DataStoreWrapper.loadAndClaim(storeName: string, key: string): LoadResult
-	assert(type(storeName) == "string" and storeName ~= "", "[DataStoreWrapper] storeName phải là chuỗi không rỗng.")
+	assert(
+		type(storeName) == "string" and storeName ~= "",
+		"[DataStoreWrapper] storeName phải là chuỗi không rỗng."
+	)
 	assert(type(key) == "string" and key ~= "", "[DataStoreWrapper] key phải là chuỗi không rỗng.")
 
 	local storeOk, storeOrError = _getStore(storeName)
 	if not storeOk then
 		local category = _categorizeError(tostring(storeOrError))
-		warn(string.format("[DataStoreWrapper] loadAndClaim: không lấy được DataStore '%s'. Category: %s", storeName, category))
+		warn(
+			string.format(
+				"[DataStoreWrapper] loadAndClaim: không lấy được DataStore '%s'. Category: %s",
+				storeName,
+				category
+			)
+		)
 		return { ok = false, data = nil, errorCategory = category }
 	end
 
@@ -181,13 +202,14 @@ function DataStoreWrapper.loadAndClaim(storeName: string, key: string): LoadResu
 
 	-- Biến capture từ trong closure của UpdateAsync
 	local sessionWasLocked = false
-	local capturedCleanData = nil  -- Data đã lọc bỏ SESSION_FIELD
+	local capturedCleanData = nil -- Data đã lọc bỏ SESSION_FIELD
 
 	local ok, result = _withRetry(label, function()
 		return pcall(function()
 			store:UpdateAsync(key, function(oldValue: any)
 				-- ── Kiểm tra Session Lock ──
-				if type(oldValue) == "table"
+				if
+					type(oldValue) == "table"
 					and type(oldValue[SESSION_FIELD]) == "string"
 					and oldValue[SESSION_FIELD] ~= ""
 					and oldValue[SESSION_FIELD] ~= SESSION_JOB_ID
@@ -231,15 +253,22 @@ function DataStoreWrapper.loadAndClaim(storeName: string, key: string): LoadResu
 
 	if not ok then
 		local category = _categorizeError(tostring(result))
-		warn(string.format("[DataStoreWrapper] loadAndClaim UpdateAsync thất bại cuối cùng. Category: %s", category))
+		warn(
+			string.format(
+				"[DataStoreWrapper] loadAndClaim UpdateAsync thất bại cuối cùng. Category: %s",
+				category
+			)
+		)
 		return { ok = false, data = nil, errorCategory = category }
 	end
 
 	if sessionWasLocked then
-		warn(string.format(
-			"[DataStoreWrapper] loadAndClaim: key '%s' đang bị lock bởi server khác. Từ chối load.",
-			key
-		))
+		warn(
+			string.format(
+				"[DataStoreWrapper] loadAndClaim: key '%s' đang bị lock bởi server khác. Từ chối load.",
+				key
+			)
+		)
 		return { ok = false, data = nil, errorCategory = ERROR_CATEGORIES.SESSION_LOCKED }
 	end
 
@@ -259,13 +288,22 @@ end
 	  { ok = false, errorCategory = <other> }           — Lỗi DataStore.
 --]]
 function DataStoreWrapper.save(storeName: string, key: string, data: any): SaveResult
-	assert(type(storeName) == "string" and storeName ~= "", "[DataStoreWrapper] storeName phải là chuỗi không rỗng.")
+	assert(
+		type(storeName) == "string" and storeName ~= "",
+		"[DataStoreWrapper] storeName phải là chuỗi không rỗng."
+	)
 	assert(type(key) == "string" and key ~= "", "[DataStoreWrapper] key phải là chuỗi không rỗng.")
 
 	local storeOk, storeOrError = _getStore(storeName)
 	if not storeOk then
 		local category = _categorizeError(tostring(storeOrError))
-		warn(string.format("[DataStoreWrapper] save: không lấy được DataStore '%s'. Category: %s", storeName, category))
+		warn(
+			string.format(
+				"[DataStoreWrapper] save: không lấy được DataStore '%s'. Category: %s",
+				storeName,
+				category
+			)
+		)
 		return { ok = false, errorCategory = category }
 	end
 
@@ -279,7 +317,8 @@ function DataStoreWrapper.save(storeName: string, key: string, data: any): SaveR
 		return pcall(function()
 			store:UpdateAsync(key, function(oldValue: any)
 				-- ── Kiểm tra Lock bị đánh cắp ──
-				if type(oldValue) == "table"
+				if
+					type(oldValue) == "table"
 					and type(oldValue[SESSION_FIELD]) == "string"
 					and oldValue[SESSION_FIELD] ~= ""
 					and oldValue[SESSION_FIELD] ~= SESSION_JOB_ID
@@ -312,10 +351,12 @@ function DataStoreWrapper.save(storeName: string, key: string, data: any): SaveR
 	end
 
 	if sessionWasStolen then
-		warn(string.format(
-			"[DataStoreWrapper] save: Session lock bị đánh cắp tại key '%s'! Không ghi đè.",
-			key
-		))
+		warn(
+			string.format(
+				"[DataStoreWrapper] save: Session lock bị đánh cắp tại key '%s'! Không ghi đè.",
+				key
+			)
+		)
 		return { ok = false, errorCategory = ERROR_CATEGORIES.SESSION_STOLEN }
 	end
 
@@ -334,13 +375,22 @@ end
 	stolen, ta vẫn muốn xoá SESSION_FIELD để tránh orphaned lock.
 --]]
 function DataStoreWrapper.saveAndRelease(storeName: string, key: string, data: any): SaveResult
-	assert(type(storeName) == "string" and storeName ~= "", "[DataStoreWrapper] storeName phải là chuỗi không rỗng.")
+	assert(
+		type(storeName) == "string" and storeName ~= "",
+		"[DataStoreWrapper] storeName phải là chuỗi không rỗng."
+	)
 	assert(type(key) == "string" and key ~= "", "[DataStoreWrapper] key phải là chuỗi không rỗng.")
 
 	local storeOk, storeOrError = _getStore(storeName)
 	if not storeOk then
 		local category = _categorizeError(tostring(storeOrError))
-		warn(string.format("[DataStoreWrapper] saveAndRelease: không lấy được DataStore '%s'. Category: %s", storeName, category))
+		warn(
+			string.format(
+				"[DataStoreWrapper] saveAndRelease: không lấy được DataStore '%s'. Category: %s",
+				storeName,
+				category
+			)
+		)
 		return { ok = false, errorCategory = category }
 	end
 
@@ -356,7 +406,7 @@ function DataStoreWrapper.saveAndRelease(storeName: string, key: string, data: a
 				local newData: { [string]: any } = {}
 				if type(data) == "table" then
 					for k, v in pairs(data) do
-						if k ~= SESSION_FIELD then  -- Lọc bỏ SESSION_FIELD khỏi payload
+						if k ~= SESSION_FIELD then -- Lọc bỏ SESSION_FIELD khỏi payload
 							newData[k] = v
 						end
 					end
@@ -372,7 +422,12 @@ function DataStoreWrapper.saveAndRelease(storeName: string, key: string, data: a
 
 	if not ok then
 		local category = _categorizeError(tostring(result))
-		warn(string.format("[DataStoreWrapper] saveAndRelease UpdateAsync thất bại cuối cùng. Category: %s", category))
+		warn(
+			string.format(
+				"[DataStoreWrapper] saveAndRelease UpdateAsync thất bại cuối cùng. Category: %s",
+				category
+			)
+		)
 		return { ok = false, errorCategory = category }
 	end
 
@@ -387,7 +442,7 @@ function DataStoreWrapper.getPendingSaveCount(): number
 	return _pendingSaveCount
 end
 
-DataStoreWrapper.ERROR_CATEGORIES  = ERROR_CATEGORIES
-DataStoreWrapper.SESSION_JOB_ID    = SESSION_JOB_ID  -- Export để SaveSmoke có thể test
+DataStoreWrapper.ERROR_CATEGORIES = ERROR_CATEGORIES
+DataStoreWrapper.SESSION_JOB_ID = SESSION_JOB_ID -- Export để SaveSmoke có thể test
 
 return DataStoreWrapper

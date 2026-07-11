@@ -49,7 +49,10 @@ function EvolutionService.tryEvolve(player: Player, instanceId: string, evolutio
 	-- 5. Validate Level
 	local currentLevel = creature.level or 1
 	if currentLevel < evolutionConfig.requiredLevel then
-		return Result.fail("insufficient_level", string.format("Creature level %d is below required level %d.", currentLevel, evolutionConfig.requiredLevel))
+		return Result.fail(
+			"insufficient_level",
+			string.format("Creature level %d is below required level %d.", currentLevel, evolutionConfig.requiredLevel)
+		)
 	end
 
 	-- 6. Spend Biomass
@@ -77,7 +80,7 @@ function EvolutionService.tryEvolve(player: Player, instanceId: string, evolutio
 		instanceId = instanceId,
 		newCreatureId = evolutionConfig.toCreatureId,
 		level = 1,
-		xp = 0
+		xp = 0,
 	})
 end
 

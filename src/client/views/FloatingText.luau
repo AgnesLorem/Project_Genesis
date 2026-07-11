@@ -16,7 +16,9 @@ local TweenService = game:GetService("TweenService")
 
 -- Shows a floating text overlay on the specified card
 function FloatingText.show(card: Frame, textType: string, amountOrText: any)
-	if not card or not card.Parent then return end
+	if not card or not card.Parent then
+		return
+	end
 
 	local label = Instance.new("TextLabel")
 	label.Name = "FloatingTextLabel"
@@ -76,10 +78,10 @@ function FloatingText.show(card: Frame, textType: string, amountOrText: any)
 	-- Animate float up and fade out using TweenService
 	local floatInfo = TweenInfo.new(1.0, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 	local tweenPosition = TweenService:Create(label, floatInfo, {
-		Position = UDim2.new(0.5, -100, 0.05, 0)
+		Position = UDim2.new(0.5, -100, 0.05, 0),
 	})
 	local tweenFade = TweenService:Create(label, floatInfo, {
-		TextTransparency = 1
+		TextTransparency = 1,
 	})
 
 	tweenPosition.Completed:Connect(function()

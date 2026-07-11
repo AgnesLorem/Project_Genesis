@@ -58,10 +58,7 @@ local function _ensureSkillState(save: any): (any, boolean)
 			migrated = true
 		else
 			for skillId, readyAt in pairs(skillCooldowns) do
-				if type(skillId) ~= "string" or type(readyAt) ~= "number" then
-					skillCooldowns[skillId] = nil
-					migrated = true
-				elseif readyAt <= _now() then
+				if type(skillId) ~= "string" or type(readyAt) ~= "number" or readyAt <= _now() then
 					skillCooldowns[skillId] = nil
 					migrated = true
 				end
@@ -110,8 +107,8 @@ end
 
 local function _getCooldownRemaining(state: any, creatureInstanceId: string, skillId: string): number
 	local readyAt = state.cooldowns
-		and state.cooldowns[creatureInstanceId]
-		and state.cooldowns[creatureInstanceId][skillId]
+			and state.cooldowns[creatureInstanceId]
+			and state.cooldowns[creatureInstanceId][skillId]
 		or 0
 	return math.max(0, math.ceil(readyAt - _now()))
 end
@@ -190,17 +187,19 @@ function SkillService.getSnapshot(player: Player, requestedCreatureInstanceId: a
 	for _, inst in pairs(save.creatureInstances or {}) do
 		if type(inst) == "table" then
 			local instanceId = inst.instanceId
-			if _isNonEmptyString(instanceId)
-				and (requestedCreatureInstanceId == nil or requestedCreatureInstanceId == instanceId) then
+			if
+				_isNonEmptyString(instanceId)
+				and (requestedCreatureInstanceId == nil or requestedCreatureInstanceId == instanceId)
+			then
 				local creatureConfig = CreatureRegistry.getCreature(inst.creatureId)
 				local skills = {}
 				for _, skillId in ipairs(creatureConfig and creatureConfig.skillIds or {}) do
 					local skill = SkillRegistry.getSkill(skillId)
 					if skill and skill.isEnabled then
-						table.insert(skills, _buildSkillSnapshot(
-							skill,
-							_getCooldownRemaining(stateResult.value, instanceId, skillId)
-						))
+						table.insert(
+							skills,
+							_buildSkillSnapshot(skill, _getCooldownRemaining(stateResult.value, instanceId, skillId))
+						)
 					end
 				end
 				table.insert(creatures, {
@@ -277,8 +276,8 @@ function SkillService.tryUseSkill(player: Player, creatureInstanceId: any, skill
 	end
 
 	if skill.cooldown > 0 then
-		stateResult.value.cooldowns[instanceResult.value.instanceId] =
-			stateResult.value.cooldowns[instanceResult.value.instanceId] or {}
+		stateResult.value.cooldowns[instanceResult.value.instanceId] = stateResult.value.cooldowns[instanceResult.value.instanceId]
+			or {}
 		stateResult.value.cooldowns[instanceResult.value.instanceId][skillId] = _now() + skill.cooldown
 	end
 
@@ -291,9 +290,49 @@ function SkillService.tryUseSkill(player: Player, creatureInstanceId: any, skill
 	return Result.ok({
 		creatureInstanceId = instanceResult.value.instanceId,
 		creatureId = instanceResult.value.creatureId,
-		skill = _buildSkillSnapshot(skill, _getCooldownRemaining(stateResult.value, instanceResult.value.instanceId, skillId)),
+		skill = _buildSkillSnapshot(
+			skill,
+			_getCooldownRemaining(stateResult.value, instanceResult.value.instanceId, skillId)
+		),
 		targetId = targetId,
 	})
+end
+
+function SkillService.runUnitTests()
+	print("[SkillService] Running unit tests...")
+
+	local testSave = {
+		skillState = {
+			schemaVersion = 1,
+			migrationVersion = 1,
+			cooldowns = {
+				creature_001 = {
+					[123] = _now() + 10,
+					skill_002 = "invalid_readyAt",
+					skill_003 = _now() - 5,
+					skill_004 = _now() + 100,
+				},
+			},
+		},
+	}
+
+	local state, migrated = _ensureSkillState(testSave)
+	assert(migrated == true, "Expected migration to occur.")
+
+	local cd = state.cooldowns.creature_001
+	assert(cd ~= nil, "Cooldowns table for creature_001 should exist.")
+	assert(cd[123] == nil, "Invalid skill ID key (123) should be cleaned up.")
+	assert(cd.skill_002 == nil, "Invalid readyAt type (string) should be cleaned up.")
+	assert(cd.skill_003 == nil, "Expired cooldown should be cleaned up.")
+	assert(cd.skill_004 ~= nil, "Valid future cooldown should remain untouched.")
+	assert(math.abs(cd.skill_004 - (_now() + 100)) < 2, "Valid future cooldown value modified.")
+
+	print("[SkillService] Unit tests PASS.")
+	return true
+end
+
+if game:GetService("RunService"):IsStudio() then
+	SkillService.runUnitTests()
 end
 
 return SkillService

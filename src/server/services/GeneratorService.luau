@@ -100,7 +100,10 @@ end
 
 local function _migrateLegacyGeneratorState(save: any)
 	_ensureGeneratorContainer(save)
-	if save.economyState.generators.bio_generator == nil and save.economyState.generators[LEGACY_GENERATOR_ID] ~= nil then
+	if
+		save.economyState.generators.bio_generator == nil
+		and save.economyState.generators[LEGACY_GENERATOR_ID] ~= nil
+	then
 		save.economyState.generators.bio_generator = save.economyState.generators[LEGACY_GENERATOR_ID]
 	end
 end
@@ -497,12 +500,7 @@ function GeneratorService.tryClaim(player: any, generatorId: any)
 			return Result.fail("NOTHING_TO_CLAIM", "Less than 1 unit accumulated.")
 		end
 
-		local grantResult = CurrencyService.tryGrant(
-			player,
-			_currencyType(config),
-			accumulated,
-			"generator_claim"
-		)
+		local grantResult = CurrencyService.tryGrant(player, _currencyType(config), accumulated, "generator_claim")
 
 		if not grantResult.success then
 			return grantResult

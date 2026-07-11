@@ -34,11 +34,19 @@ function EvolutionSchema.validate(data: any)
 		return Result.fail("validation_failed", "Missing or invalid toCreatureId.")
 	end
 
-	if type(data.requiredLevel) ~= "number" or data.requiredLevel <= 0 or data.requiredLevel ~= math.floor(data.requiredLevel) then
+	if
+		type(data.requiredLevel) ~= "number"
+		or data.requiredLevel <= 0
+		or data.requiredLevel ~= math.floor(data.requiredLevel)
+	then
 		return Result.fail("validation_failed", "Missing or invalid requiredLevel (positive integer).")
 	end
 
-	if type(data.biomassCost) ~= "number" or data.biomassCost < 0 or data.biomassCost ~= math.floor(data.biomassCost) then
+	if
+		type(data.biomassCost) ~= "number"
+		or data.biomassCost < 0
+		or data.biomassCost ~= math.floor(data.biomassCost)
+	then
 		return Result.fail("validation_failed", "Missing or invalid biomassCost (non-negative integer).")
 	end
 

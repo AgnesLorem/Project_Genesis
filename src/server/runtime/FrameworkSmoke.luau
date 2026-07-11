@@ -34,11 +34,7 @@ local function _assert(testName: string, condition: boolean, detail: string?)
 		print(string.format("[FrameworkSmoke] PASS — %s", testName))
 	else
 		_failCount += 1
-		warn(string.format(
-			"[FrameworkSmoke] FAIL — %s%s",
-			testName,
-			detail and (": " .. detail) or ""
-		))
+		warn(string.format("[FrameworkSmoke] FAIL — %s%s", testName, detail and (": " .. detail) or ""))
 	end
 end
 
@@ -102,16 +98,8 @@ local function _testServiceLifecycle()
 		type(fakeService.name) == "string" and fakeService.name ~= "",
 		"name check"
 	)
-	_assert(
-		"ServiceContract: init is function",
-		type(fakeService.init) == "function",
-		"init check"
-	)
-	_assert(
-		"ServiceContract: start is function",
-		type(fakeService.start) == "function",
-		"start check"
-	)
+	_assert("ServiceContract: init is function", type(fakeService.init) == "function", "init check")
+	_assert("ServiceContract: start is function", type(fakeService.start) == "function", "start check")
 
 	-- T2: A ServiceContract without name fails the contract check.
 	local badService = { init = function() end, start = function() end }
@@ -120,11 +108,7 @@ local function _testServiceLifecycle()
 
 	-- T3: A ServiceContract without init fails.
 	local noInitService = { name = "NoInit", start = function() end }
-	_assert(
-		"ServiceContract: missing init caught",
-		type(noInitService.init) ~= "function",
-		"init validation"
-	)
+	_assert("ServiceContract: missing init caught", type(noInitService.init) ~= "function", "init validation")
 end
 
 -- ─── Public API ─────────────────────────────────────────────────────────────
@@ -147,11 +131,7 @@ function FrameworkSmoke.run(): { passed: number, failed: number }
 	_testResult()
 	_testServiceLifecycle()
 
-	print(string.format(
-		"[FrameworkSmoke] ═══ Done: %d PASSED, %d FAILED ═══",
-		_passCount,
-		_failCount
-	))
+	print(string.format("[FrameworkSmoke] ═══ Done: %d PASSED, %d FAILED ═══", _passCount, _failCount))
 
 	return { passed = _passCount, failed = _failCount }
 end

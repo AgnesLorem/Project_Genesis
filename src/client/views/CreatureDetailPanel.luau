@@ -16,13 +16,7 @@ local function _xpNeededForLevel(level: number): number
 	return level * 100
 end
 
-function CreatureDetailPanel.create(
-	instance: any,
-	publicConfig: any,
-	isActive: boolean,
-	onClose: () -> ()
-): Frame
-
+function CreatureDetailPanel.create(instance: any, publicConfig: any, isActive: boolean, onClose: () -> ()): Frame
 	local modal = UIComponents.createBaseModal()
 	modal.Name = "CreatureDetailPanel"
 
@@ -41,7 +35,7 @@ function CreatureDetailPanel.create(
 	elseif publicConfig and publicConfig.collectionCategory == "rare" then
 		rarity = "Rare"
 	end
-	
+
 	UIComponents.applyRarityBorder(panel, rarity)
 
 	-- ─── Header ──────────────────────────────────────────────────────────────────
@@ -59,7 +53,9 @@ function CreatureDetailPanel.create(
 
 	local displayName = publicConfig and publicConfig.displayName or (instance and instance.creatureId or "Unknown")
 	local titleText = displayName
-	if isActive then titleText = "⚔ " .. titleText .. "  [ACTIVE]" end
+	if isActive then
+		titleText = "⚔ " .. titleText .. "  [ACTIVE]"
+	end
 
 	local titleLabel = UIComponents.createBaseLabel(titleText)
 	titleLabel.Size = UDim2.new(1, -160, 1, 0)
@@ -68,9 +64,8 @@ function CreatureDetailPanel.create(
 	titleLabel.TextSize = 22
 	titleLabel.Parent = headerBg
 
-	local rarityTag = UIComponents.createBaseLabel(
-		publicConfig and string.upper(publicConfig.collectionCategory or "") or ""
-	)
+	local rarityTag =
+		UIComponents.createBaseLabel(publicConfig and string.upper(publicConfig.collectionCategory or "") or "")
 	rarityTag.Size = UDim2.new(0, 100, 0, 24)
 	rarityTag.AnchorPoint = Vector2.new(1, 0.5)
 	rarityTag.Position = UDim2.new(1, -120, 0.5, 0)
@@ -190,9 +185,7 @@ function CreatureDetailPanel.create(
 	local evo = publicConfig and publicConfig.evolutionAvailable
 
 	if evo then
-		local evoName = UIComponents.createBaseLabel(
-			string.format("→ %s", evo.toCreatureId)
-		)
+		local evoName = UIComponents.createBaseLabel(string.format("→ %s", evo.toCreatureId))
 		evoName.Size = UDim2.new(1, -40, 0, 22)
 		evoName.Position = UDim2.new(0, 20, 0, evoY)
 		evoName.Font = Theme.Fonts.Bold
@@ -212,8 +205,8 @@ function CreatureDetailPanel.create(
 
 		-- Eligibility check
 		local eligible = level >= evo.requiredLevel
-		local statusText = eligible and "✓ Eligible (evolve via inventory)" or
-			string.format("✗ Need Level %d (currently %d)", evo.requiredLevel, level)
+		local statusText = eligible and "✓ Eligible (evolve via inventory)"
+			or string.format("✗ Need Level %d (currently %d)", evo.requiredLevel, level)
 		local statusLabel = UIComponents.createBaseLabel(statusText)
 		statusLabel.Size = UDim2.new(1, -40, 0, 22)
 		statusLabel.Position = UDim2.new(0, 20, 0, evoY + 50)

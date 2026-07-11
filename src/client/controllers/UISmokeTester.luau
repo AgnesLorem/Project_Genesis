@@ -642,6 +642,49 @@ function UISmokeTester.runAllTests()
 
 	local suiteOk, suiteResult = xpcall(function()
 		UIController.cleanup()
+
+		-- Monkeypatch UIController to assert no "nil" labels
+		local originalMountScreen = UIController.mountScreen
+		local originalMountOverlay = UIController.mountOverlay
+		local originalMountModal = UIController.mountModal
+
+		local function checkNilLabels(context)
+			local player = Players.LocalPlayer
+			local playerGui = player and player:FindFirstChild("PlayerGui")
+			local targetUI = playerGui and playerGui:FindFirstChild("GenesisMainUI")
+			if targetUI then
+				for _, child in ipairs(targetUI:GetDescendants()) do
+					if child:IsA("TextLabel") and child.Visible and child.Text == "nil" then
+						local msg = string.format(
+							"[UISmokeTester] FAILED: Found visible TextLabel with value 'nil' in %s: %s",
+							context,
+							child:GetFullName()
+						)
+						warn(msg)
+						error(msg)
+					end
+				end
+			end
+		end
+
+		UIController.mountScreen = function(screenInstance)
+			originalMountScreen(screenInstance)
+			task.wait(0.05)
+			checkNilLabels("mountScreen")
+		end
+
+		UIController.mountOverlay = function(overlayInstance, overlayId)
+			originalMountOverlay(overlayInstance, overlayId)
+			task.wait(0.05)
+			checkNilLabels("mountOverlay")
+		end
+
+		UIController.mountModal = function(modalInstance, onClose)
+			originalMountModal(modalInstance, onClose)
+			task.wait(0.05)
+			checkNilLabels("mountModal")
+		end
+
 		local cleanupDeadline = os.clock() + 2
 		while mainUI and #mainUI:GetChildren() > 0 and os.clock() < cleanupDeadline do
 			task.wait()
@@ -684,6 +727,11 @@ function UISmokeTester.runAllTests()
 
 			UIController.init()
 		end
+
+		-- Restore
+		UIController.mountScreen = originalMountScreen
+		UIController.mountOverlay = originalMountOverlay
+		UIController.mountModal = originalMountModal
 
 		print("[UISmokeTester] Testing double cleanup (idempotency)...")
 		local cleanupSuccess, cleanupErr = pcall(function()

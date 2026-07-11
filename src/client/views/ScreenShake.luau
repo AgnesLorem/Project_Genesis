@@ -31,7 +31,7 @@ function ScreenShake.shake(presetName: string)
 		if not camera then
 			camera = workspace.CurrentCamera
 		end
-		
+
 		local elapsed = os.clock() - startTime
 		if elapsed >= duration or not camera then
 			RunService:UnbindFromRenderStep(shakeId)

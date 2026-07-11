@@ -11,8 +11,8 @@ local InventoryController = require(script.Parent.InventoryController)
 local EquipmentController = require(script.Parent.EquipmentController)
 local SkillController = require(script.Parent.SkillController)
 local GeneratorController = require(script.Parent.GeneratorController)
-local UISmokeTester = require(script.Parent.UISmokeTester)
 local Players = game:GetService("Players")
+local CreatureRegistry = require(game:GetService("ReplicatedStorage").Genesis.Shared.data.CreatureRegistry)
 
 local GameplaySimulator = {}
 
@@ -167,31 +167,60 @@ function GameplaySimulator.claimGenerator()
 	ensureUiReady()
 	print("[GameplaySimulator] Command: Claiming Bio Generator...")
 
-	local snapRes = NetworkController.getPlayerProfileSnapshot()
-	if not snapRes.success then
-		print("[GameplaySimulator] Failed to get profile snapshot.")
-		return snapRes
+	local snapRes = NetworkController.getGeneratorSnapshot()
+	if not snapRes.success or not snapRes.value or not snapRes.value.generators then
+		error("[GameplaySimulator] FAILED: Missing generator snapshot during claim.")
 	end
 
-	local generator = snapRes.value.generators and snapRes.value.generators[1]
+	local generator = snapRes.value.generators[1]
 	if not generator or not generator.generatorId then
-		print("[GameplaySimulator] No generator snapshot available.")
-		return { success = false, message = "no_generator" }
+		error("[GameplaySimulator] FAILED: Missing generatorId in snapshot during claim.")
 	end
+
+	-- Get before biomass from profile snapshot
+	local profileBefore = NetworkController.getPlayerProfileSnapshot()
+	if not profileBefore.success then
+		error(
+			"[GameplaySimulator] FAILED: Profile snapshot failed before generator claim: "
+				.. tostring(profileBefore.message or profileBefore.code)
+		)
+	end
+	local beforeBiomass = profileBefore.value.balances and profileBefore.value.balances.biomass or 0
+
+	print(
+		string.format(
+			"[GameplaySimulator] Before Claim - Generator: %s, Level: %d, Accumulated: %d, Biomass: %d",
+			generator.generatorId,
+			generator.level or 1,
+			generator.accumulated or 0,
+			beforeBiomass
+		)
+	)
 
 	local res = NetworkController.requestGeneratorClaim(generator.generatorId)
-	if res.success then
-		print(
-			string.format(
-				"[GameplaySimulator] Generator Claim Success! Claimed: %d, New Balance: %d",
-				res.value.claimed,
-				res.value.newBalance
-			)
-		)
-		GameplaySimulator.refreshWorld()
-	else
-		print("[GameplaySimulator] Generator Claim Failed: " .. tostring(res.message or res.code))
+	if not res.success then
+		error("[GameplaySimulator] FAILED: Generator Claim failed: " .. tostring(res.message or res.code))
 	end
+
+	local profileAfter = NetworkController.getPlayerProfileSnapshot()
+	if not profileAfter.success then
+		error(
+			"[GameplaySimulator] FAILED: Profile snapshot failed after generator claim: "
+				.. tostring(profileAfter.message or profileAfter.code)
+		)
+	end
+	local afterBiomass = profileAfter.value.balances and profileAfter.value.balances.biomass or 0
+
+	print(
+		string.format(
+			"[GameplaySimulator] Generator Claim Success! Claimed: %d, Response New Balance: %d, Actual New Biomass: %d",
+			res.value.claimed or 0,
+			res.value.newBalance or 0,
+			afterBiomass
+		)
+	)
+
+	GameplaySimulator.refreshWorld()
 	return res
 end
 
@@ -1024,6 +1053,8 @@ local function _runTowerChallengeFullFlowCases()
 	GameplaySimulator.reconnectDuringTowerChallengeTest()
 	_waitTowerSemanticRequestWindow()
 	GameplaySimulator.reconnectAfterTowerChallengeCompleteTest()
+	_waitTowerSemanticRequestWindow()
+	GameplaySimulator.testTowerConfigMissingFixtures()
 	_waitTowerSemanticRequestWindow()
 
 	-- ─── 5. UI Polish & Stress Tests ──────────────────────────────────────────
@@ -2210,22 +2241,41 @@ function GameplaySimulator.spamClaimGeneratorTest()
 	assertStudio()
 	ensureUiReady()
 	print("[GameplaySimulator] Security Test: Spamming Claim Generator...")
-	local snapRes = NetworkController.getPlayerProfileSnapshot()
-	local generator = snapRes.success and snapRes.value.generators and snapRes.value.generators[1]
-	local generatorId = generator and generator.generatorId
-	if not generatorId then
-		return { successes = 0, failures = 5, message = "no_generator" }
+
+	local snapRes = NetworkController.getGeneratorSnapshot()
+	if not snapRes.success or not snapRes.value or not snapRes.value.generators then
+		error("[GameplaySimulator] FAILED: Missing generator snapshot during spam check.")
 	end
+
+	local generator = snapRes.value.generators[1]
+	if not generator or not generator.generatorId then
+		error("[GameplaySimulator] FAILED: No generator available in snapshot during spam check.")
+	end
+
+	local generatorId = generator.generatorId
 	local successes = 0
 	local failures = 0
+	local threads = {}
 	for i = 1, 5 do
-		local res = NetworkController.requestGeneratorClaim(generatorId)
-		if res.success then
-			successes += 1
-		else
-			failures += 1
-		end
+		table.insert(
+			threads,
+			task.spawn(function()
+				local res = NetworkController.requestGeneratorClaim(generatorId)
+				if res.success then
+					successes += 1
+				else
+					failures += 1
+				end
+			end)
+		)
 	end
+
+	-- Wait for all spawned threads to complete
+	local deadline = os.clock() + 5
+	while successes + failures < 5 and os.clock() < deadline do
+		task.wait()
+	end
+
 	print(
 		string.format(
 			"[GameplaySimulator] Spam claim results: %d successes, %d failures (Expected: max 1 success, others NOTHING_TO_CLAIM/invalid).",
@@ -2233,7 +2283,154 @@ function GameplaySimulator.spamClaimGeneratorTest()
 			failures
 		)
 	)
+
+	-- At least some failures must occur (or only 1 success), otherwise rate limiting / spam check is broken!
+	if successes > 1 then
+		error(
+			string.format(
+				"[GameplaySimulator] FAILED: Spam claim security validation failed. Got %d successes.",
+				successes
+			)
+		)
+	end
+
 	return { successes = successes, failures = failures }
+end
+
+function GameplaySimulator.testTowerConfigMissingFixtures()
+	assertStudio()
+	ensureUiReady()
+	print("[GameplaySimulator] Starting Tower Config-Missing Safety Fixture tests...")
+
+	local profileRes = NetworkController.getPlayerProfileSnapshot()
+	if not profileRes.success then
+		error("Profile snapshot failed: " .. tostring(profileRes.message or profileRes.code))
+	end
+
+	local ownedInstance = _getFirstCreatureInstance(profileRes.value)
+	local challenge, floor, towerRes = _getTowerDefaults()
+	if not towerRes.success then
+		error("Tower defaults unavailable: " .. tostring(towerRes.message or towerRes.code))
+	end
+
+	local originalGetCreature = CreatureRegistry.getCreature
+	local originalGetConfigs = NetworkController.getCreatureConfigsPublic
+
+	-- Case 1: Missing Player Config
+	print("[GameplaySimulator] Case 1: Testing missing player config...")
+	CreatureRegistry.getCreature = function(cid)
+		if cid == ownedInstance.creatureId then
+			return nil
+		end
+		return originalGetCreature(cid)
+	end
+	NetworkController.getCreatureConfigsPublic = function()
+		return { success = false, message = "simulation_fail" }
+	end
+
+	local res1 = TowerChallengeController.runChallengeToCompletion(challenge.challengeId, floor.floorId, ownedInstance.instanceId)
+	if res1.success or res1.code ~= "creature_config_unavailable" then
+		error(
+			"Expected runChallengeToCompletion to fail with creature_config_unavailable, got success="
+				.. tostring(res1.success)
+				.. " code="
+				.. tostring(res1.code)
+		)
+	end
+	print("[GameplaySimulator] Case 1 PASS: Safely aborted missing player config.")
+
+	-- Clear active run
+	CreatureRegistry.getCreature = originalGetCreature
+	NetworkController.requestTowerChallengeComplete("clear_active_run_for_test")
+
+	-- Case 2: Missing Enemy Config
+	print("[GameplaySimulator] Case 2: Testing missing enemy config...")
+	CreatureRegistry.getCreature = function(cid)
+		if
+			cid == "dummy_immortal"
+			or cid == "enemy_001"
+			or cid == "void_stag_001"
+			or cid:find("enemy")
+			or cid == floor.enemyCreatureId
+		then
+			return nil
+		end
+		return originalGetCreature(cid)
+	end
+
+	local res2 = TowerChallengeController.runChallengeToCompletion(challenge.challengeId, floor.floorId, ownedInstance.instanceId)
+	if res2.success or res2.code ~= "creature_config_unavailable" then
+		error(
+			"Expected runChallengeToCompletion to fail with creature_config_unavailable, got success="
+				.. tostring(res2.success)
+				.. " code="
+				.. tostring(res2.code)
+		)
+	end
+	print("[GameplaySimulator] Case 2 PASS: Safely aborted missing enemy config.")
+
+	-- Clear active run
+	CreatureRegistry.getCreature = originalGetCreature
+	NetworkController.requestTowerChallengeComplete("clear_active_run_for_test")
+
+	-- Case 3: Bounded Refresh Recovery (Lookup fails initially, gets reloaded, then succeeds)
+	print("[GameplaySimulator] Case 3: Testing registry refresh recovery...")
+	local callCount = 0
+	local realConfig = originalGetCreature(ownedInstance.creatureId)
+	CreatureRegistry.getCreature = function(cid)
+		if cid == ownedInstance.creatureId then
+			if callCount == 0 then
+				callCount += 1
+				return nil
+			else
+				return realConfig
+			end
+		elseif cid == "enemy_001" or cid == floor.enemyCreatureId then
+			return originalGetCreature(cid)
+		end
+		return originalGetCreature(cid)
+	end
+
+	local originalLoadConfig = CreatureRegistry.loadConfig
+	CreatureRegistry.loadConfig = function(val)
+		-- do nothing, but it's called
+	end
+	NetworkController.getCreatureConfigsPublic = function()
+		return { success = true, value = {} }
+	end
+
+	local originalStart = NetworkController.requestTowerChallengeStart
+	local originalComplete = NetworkController.requestTowerChallengeComplete
+	NetworkController.requestTowerChallengeStart = function()
+		return {
+			success = true,
+			value = {
+				runToken = "fixture_token",
+				enemyCreatureId = "enemy_001",
+				timeline = {},
+				playerUnitIds = {},
+				enemyUnitIds = {},
+			},
+		}
+	end
+	NetworkController.requestTowerChallengeComplete = function()
+		return { success = true, value = { rewards = {} } }
+	end
+
+	local res3 = TowerChallengeController.runChallengeToCompletion(challenge.challengeId, floor.floorId, ownedInstance.instanceId)
+	if not res3.success then
+		error("Expected recovery to succeed, got failure: " .. tostring(res3.code))
+	end
+	print("[GameplaySimulator] Case 3 PASS: Recovered via bounded registry refresh lookup.")
+
+	-- Restore all monkeypatches
+	CreatureRegistry.getCreature = originalGetCreature
+	CreatureRegistry.loadConfig = originalLoadConfig
+	NetworkController.getCreatureConfigsPublic = originalGetConfigs
+	NetworkController.requestTowerChallengeStart = originalStart
+	NetworkController.requestTowerChallengeComplete = originalComplete
+
+	print("[GameplaySimulator] Tower Config-Missing Safety Fixture tests PASS.")
 end
 
 -- Security check: Spams battles rapidly to ensure server rejects invalid battles

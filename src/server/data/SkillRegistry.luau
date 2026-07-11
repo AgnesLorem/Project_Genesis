@@ -63,11 +63,13 @@ function SkillRegistry.init()
 				print(string.format("[SkillRegistry] Loaded skill '%s'.", skill.skillId))
 			end
 		else
-			warn(string.format(
-				"[SkillRegistry] Config validation failed: %s - %s",
-				tostring(record.id or "unknown"),
-				tostring(result.message or result.code)
-			))
+			warn(
+				string.format(
+					"[SkillRegistry] Config validation failed: %s - %s",
+					tostring(record.id or "unknown"),
+					tostring(result.message or result.code)
+				)
+			)
 		end
 	end
 

@@ -23,8 +23,8 @@ local ConfigRegistry = require(script.Parent.ConfigRegistry)
 -- Reserved categories that must not be referenced from active MVP config.
 -- (from docs/CONFIG_STRUCTURE.md and docs/DATA_SCHEMA.md)
 local RESERVED_CATEGORIES = {
-	quests        = true,
-	towers        = true,
+	quests = true,
+	towers = true,
 	status_effects = true,
 }
 
@@ -74,10 +74,7 @@ function ReferenceResolver.validateRef(refId: string, category: string): Resolve
 		return {
 			ok = false,
 			record = nil,
-			error = string.format(
-				"validateRef: refId must be a string, got '%s'.",
-				type(refId)
-			),
+			error = string.format("validateRef: refId must be a string, got '%s'.", type(refId)),
 		}
 	end
 
@@ -85,10 +82,7 @@ function ReferenceResolver.validateRef(refId: string, category: string): Resolve
 		return {
 			ok = false,
 			record = nil,
-			error = string.format(
-				"validateRef: category must be a string, got '%s'.",
-				type(category)
-			),
+			error = string.format("validateRef: category must be a string, got '%s'.", type(category)),
 		}
 	end
 
@@ -98,8 +92,7 @@ function ReferenceResolver.validateRef(refId: string, category: string): Resolve
 			ok = false,
 			record = nil,
 			error = string.format(
-				"Reference to reserved category '%s' is not allowed in active MVP config. " ..
-				"ID: '%s'.",
+				"Reference to reserved category '%s' is not allowed in active MVP config. " .. "ID: '%s'.",
 				category,
 				refId
 			),
@@ -113,11 +106,7 @@ function ReferenceResolver.validateRef(refId: string, category: string): Resolve
 		return {
 			ok = false,
 			record = nil,
-			error = string.format(
-				"Reference '%s' not found in category '%s'.",
-				refId,
-				category
-			),
+			error = string.format("Reference '%s' not found in category '%s'.", refId, category),
 		}
 	end
 
@@ -127,8 +116,8 @@ function ReferenceResolver.validateRef(refId: string, category: string): Resolve
 			ok = false,
 			record = nil,
 			error = string.format(
-				"Reference '%s' in category '%s' exists but is disabled (isEnabled = false). " ..
-				"Disabled records must not be referenced in active content.",
+				"Reference '%s' in category '%s' exists but is disabled (isEnabled = false). "
+					.. "Disabled records must not be referenced in active content.",
 				refId,
 				category
 			),
@@ -151,11 +140,7 @@ end
 	
 	Never throws.
 --]]
-function ReferenceResolver.validateAllRefs(
-	refIds: { string },
-	category: string
-): { ResolveResult }
-
+function ReferenceResolver.validateAllRefs(refIds: { string }, category: string): { ResolveResult }
 	local results: { ResolveResult } = {}
 
 	if type(refIds) ~= "table" then
@@ -163,10 +148,7 @@ function ReferenceResolver.validateAllRefs(
 			{
 				ok = false,
 				record = nil,
-				error = string.format(
-					"validateAllRefs: refIds must be a table, got '%s'.",
-					type(refIds)
-				),
+				error = string.format("validateAllRefs: refIds must be a table, got '%s'.", type(refIds)),
 			},
 		}
 	end

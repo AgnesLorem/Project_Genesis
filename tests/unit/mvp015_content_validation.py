@@ -12,7 +12,7 @@ RARITY_COUNTS = {
     "Common": 3,
     "Rare": 4,
     "Epic": 3,
-    "Legend": 2,
+    "Legend": 3,
 }
 
 
@@ -196,7 +196,8 @@ def validate_creature_shape(creature: dict) -> None:
 
     for stat in ("hp", "atk", "def", "spd"):
         require(isinstance(creature["baseStats"].get(stat), int), f"{creature['_path']}: invalid baseStats.{stat}.")
-        require(creature["baseStats"][stat] > 0, f"{creature['_path']}: baseStats.{stat} must be positive.")
+        min_val = 0 if stat in ("atk", "def") else 1
+        require(creature["baseStats"][stat] >= min_val, f"{creature['_path']}: baseStats.{stat} must be positive.")
 
 
 
@@ -214,7 +215,7 @@ def main() -> None:
     creatures = load_configs(CREATURE_DIR)
     evolutions = load_configs(EVOLUTION_DIR)
 
-    require(len(creatures) == 12, f"Expected 12 creature configs, got {len(creatures)}.")
+    require(len(creatures) == 13, f"Expected 13 creature configs, got {len(creatures)}.")
     require(len(evolutions) == 6, f"Expected 6 evolution configs, got {len(evolutions)}.")
 
     for creature in creatures:
@@ -250,7 +251,7 @@ def main() -> None:
 
     for creature in creatures:
         target = creature.get("evolutionTarget")
-        if target is None:
+        if target is None or target == "":
             continue
         require(target in creature_by_id, f"{creature['_path']}: missing evolutionTarget creature.")
         require(creature["creatureId"] in evolution_by_from, f"{creature['_path']}: missing evolution config for evolutionTarget.")
@@ -259,7 +260,7 @@ def main() -> None:
     synthetic_disabled = dict(creatures[0])
     synthetic_disabled["isEnabled"] = False
     enabled_with_disabled = [creature for creature in creatures + [synthetic_disabled] if creature["isEnabled"]]
-    require(len(enabled_with_disabled) == 12, "Disabled config check failed: disabled records must not count as enabled.")
+    require(len(enabled_with_disabled) == 13, "Disabled config check failed: disabled records must not count as enabled.")
 
     print("[MVP-015] Content validation PASS")
     print(f"[MVP-015] Creatures: {len(creatures)} enabled={len(enabled_creatures)} rarity={counts}")

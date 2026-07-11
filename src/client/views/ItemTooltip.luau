@@ -42,7 +42,12 @@ function ItemTooltip.create(item: any, equipment: any, onClose: () -> ())
 	local rarity = "Common"
 	if item.rarity == "rare" or item.rarity == "Rare" then
 		rarity = "Rare"
-	elseif item.rarity == "epic" or item.rarity == "Epic" or item.rarity == "legendary" or item.rarity == "Legendary" then
+	elseif
+		item.rarity == "epic"
+		or item.rarity == "Epic"
+		or item.rarity == "legendary"
+		or item.rarity == "Legendary"
+	then
 		rarity = "Legendary"
 	end
 	UIComponents.applyRarityBorder(panel, rarity)
@@ -71,7 +76,9 @@ function ItemTooltip.create(item: any, equipment: any, onClose: () -> ())
 	title.ZIndex = Theme.ZIndex.Modal + 2
 	title.Parent = panel
 
-	local meta = UIComponents.createBaseLabel(string.format("%s   |   %s", tostring(item.rarity or "Common"), tostring(item.itemType or "item")))
+	local meta = UIComponents.createBaseLabel(
+		string.format("%s   |   %s", tostring(item.rarity or "Common"), tostring(item.itemType or "item"))
+	)
 	meta.Name = "Meta"
 	meta.Size = UDim2.new(1, -130, 0, 24)
 	meta.Position = UDim2.new(0, 112, 0, 62)

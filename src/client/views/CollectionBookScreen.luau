@@ -16,12 +16,7 @@ local CARD_W = 160
 local CARD_H = 120
 local PADDING = 12
 
-function CollectionBookScreen.create(
-	collectionData: any,
-	publicConfigs: any,
-	onClose: () -> ()
-): Frame
-
+function CollectionBookScreen.create(collectionData: any, publicConfigs: any, onClose: () -> ()): Frame
 	local screen = UIComponents.createBaseContainer()
 	screen.Name = "CollectionBookScreen"
 
@@ -91,7 +86,9 @@ function CollectionBookScreen.create(
 	table.sort(sortedIds, function(a, b)
 		local pa = publicConfigs and publicConfigs[a] and publicConfigs[a].sortOrder or 999
 		local pb = publicConfigs and publicConfigs[b] and publicConfigs[b].sortOrder or 999
-		if pa ~= pb then return pa < pb end
+		if pa ~= pb then
+			return pa < pb
+		end
 		return a < b
 	end)
 
@@ -109,7 +106,7 @@ function CollectionBookScreen.create(
 		elseif cfg and cfg.collectionCategory == "rare" then
 			rarity = "Rare"
 		end
-		
+
 		UIComponents.applyRarityBorder(card, rarity)
 
 		-- Active outline highlight
@@ -134,9 +131,7 @@ function CollectionBookScreen.create(
 		artLabel.Parent = artFrame
 
 		-- Name
-		local nameLabel = UIComponents.createBaseLabel(
-			discovered and (cfg and cfg.displayName or creatureId) or "???"
-		)
+		local nameLabel = UIComponents.createBaseLabel(discovered and (cfg and cfg.displayName or creatureId) or "???")
 		nameLabel.Size = UDim2.new(1, -8, 0, 24)
 		nameLabel.Position = UDim2.new(0, 4, 0, 72)
 		nameLabel.TextXAlignment = Enum.TextXAlignment.Center
@@ -146,9 +141,7 @@ function CollectionBookScreen.create(
 
 		-- Rarity tag
 		if cfg then
-			local rarityLabel = UIComponents.createBaseLabel(
-				discovered and cfg.collectionCategory or ""
-			)
+			local rarityLabel = UIComponents.createBaseLabel(discovered and cfg.collectionCategory or "")
 			rarityLabel.Size = UDim2.new(1, -8, 0, 18)
 			rarityLabel.Position = UDim2.new(0, 4, 0, 96)
 			rarityLabel.TextXAlignment = Enum.TextXAlignment.Center

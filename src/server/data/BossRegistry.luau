@@ -55,11 +55,13 @@ function BossRegistry.init()
 				end
 			end
 		else
-			warn(string.format(
-				"[BossRegistry] Validation failed for '%s': %s",
-				tostring(record.bossId or record.id or "unknown"),
-				result.message or result.code
-			))
+			warn(
+				string.format(
+					"[BossRegistry] Validation failed for '%s': %s",
+					tostring(record.bossId or record.id or "unknown"),
+					result.message or result.code
+				)
+			)
 		end
 	end
 

@@ -23,7 +23,9 @@ function CreatureInventoryController.show(onClose: () -> ())
 	UIController.clearModal()
 
 	if not profileRes.success then
-		UIController.mountModal(StatePatterns.Error(nil, "Profile Load Failed: " .. tostring(profileRes.message or profileRes.code)))
+		UIController.mountModal(
+			StatePatterns.Error(nil, "Profile Load Failed: " .. tostring(profileRes.message or profileRes.code))
+		)
 		return profileRes
 	end
 
@@ -32,50 +34,48 @@ function CreatureInventoryController.show(onClose: () -> ())
 		return configsRes
 	end
 
-	local screen = CreatureInventoryScreen.create(
-		profileRes.value,
-		configsRes.value,
-		function()
-			UIController.unmountScreen("CreatureInventoryScreen")
-			onClose()
-		end,
-		function(instanceId)
-			-- Set Active Creature
-			UIController.mountModal(StatePatterns.Loading(nil))
-			local setRes = NetworkController.requestSetActiveCreature(instanceId)
-			UIController.clearModal()
-			if setRes.success then
-				-- Refresh screen
-				CreatureInventoryController.show(onClose)
-			else
-				UIController.mountModal(StatePatterns.Error(nil, "Failed to set active creature: " .. tostring(setRes.message or setRes.code)))
-			end
-		end,
-		function(instanceId)
-			-- Open Details Panel
-			CreatureInventoryController.showDetails(instanceId, profileRes.value, configsRes.value, onClose)
+	local screen = CreatureInventoryScreen.create(profileRes.value, configsRes.value, function()
+		UIController.unmountScreen("CreatureInventoryScreen")
+		onClose()
+	end, function(instanceId)
+		-- Set Active Creature
+		UIController.mountModal(StatePatterns.Loading(nil))
+		local setRes = NetworkController.requestSetActiveCreature(instanceId)
+		UIController.clearModal()
+		if setRes.success then
+			-- Refresh screen
+			CreatureInventoryController.show(onClose)
+		else
+			UIController.mountModal(
+				StatePatterns.Error(nil, "Failed to set active creature: " .. tostring(setRes.message or setRes.code))
+			)
 		end
-	)
+	end, function(instanceId)
+		-- Open Details Panel
+		CreatureInventoryController.showDetails(instanceId, profileRes.value, configsRes.value, onClose)
+	end)
 
 	UIController.mountScreen(screen)
 	return profileRes
 end
 
-function CreatureInventoryController.showDetails(instanceId: string, profileSnapshot: any, publicConfigs: any, onClose: () -> ())
+function CreatureInventoryController.showDetails(
+	instanceId: string,
+	profileSnapshot: any,
+	publicConfigs: any,
+	onClose: () -> ()
+)
 	local instance = profileSnapshot.creatureInstances[instanceId]
-	if not instance then return end
+	if not instance then
+		return
+	end
 
 	local publicConfig = publicConfigs[instance.creatureId]
 	local isActive = profileSnapshot.activeCreatureInstanceId == instanceId
 
-	local modal = CreatureDetailPanel.create(
-		instance,
-		publicConfig,
-		isActive,
-		function()
-			UIController.clearModal()
-		end
-	)
+	local modal = CreatureDetailPanel.create(instance, publicConfig, isActive, function()
+		UIController.clearModal()
+	end)
 
 	UIController.mountModal(modal)
 end

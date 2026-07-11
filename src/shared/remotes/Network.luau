@@ -20,10 +20,10 @@ end
 function Network.getRemoteFunction(name)
 	if isServer then
 		local rf = remoteFolder:FindFirstChild(name)
-		if not rf then 
+		if not rf then
 			rf = Instance.new("RemoteFunction")
 			rf.Name = name
-			rf.Parent = remoteFolder 
+			rf.Parent = remoteFolder
 		end
 		return rf
 	else
@@ -34,10 +34,10 @@ end
 function Network.getRemoteEvent(name)
 	if isServer then
 		local re = remoteFolder:FindFirstChild(name)
-		if not re then 
+		if not re then
 			re = Instance.new("RemoteEvent")
 			re.Name = name
-			re.Parent = remoteFolder 
+			re.Parent = remoteFolder
 		end
 		return re
 	else

@@ -32,9 +32,9 @@ export type ValidationResult = {
 -- Type alias for a field schema definition.
 -- Required to declare what fields a config record must have and their expected types.
 export type FieldSchema = {
-	name: string,        -- Field name on the record table.
-	fieldType: string,   -- Expected Lua type string: "string", "number", "boolean", "table".
-	required: boolean,   -- Whether the field must be present.
+	name: string, -- Field name on the record table.
+	fieldType: string, -- Expected Lua type string: "string", "number", "boolean", "table".
+	required: boolean, -- Whether the field must be present.
 }
 
 -- Stable ID rules (from docs/CONFIG_GUIDE.md):
@@ -47,9 +47,9 @@ local ID_PATTERN = "^[a-z][a-z0-9_]*$"
 -- Universal required fields that every config record must have
 -- (from docs/DATA_SCHEMA.md schema principles).
 local UNIVERSAL_REQUIRED_FIELDS: { FieldSchema } = {
-	{ name = "id",            fieldType = "string",  required = true  },
-	{ name = "schemaVersion", fieldType = "number",  required = true  },
-	{ name = "isEnabled",     fieldType = "boolean", required = true  },
+	{ name = "id", fieldType = "string", required = true },
+	{ name = "schemaVersion", fieldType = "number", required = true },
+	{ name = "isEnabled", fieldType = "boolean", required = true },
 }
 
 local ConfigValidator = {}
@@ -58,20 +58,13 @@ local ConfigValidator = {}
 	Internal: validate a single field against its schema.
 	Appends error strings to the provided errors table.
 --]]
-local function _validateField(
-	record: { [string]: any },
-	fieldSchema: FieldSchema,
-	errors: { string }
-)
+local function _validateField(record: { [string]: any }, fieldSchema: FieldSchema, errors: { string })
 	local value = record[fieldSchema.name]
 
 	-- Check presence.
 	if value == nil then
 		if fieldSchema.required then
-			table.insert(errors, string.format(
-				"Missing required field: '%s'",
-				fieldSchema.name
-			))
+			table.insert(errors, string.format("Missing required field: '%s'", fieldSchema.name))
 		end
 		return -- Nothing further to check for a missing field.
 	end
@@ -79,12 +72,15 @@ local function _validateField(
 	-- Check type.
 	local actualType = type(value)
 	if actualType ~= fieldSchema.fieldType then
-		table.insert(errors, string.format(
-			"Field '%s' expected type '%s' but got '%s'",
-			fieldSchema.name,
-			fieldSchema.fieldType,
-			actualType
-		))
+		table.insert(
+			errors,
+			string.format(
+				"Field '%s' expected type '%s' but got '%s'",
+				fieldSchema.name,
+				fieldSchema.fieldType,
+				actualType
+			)
+		)
 	end
 end
 
@@ -106,11 +102,14 @@ local function _validateId(record: { [string]: any }, errors: { string })
 
 	-- Check pattern: lowercase snake_case, starts with a letter.
 	if not string.match(id, ID_PATTERN) then
-		table.insert(errors, string.format(
-			"Field 'id' value '%s' does not follow stable ID naming rules. " ..
-			"Use lowercase snake_case starting with a letter (e.g. 'creature_001').",
-			id
-		))
+		table.insert(
+			errors,
+			string.format(
+				"Field 'id' value '%s' does not follow stable ID naming rules. "
+					.. "Use lowercase snake_case starting with a letter (e.g. 'creature_001').",
+				id
+			)
+		)
 	end
 end
 
@@ -127,21 +126,14 @@ end
 	Returns { ok = false, errors = { ... } } with messages on failure.
 	Never throws.
 --]]
-function ConfigValidator.validate(
-	record: { [string]: any },
-	extraFields: { FieldSchema }?
-): ValidationResult
-
+function ConfigValidator.validate(record: { [string]: any }, extraFields: { FieldSchema }?): ValidationResult
 	local errors: { string } = {}
 
 	-- Guard: record must be a table.
 	if type(record) ~= "table" then
 		return {
 			ok = false,
-			errors = { string.format(
-				"Config record must be a table, got '%s'.",
-				type(record)
-			) },
+			errors = { string.format("Config record must be a table, got '%s'.", type(record)) },
 		}
 	end
 
@@ -174,20 +166,15 @@ end
 	
 	Never throws.
 --]]
-function ConfigValidator.validateAll(
-	records: { { [string]: any } },
-	extraFields: { FieldSchema }?
-): ValidationResult
-
+function ConfigValidator.validateAll(records: { { [string]: any } }, extraFields: { FieldSchema }?): ValidationResult
 	local allErrors: { string } = {}
 
 	if type(records) ~= "table" then
 		return {
 			ok = false,
-			errors = { string.format(
-				"validateAll: expected a table of records, got '%s'.",
-				type(records)
-			) },
+			errors = {
+				string.format("validateAll: expected a table of records, got '%s'.", type(records)),
+			},
 		}
 	end
 
@@ -195,8 +182,7 @@ function ConfigValidator.validateAll(
 		local result = ConfigValidator.validate(record, extraFields)
 		if not result.ok then
 			for _, err in ipairs(result.errors) do
-				local recordId = (type(record) == "table" and type(record.id) == "string")
-					and ("'" .. record.id .. "'")
+				local recordId = (type(record) == "table" and type(record.id) == "string") and ("'" .. record.id .. "'")
 					or ("[index " .. tostring(i) .. "]")
 				table.insert(allErrors, string.format("Record %s: %s", recordId, err))
 			end

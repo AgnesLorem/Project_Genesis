@@ -62,21 +62,34 @@ function EquipmentRegistry.init()
 					if result.success then
 						local equipment = result.value
 						if _registry[equipment.equipmentId] then
-							warn(string.format("[EquipmentRegistry] Duplicate equipmentId '%s' - skipping.", equipment.equipmentId))
+							warn(
+								string.format(
+									"[EquipmentRegistry] Duplicate equipmentId '%s' - skipping.",
+									equipment.equipmentId
+								)
+							)
 						else
 							_registry[equipment.equipmentId] = equipment
 							_byItemId[equipment.itemId] = equipment
 							print(string.format("[EquipmentRegistry] Loaded equipment '%s'.", equipment.equipmentId))
 						end
 					else
-						warn(string.format(
-							"[EquipmentRegistry] Validation failed for '%s': %s",
-							tostring(record.equipmentId or record.id or child.Name),
-							result.message or result.code
-						))
+						warn(
+							string.format(
+								"[EquipmentRegistry] Validation failed for '%s': %s",
+								tostring(record.equipmentId or record.id or child.Name),
+								result.message or result.code
+							)
+						)
 					end
 				else
-					warn(string.format("[EquipmentRegistry] Failed to require '%s': %s", child:GetFullName(), tostring(record)))
+					warn(
+						string.format(
+							"[EquipmentRegistry] Failed to require '%s': %s",
+							child:GetFullName(),
+							tostring(record)
+						)
+					)
 				end
 			end
 		end

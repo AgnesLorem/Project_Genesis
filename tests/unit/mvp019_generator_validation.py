@@ -48,14 +48,17 @@ class TokenStream:
             raise AssertionError(f"Expected identifier near {self.source[start:start + 20]!r}.")
         return self.source[start:self.index]
 
-    def take_number(self) -> int:
+    def take_number(self) -> int | float:
         self._skip_space()
         start = self.index
-        while self.index < len(self.source) and self.source[self.index].isdigit():
+        while self.index < len(self.source) and (self.source[self.index].isdigit() or self.source[self.index] == "."):
             self.index += 1
         if self.index == start:
             raise AssertionError(f"Expected number near {self.source[start:start + 20]!r}.")
-        return int(self.source[start:self.index])
+        val_str = self.source[start:self.index]
+        if "." in val_str:
+            return float(val_str)
+        return int(val_str)
 
     def take_string(self) -> str:
         self.take('"')

@@ -40,20 +40,19 @@ function EconomyRegistry.init()
 		if result.success then
 			local currencyId = result.value.currencyId
 			if _registry[currencyId] then
-				warn(string.format(
-					"[EconomyRegistry] Duplicate currencyId '%s' — skipping.",
-					currencyId
-				))
+				warn(string.format("[EconomyRegistry] Duplicate currencyId '%s' — skipping.", currencyId))
 			else
 				_registry[currencyId] = result.value
 				print(string.format("[EconomyRegistry] Loaded currency: '%s'", currencyId))
 			end
 		else
-			warn(string.format(
-				"[EconomyRegistry] Config validation failed: %s — %s",
-				tostring(record.id or "unknown"),
-				result.message or result.code
-			))
+			warn(
+				string.format(
+					"[EconomyRegistry] Config validation failed: %s — %s",
+					tostring(record.id or "unknown"),
+					result.message or result.code
+				)
+			)
 		end
 	end
 

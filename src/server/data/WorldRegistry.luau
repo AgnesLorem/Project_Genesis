@@ -58,11 +58,13 @@ function WorldRegistry.init()
 				end
 			end
 		else
-			warn(string.format(
-				"[WorldRegistry] Validation failed for '%s': %s",
-				tostring(record.worldId or record.id or "unknown"),
-				result.message or result.code
-			))
+			warn(
+				string.format(
+					"[WorldRegistry] Validation failed for '%s': %s",
+					tostring(record.worldId or record.id or "unknown"),
+					result.message or result.code
+				)
+			)
 		end
 	end
 

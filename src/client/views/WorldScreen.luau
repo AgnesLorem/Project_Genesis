@@ -134,7 +134,7 @@ function WorldScreen.create(
 		local atk = 10
 		local def = 5
 		local spd = 10
-		
+
 		if config then
 			local scaledStats = StatCalculator.getScaledStats(config, activeInst.level, nil)
 			maxHp = scaledStats.hp

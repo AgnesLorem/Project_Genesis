@@ -127,46 +127,54 @@ function RemoteHandlers.init()
 
 	-- ─── Handlers ────────────────────────────────────────────────────────────────
 
-	GetPlayerProfileSnapshot.OnServerInvoke = RemoteMiddleware.createHandler("GetPlayerProfileSnapshot", function(player)
-		local save = SaveService.getPlayerSave(player)
-		if not save then
-			return Result.fail("not_loaded", "Player save data not loaded.")
+	GetPlayerProfileSnapshot.OnServerInvoke = RemoteMiddleware.createHandler(
+		"GetPlayerProfileSnapshot",
+		function(player)
+			local save = SaveService.getPlayerSave(player)
+			if not save then
+				return Result.fail("not_loaded", "Player save data not loaded.")
+			end
+
+			local activeId = CreatureService.getActiveCreatureInstanceId(player)
+
+			local snapshot = {
+				creatureInstances = save.creatureInstances or {},
+				collectionState = save.collectionState or { discoveredCreatureIds = {} },
+				balances = save.economyState and save.economyState.balances or {},
+				starterSelected = save.collectionState
+					and save.collectionState.discoveredCreatureIds
+					and save.collectionState.discoveredCreatureIds["starter_001"] == true,
+				activeCreatureInstanceId = activeId,
+			}
+			return Result.ok(snapshot)
 		end
-
-		local activeId = CreatureService.getActiveCreatureInstanceId(player)
-
-		local snapshot = {
-			creatureInstances = save.creatureInstances or {},
-			collectionState = save.collectionState or { discoveredCreatureIds = {} },
-			balances = save.economyState and save.economyState.balances or {},
-			starterSelected = save.collectionState
-				and save.collectionState.discoveredCreatureIds
-				and save.collectionState.discoveredCreatureIds["starter_001"] == true,
-			activeCreatureInstanceId = activeId,
-		}
-		return Result.ok(snapshot)
-	end)
+	)
 
 	GetStarterChoices.OnServerInvoke = RemoteMiddleware.createHandler("GetStarterChoices", function(player)
 		return Result.ok({ "starter_001" })
 	end)
 
-	RequestStarterSelection.OnServerInvoke = RemoteMiddleware.createHandler("RequestStarterSelection", function(player, creatureId)
-		local valRes = RemoteMiddleware.validateString(creatureId, 50)
-		if not valRes.success then return valRes end
+	RequestStarterSelection.OnServerInvoke = RemoteMiddleware.createHandler(
+		"RequestStarterSelection",
+		function(player, creatureId)
+			local valRes = RemoteMiddleware.validateString(creatureId, 50)
+			if not valRes.success then
+				return valRes
+			end
 
-		if creatureId ~= "starter_001" then
-			return Result.fail("unapproved_starter", "Only starter_001 is available in MVP.")
-		end
+			if creatureId ~= "starter_001" then
+				return Result.fail("unapproved_starter", "Only starter_001 is available in MVP.")
+			end
 
-		local grantRes = CreatureService.tryGrantCreature(player, creatureId)
-		if grantRes.success then
-			CreatureService.setActiveCreature(player, grantRes.value.instanceId)
-			SaveService.markDirty(player)
-			return Result.ok(grantRes.value)
+			local grantRes = CreatureService.tryGrantCreature(player, creatureId)
+			if grantRes.success then
+				CreatureService.setActiveCreature(player, grantRes.value.instanceId)
+				SaveService.markDirty(player)
+				return Result.ok(grantRes.value)
+			end
+			return grantRes
 		end
-		return grantRes
-	end)
+	)
 
 	RequestWorldSnapshot.OnServerInvoke = RemoteMiddleware.createHandler("RequestWorldSnapshot", function(player)
 		local save = SaveService.getPlayerSave(player)
@@ -179,114 +187,121 @@ function RemoteHandlers.init()
 
 		return Result.ok({
 			worldId = "world_001",
-			unlockedStages = save.worldProgression.unlockedStages
+			unlockedStages = save.worldProgression.unlockedStages,
 		})
 	end)
 
-	RequestStoryBattle.OnServerInvoke = RemoteMiddleware.createHandler("RequestStoryBattle", function(player, _clientCreatureId, stageId)
-		local stageRes = RemoteMiddleware.validateString(stageId, 50)
-		if not stageRes.success then return stageRes end
-
-		local enemyConfigId = STAGE_ENCOUNTERS[stageId]
-		if not enemyConfigId then
-			return Result.fail("invalid_stage", "Unknown stageId.")
-		end
-
-		local save = SaveService.getPlayerSave(player)
-		if not save then
-			return Result.fail("not_loaded", "Player save data not loaded.")
-		end
-
-		-- worldProgression is guaranteed by MigrationManager, but stay defensive.
-		save.worldProgression = save.worldProgression or { unlockedStages = { "story_stage_1" } }
-		local unlockedStages = save.worldProgression.unlockedStages
-
-		-- SERVER AUTHORITY: Access to a stage is validated against the player's
-		-- persisted unlock list, never trusted from the client.
-		local isUnlocked = false
-		for _, unlockedId in ipairs(unlockedStages) do
-			if unlockedId == stageId then
-				isUnlocked = true
-				break
-			end
-		end
-		if not isUnlocked then
-			return Result.fail("stage_locked", "This stage has not been unlocked yet.")
-		end
-
-		-- SERVER AUTHORITY: Enforce active creature, discard client-provided creature ID
-		local activeCreatureId = CreatureService.getActiveCreatureInstanceId(player)
-		if not activeCreatureId then
-			return Result.fail("invalid_request", "Player has no active creature assigned.")
-		end
-
-		local cooldownRes = _tryReserveStoryBattle(player)
-		if not cooldownRes.success then return cooldownRes end
-
-		local battleRes = GameModeService.resolveModeBattle(player, {
-			modeId = "story",
-			playerCreatureId = activeCreatureId,
-			enemyConfigId = enemyConfigId
-		})
-
-		if not battleRes.success then
-			return battleRes
-		end
-
-		local xpGained = 0
-		local xpRes = CreatureService.addCreatureXp(player, activeCreatureId, 1000)
-		if xpRes.success then
-			xpGained = 1000
-		end
-
-		local biomassGained = 0
-		local dnaGained = 0
-		local newlyUnlockedStage = nil
-
-		if battleRes.value.isVictory then
-			local bioRes = CurrencyService.tryGrant(player, "biomass", STORY_VICTORY_BIOMASS, "story")
-			if bioRes.success then
-				biomassGained = bioRes.value.granted
+	RequestStoryBattle.OnServerInvoke = RemoteMiddleware.createHandler(
+		"RequestStoryBattle",
+		function(player, _clientCreatureId, stageId)
+			local stageRes = RemoteMiddleware.validateString(stageId, 50)
+			if not stageRes.success then
+				return stageRes
 			end
 
-			local dnaRes = CurrencyService.tryGrant(player, "dna", STORY_VICTORY_DNA, "reward_combat")
-			if dnaRes.success then
-				dnaGained = dnaRes.value.granted
+			local enemyConfigId = STAGE_ENCOUNTERS[stageId]
+			if not enemyConfigId then
+				return Result.fail("invalid_stage", "Unknown stageId.")
 			end
 
-			-- Stage progression: unlock the next stage in the sequence, if any.
-			local stageIndex = table.find(STAGE_ORDER, stageId)
-			local nextStageId = stageIndex and STAGE_ORDER[stageIndex + 1]
-			if nextStageId then
-				local alreadyUnlocked = false
-				for _, unlockedId in ipairs(unlockedStages) do
-					if unlockedId == nextStageId then
-						alreadyUnlocked = true
-						break
+			local save = SaveService.getPlayerSave(player)
+			if not save then
+				return Result.fail("not_loaded", "Player save data not loaded.")
+			end
+
+			-- worldProgression is guaranteed by MigrationManager, but stay defensive.
+			save.worldProgression = save.worldProgression or { unlockedStages = { "story_stage_1" } }
+			local unlockedStages = save.worldProgression.unlockedStages
+
+			-- SERVER AUTHORITY: Access to a stage is validated against the player's
+			-- persisted unlock list, never trusted from the client.
+			local isUnlocked = false
+			for _, unlockedId in ipairs(unlockedStages) do
+				if unlockedId == stageId then
+					isUnlocked = true
+					break
+				end
+			end
+			if not isUnlocked then
+				return Result.fail("stage_locked", "This stage has not been unlocked yet.")
+			end
+
+			-- SERVER AUTHORITY: Enforce active creature, discard client-provided creature ID
+			local activeCreatureId = CreatureService.getActiveCreatureInstanceId(player)
+			if not activeCreatureId then
+				return Result.fail("invalid_request", "Player has no active creature assigned.")
+			end
+
+			local cooldownRes = _tryReserveStoryBattle(player)
+			if not cooldownRes.success then
+				return cooldownRes
+			end
+
+			local battleRes = GameModeService.resolveModeBattle(player, {
+				modeId = "story",
+				playerCreatureId = activeCreatureId,
+				enemyConfigId = enemyConfigId,
+			})
+
+			if not battleRes.success then
+				return battleRes
+			end
+
+			local xpGained = 0
+			local xpRes = CreatureService.addCreatureXp(player, activeCreatureId, 1000)
+			if xpRes.success then
+				xpGained = 1000
+			end
+
+			local biomassGained = 0
+			local dnaGained = 0
+			local newlyUnlockedStage = nil
+
+			if battleRes.value.isVictory then
+				local bioRes = CurrencyService.tryGrant(player, "biomass", STORY_VICTORY_BIOMASS, "story")
+				if bioRes.success then
+					biomassGained = bioRes.value.granted
+				end
+
+				local dnaRes = CurrencyService.tryGrant(player, "dna", STORY_VICTORY_DNA, "reward_combat")
+				if dnaRes.success then
+					dnaGained = dnaRes.value.granted
+				end
+
+				-- Stage progression: unlock the next stage in the sequence, if any.
+				local stageIndex = table.find(STAGE_ORDER, stageId)
+				local nextStageId = stageIndex and STAGE_ORDER[stageIndex + 1]
+				if nextStageId then
+					local alreadyUnlocked = false
+					for _, unlockedId in ipairs(unlockedStages) do
+						if unlockedId == nextStageId then
+							alreadyUnlocked = true
+							break
+						end
+					end
+					if not alreadyUnlocked then
+						table.insert(unlockedStages, nextStageId)
+						newlyUnlockedStage = nextStageId
 					end
 				end
-				if not alreadyUnlocked then
-					table.insert(unlockedStages, nextStageId)
-					newlyUnlockedStage = nextStageId
-				end
 			end
+
+			SaveService.markDirty(player)
+
+			return Result.ok({
+				isVictory = battleRes.value.isVictory,
+				timeline = battleRes.value.timeline,
+				summary = battleRes.value.summary,
+				rewards = {
+					biomass = biomassGained,
+					dna = dnaGained,
+				},
+				xpGained = xpGained,
+				creatureUpdates = xpRes.success and xpRes.value or nil,
+				newlyUnlockedStage = newlyUnlockedStage,
+			})
 		end
-
-		SaveService.markDirty(player)
-
-		return Result.ok({
-			isVictory = battleRes.value.isVictory,
-			timeline = battleRes.value.timeline,
-			summary = battleRes.value.summary,
-			rewards = {
-				biomass = biomassGained,
-				dna = dnaGained,
-			},
-			xpGained = xpGained,
-			creatureUpdates = xpRes.success and xpRes.value or nil,
-			newlyUnlockedStage = newlyUnlockedStage,
-		})
-	end)
+	)
 
 	GetCollectionSnapshot.OnServerInvoke = RemoteMiddleware.createHandler("GetCollectionSnapshot", function(player)
 		return CollectionService.getCollectionSnapshot(player)
@@ -308,51 +323,83 @@ function RemoteHandlers.init()
 
 	SetActiveCreature.OnServerInvoke = RemoteMiddleware.createHandler("SetActiveCreature", function(player, instanceId)
 		local valRes = RemoteMiddleware.validateString(instanceId, 100)
-		if not valRes.success then return valRes end
-		
+		if not valRes.success then
+			return valRes
+		end
+
 		return CreatureService.setActiveCreature(player, instanceId)
 	end)
 
-	GetCreatureConfigsPublic.OnServerInvoke = RemoteMiddleware.createHandler("GetCreatureConfigsPublic", function(player)
-		-- O(1) Cache hit
-		return Result.ok(cachedPublicConfigs)
-	end)
+	GetCreatureConfigsPublic.OnServerInvoke = RemoteMiddleware.createHandler(
+		"GetCreatureConfigsPublic",
+		function(player)
+			-- O(1) Cache hit
+			return Result.ok(cachedPublicConfigs)
+		end
+	)
 
-	GetSkillSnapshot.OnServerInvoke = RemoteMiddleware.createHandler("GetSkillSnapshot", function(player, creatureInstanceId)
-		return SkillService.getSnapshot(player, creatureInstanceId)
-	end)
+	GetSkillSnapshot.OnServerInvoke = RemoteMiddleware.createHandler(
+		"GetSkillSnapshot",
+		function(player, creatureInstanceId)
+			return SkillService.getSnapshot(player, creatureInstanceId)
+		end
+	)
 
-	RequestSkillUse.OnServerInvoke = RemoteMiddleware.createHandler("RequestSkillUse", function(player, creatureInstanceId, skillId, targetId)
-		return SkillService.tryUseSkill(player, creatureInstanceId, skillId, targetId)
-	end)
+	RequestSkillUse.OnServerInvoke = RemoteMiddleware.createHandler(
+		"RequestSkillUse",
+		function(player, creatureInstanceId, skillId, targetId)
+			return SkillService.tryUseSkill(player, creatureInstanceId, skillId, targetId)
+		end
+	)
 
-	GetGeneratorSnapshot.OnServerInvoke = RemoteMiddleware.createHandler("GetGeneratorSnapshot", function(player, generatorId)
-		return GeneratorService.getSnapshotResult(player, generatorId)
-	end)
+	GetGeneratorSnapshot.OnServerInvoke = RemoteMiddleware.createHandler(
+		"GetGeneratorSnapshot",
+		function(player, generatorId)
+			return GeneratorService.getSnapshotResult(player, generatorId)
+		end
+	)
 
-	RequestClaimGenerator.OnServerInvoke = RemoteMiddleware.createHandler("RequestClaimGenerator", function(player, generatorId)
-		return GeneratorService.tryClaim(player, generatorId)
-	end)
+	RequestClaimGenerator.OnServerInvoke = RemoteMiddleware.createHandler(
+		"RequestClaimGenerator",
+		function(player, generatorId)
+			return GeneratorService.tryClaim(player, generatorId)
+		end
+	)
 
-	RequestUpgradeGenerator.OnServerInvoke = RemoteMiddleware.createHandler("RequestUpgradeGenerator", function(player, generatorId)
-		return GeneratorService.tryUpgrade(player, generatorId)
-	end)
+	RequestUpgradeGenerator.OnServerInvoke = RemoteMiddleware.createHandler(
+		"RequestUpgradeGenerator",
+		function(player, generatorId)
+			return GeneratorService.tryUpgrade(player, generatorId)
+		end
+	)
 
-	RequestEvolution.OnServerInvoke = RemoteMiddleware.createHandler("RequestEvolution", function(player, instanceId, evolutionId)
-		return EvolutionService.tryEvolve(player, instanceId, evolutionId)
-	end)
+	RequestEvolution.OnServerInvoke = RemoteMiddleware.createHandler(
+		"RequestEvolution",
+		function(player, instanceId, evolutionId)
+			return EvolutionService.tryEvolve(player, instanceId, evolutionId)
+		end
+	)
 
-	GetTowerChallengeSnapshot.OnServerInvoke = RemoteMiddleware.createHandler("GetTowerChallengeSnapshot", function(player)
-		return TowerChallengeService.getSnapshot(player)
-	end)
+	GetTowerChallengeSnapshot.OnServerInvoke = RemoteMiddleware.createHandler(
+		"GetTowerChallengeSnapshot",
+		function(player)
+			return TowerChallengeService.getSnapshot(player)
+		end
+	)
 
-	RequestTowerChallengeStart.OnServerInvoke = RemoteMiddleware.createHandler("RequestTowerChallengeStart", function(player, challengeId, floorId, playerInstanceId)
-		return TowerChallengeService.startRun(player, challengeId, floorId, playerInstanceId)
-	end)
+	RequestTowerChallengeStart.OnServerInvoke = RemoteMiddleware.createHandler(
+		"RequestTowerChallengeStart",
+		function(player, challengeId, floorId, playerInstanceId)
+			return TowerChallengeService.startRun(player, challengeId, floorId, playerInstanceId)
+		end
+	)
 
-	RequestTowerChallengeComplete.OnServerInvoke = RemoteMiddleware.createHandler("RequestTowerChallengeComplete", function(player, runToken)
-		return TowerChallengeService.completeRun(player, runToken)
-	end)
+	RequestTowerChallengeComplete.OnServerInvoke = RemoteMiddleware.createHandler(
+		"RequestTowerChallengeComplete",
+		function(player, runToken)
+			return TowerChallengeService.completeRun(player, runToken)
+		end
+	)
 
 	GetInventorySnapshot.OnServerInvoke = RemoteMiddleware.createHandler("GetInventorySnapshot", function(player)
 		return ItemService.getSnapshot(player)
@@ -362,9 +409,12 @@ function RemoteHandlers.init()
 		return EquipmentService.getSnapshot(player)
 	end)
 
-	RequestEquipItem.OnServerInvoke = RemoteMiddleware.createHandler("RequestEquipItem", function(player, itemId, slotId)
-		return EquipmentService.tryEquip(player, itemId, slotId)
-	end)
+	RequestEquipItem.OnServerInvoke = RemoteMiddleware.createHandler(
+		"RequestEquipItem",
+		function(player, itemId, slotId)
+			return EquipmentService.tryEquip(player, itemId, slotId)
+		end
+	)
 
 	RequestUnequipItem.OnServerInvoke = RemoteMiddleware.createHandler("RequestUnequipItem", function(player, slotId)
 		return EquipmentService.tryUnequip(player, slotId)

@@ -13,7 +13,7 @@ export type SimulationGuardConfig = {
 	maxSteps: number?,
 	timeoutSeconds: number?,
 	noProgressLimit: number?,
-	context: string?
+	context: string?,
 }
 
 function SimulationGuard.new(config: SimulationGuardConfig)
@@ -22,24 +22,26 @@ function SimulationGuard.new(config: SimulationGuardConfig)
 	self.timeoutSeconds = config.timeoutSeconds or 2.0
 	self.noProgressLimit = config.noProgressLimit or 5000
 	self.context = config.context or "Unknown Loop"
-	
+
 	self.steps = 0
 	self.stepsSinceProgress = 0
 	self.startTime = os.clock()
-	
+
 	self.stalled = false
 	self._failReason = nil
 	self.diagnosticLogged = false
-	
+
 	return self
 end
 
 function SimulationGuard:step(): boolean
-	if self.stalled then return false end
-	
+	if self.stalled then
+		return false
+	end
+
 	self.steps += 1
 	self.stepsSinceProgress += 1
-	
+
 	if self.steps > self.maxSteps then
 		self.stalled = true
 		self._failReason = "max_steps_exceeded"
@@ -50,7 +52,7 @@ function SimulationGuard:step(): boolean
 		self.stalled = true
 		self._failReason = "timeout"
 	end
-	
+
 	return not self.stalled
 end
 
@@ -67,23 +69,31 @@ function SimulationGuard:failReason(): string?
 end
 
 function SimulationGuard:logDiagnostic(snapshot: any)
-	if self.diagnosticLogged then return end
+	if self.diagnosticLogged then
+		return
+	end
 	self.diagnosticLogged = true
-	
+
 	local timeTaken = os.clock() - self.startTime
-	
+
 	local HttpService = game:GetService("HttpService")
-	local ok, snapJson = pcall(function() return HttpService:JSONEncode(snapshot or {}) end)
-	if not ok then snapJson = tostring(snapshot) end
-	
-	warn(string.format(
-		"[SimulationGuard] LOOP STALLED in '%s'. Reason: %s. Steps: %d. Time: %.3fs. Snapshot: %s",
-		self.context,
-		tostring(self._failReason),
-		self.steps,
-		timeTaken,
-		snapJson
-	))
+	local ok, snapJson = pcall(function()
+		return HttpService:JSONEncode(snapshot or {})
+	end)
+	if not ok then
+		snapJson = tostring(snapshot)
+	end
+
+	warn(
+		string.format(
+			"[SimulationGuard] LOOP STALLED in '%s'. Reason: %s. Steps: %d. Time: %.3fs. Snapshot: %s",
+			self.context,
+			tostring(self._failReason),
+			self.steps,
+			timeTaken,
+			snapJson
+		)
+	)
 end
 
 return SimulationGuard

@@ -66,14 +66,22 @@ function ItemRegistry.init()
 							print(string.format("[ItemRegistry] Loaded item '%s'.", item.itemId))
 						end
 					else
-						warn(string.format(
-							"[ItemRegistry] Validation failed for '%s': %s",
-							tostring(record.itemId or record.id or child.Name),
-							result.message or result.code
-						))
+						warn(
+							string.format(
+								"[ItemRegistry] Validation failed for '%s': %s",
+								tostring(record.itemId or record.id or child.Name),
+								result.message or result.code
+							)
+						)
 					end
 				else
-					warn(string.format("[ItemRegistry] Failed to require '%s': %s", child:GetFullName(), tostring(record)))
+					warn(
+						string.format(
+							"[ItemRegistry] Failed to require '%s': %s",
+							child:GetFullName(),
+							tostring(record)
+						)
+					)
 				end
 			end
 		end

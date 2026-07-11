@@ -26,12 +26,12 @@ function UIComponents.createBasePanel(): Frame
 	panel.BackgroundColor3 = Theme.Colors.Background
 	panel.BorderSizePixel = 0
 	panel.Size = UDim2.new(1, 0, 1, 0)
-	
+
 	-- Rounded corner
 	local corner = Instance.new("UICorner")
 	corner.CornerRadius = Theme.CornerRadius
 	corner.Parent = panel
-	
+
 	-- Border outline for frosted-glass design
 	local stroke = Instance.new("UIStroke")
 	stroke.Thickness = Theme.StrokeThickness
@@ -39,7 +39,7 @@ function UIComponents.createBasePanel(): Frame
 	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	stroke.Transparency = 0.6
 	stroke.Parent = panel
-	
+
 	return panel
 end
 
@@ -54,16 +54,16 @@ function UIComponents.createBaseButton(text: string): TextButton
 	button.Font = Theme.Fonts.Bold
 	button.TextSize = 16
 	button.TextWrapped = true
-	
+
 	-- Rounded corner
 	local corner = Instance.new("UICorner")
 	corner.CornerRadius = Theme.CornerRadius
 	corner.Parent = button
-	
+
 	-- Hover animation (returns clean up function if needed)
 	AnimationService.hoverScale(button)
 	VFXHelper.buttonPress(button)
-	
+
 	return button
 end
 
@@ -98,14 +98,14 @@ function UIComponents.applyRarityBorder(instance: GuiObject, rarity: string)
 	if existing then
 		existing:Destroy()
 	end
-	
+
 	local color = Theme.Colors.Common
 	if rarity == "Rare" then
 		color = Theme.Colors.Rare
 	elseif rarity == "Legendary" then
 		color = Theme.Colors.Legendary
 	end
-	
+
 	local stroke = Instance.new("UIStroke")
 	stroke.Name = "RarityBorder"
 	stroke.Thickness = Theme.StrokeThickness or 1
@@ -119,7 +119,7 @@ function UIComponents.applySelectionOutline(instance: GuiObject)
 	if existing then
 		existing:Destroy()
 	end
-	
+
 	local stroke = Instance.new("UIStroke")
 	stroke.Name = "SelectionOutline"
 	stroke.Thickness = Theme.StrokeThicknessSelected
@@ -135,16 +135,20 @@ function UIComponents.removeSelectionOutline(instance: GuiObject)
 	end
 end
 
-function UIComponents.createConfirmationModal(message: string, confirmCallback: () -> (), cancelCallback: (() -> ())?): Frame
+function UIComponents.createConfirmationModal(
+	message: string,
+	confirmCallback: () -> (),
+	cancelCallback: (() -> ())?
+): Frame
 	local modal = UIComponents.createBaseModal()
 	modal.Name = "ConfirmationModal"
-	
+
 	local panel = UIComponents.createBasePanel()
 	panel.Name = "DialogPanel"
 	panel.Size = UDim2.new(0, 400, 0, 200)
 	panel.Position = UDim2.new(0.5, -200, 0.5, -100)
 	panel.Parent = modal
-	
+
 	local label = UIComponents.createBaseLabel(message)
 	label.Size = UDim2.new(1, -40, 0, 80)
 	label.Position = UDim2.new(0, 20, 0, 20)
@@ -154,32 +158,32 @@ function UIComponents.createConfirmationModal(message: string, confirmCallback: 
 	label.TextSize = 18
 	label.TextWrapped = true
 	label.Parent = panel
-	
+
 	local confirmBtn = UIComponents.createBaseButton("Confirm")
 	confirmBtn.Name = "ConfirmButton"
 	confirmBtn.Size = UDim2.new(0, 140, 0, 44)
 	confirmBtn.Position = UDim2.new(0.5, -150, 1, -64)
 	confirmBtn.BackgroundColor3 = Theme.Colors.Success
 	confirmBtn.Parent = panel
-	
+
 	local cancelBtn = UIComponents.createBaseButton("Cancel")
 	cancelBtn.Name = "CancelButton"
 	cancelBtn.Size = UDim2.new(0, 140, 0, 44)
 	cancelBtn.Position = UDim2.new(0.5, 10, 1, -64)
 	cancelBtn.BackgroundColor3 = Theme.Colors.Error
 	cancelBtn.Parent = panel
-	
+
 	confirmBtn.MouseButton1Click:Connect(confirmCallback)
 	cancelBtn.MouseButton1Click:Connect(function()
 		if cancelCallback then
 			cancelCallback()
 		end
 	end)
-	
+
 	-- Hover Scaling
 	AnimationService.hoverScale(confirmBtn, Theme.Colors.Success, Theme.Colors.Success)
 	AnimationService.hoverScale(cancelBtn, Theme.Colors.Error, Theme.Colors.Error)
-	
+
 	return modal
 end
 

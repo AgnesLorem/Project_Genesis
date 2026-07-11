@@ -40,20 +40,19 @@ function GeneratorRegistry.init()
 		if result.success then
 			local generatorId = result.value.generatorId
 			if _registry[generatorId] then
-				warn(string.format(
-					"[GeneratorRegistry] Duplicate generatorId '%s' — skipping.",
-					generatorId
-				))
+				warn(string.format("[GeneratorRegistry] Duplicate generatorId '%s' — skipping.", generatorId))
 			else
 				_registry[generatorId] = result.value
 				print(string.format("[GeneratorRegistry] Loaded generator: '%s'", generatorId))
 			end
 		else
-			warn(string.format(
-				"[GeneratorRegistry] Config validation failed: %s — %s",
-				tostring(record.id or "unknown"),
-				result.message or result.code
-			))
+			warn(
+				string.format(
+					"[GeneratorRegistry] Config validation failed: %s — %s",
+					tostring(record.id or "unknown"),
+					result.message or result.code
+				)
+			)
 		end
 	end
 

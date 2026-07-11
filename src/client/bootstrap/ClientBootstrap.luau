@@ -46,7 +46,7 @@ end
 function ClientBootstrap.init()
 	local NetworkController = require(script.Parent.Parent.controllers.NetworkController)
 	local CreatureRegistry = require(game:GetService("ReplicatedStorage").Genesis.Shared.data.CreatureRegistry)
-	
+
 	local configRes = NetworkController.getCreatureConfigsPublic()
 	if configRes and configRes.success and CreatureRegistry.loadConfig then
 		CreatureRegistry.loadConfig(configRes.value)

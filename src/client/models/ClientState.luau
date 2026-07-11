@@ -58,7 +58,7 @@ end
 function ClientState.listen(key: string, callback: (any) -> ())
 	assert(type(key) == "string" and key ~= "", "[ClientState] Key must be a non-empty string.")
 	assert(type(callback) == "function", "[ClientState] Callback must be a function.")
-	
+
 	if not _listeners[key] then
 		_listeners[key] = {}
 	end

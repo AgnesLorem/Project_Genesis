@@ -40,14 +40,10 @@ function CollectionController.openCollectionBook(onClose: () -> ())
 		return
 	end
 
-	local screen = CollectionBookScreen.create(
-		collectionRes.value,
-		configsRes.value,
-		function()
-			UIController.unmountScreen("CollectionBookScreen")
-			onClose()
-		end
-	)
+	local screen = CollectionBookScreen.create(collectionRes.value, configsRes.value, function()
+		UIController.unmountScreen("CollectionBookScreen")
+		onClose()
+	end)
 
 	UIController.mountOverlay(screen, "CollectionBookScreen")
 end

@@ -9,10 +9,10 @@ function StarterController.start(onComplete)
 	local choices = res.success and res.value or { "starter_001" }
 	local screen = StarterSelectionScreen.create(choices, function(selectedId)
 		local claimRes = NetworkController.requestStarterSelection(selectedId)
-		if claimRes.success then 
-			onComplete() 
-		else 
-			warn("Failed to claim starter") 
+		if claimRes.success then
+			onComplete()
+		else
+			warn("Failed to claim starter")
 		end
 	end)
 	UIController.mountScreen(screen)

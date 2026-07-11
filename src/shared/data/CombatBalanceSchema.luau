@@ -32,12 +32,16 @@ function CombatBalanceSchema.validate(data: any)
 	if type(data.gaugeFillCoefficient) ~= "number" or data.gaugeFillCoefficient <= 0 then
 		return Result.fail("validation_failed", "Missing or invalid gaugeFillCoefficient (positive number).")
 	end
-	
+
 	if type(data.defReductionConstant) ~= "number" or data.defReductionConstant <= 0 then
 		return Result.fail("validation_failed", "Missing or invalid defReductionConstant (positive number).")
 	end
-	
-	if type(data.maxTurnSafeguard) ~= "number" or data.maxTurnSafeguard <= 0 or data.maxTurnSafeguard ~= math.floor(data.maxTurnSafeguard) then
+
+	if
+		type(data.maxTurnSafeguard) ~= "number"
+		or data.maxTurnSafeguard <= 0
+		or data.maxTurnSafeguard ~= math.floor(data.maxTurnSafeguard)
+	then
 		return Result.fail("validation_failed", "Missing or invalid maxTurnSafeguard (positive integer).")
 	end
 

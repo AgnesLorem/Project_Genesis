@@ -29,36 +29,53 @@ function GeneratorController.show(selectedGeneratorId: string?, statusText: stri
 	local snapshotResult = NetworkController.getGeneratorSnapshot()
 	UIController.clearModal()
 	if not snapshotResult.success then
-		UIController.mountModal(StatePatterns.Error(nil, "Generator Load Failed: " .. tostring(snapshotResult.message or snapshotResult.code)))
+		UIController.mountModal(
+			StatePatterns.Error(
+				nil,
+				"Generator Load Failed: " .. tostring(snapshotResult.message or snapshotResult.code)
+			)
+		)
 		return snapshotResult
 	end
 
 	lastSelectedGeneratorId = selectedGeneratorId or lastSelectedGeneratorId
 	lastStatusText = statusText or lastStatusText
-	local screen = GeneratorPanel.create(snapshotResult.value, function(generatorId)
-		GeneratorController.claim(generatorId, onClose)
-	end, function(generatorId)
-		GeneratorController.upgrade(generatorId, onClose)
-	end, function()
-		GeneratorController.show(lastSelectedGeneratorId, lastStatusText, onClose)
-	end, lastSelectedGeneratorId, lastStatusText, function()
-		UIController.unmountScreen("GeneratorPanel")
-		if onClose then onClose() end
-	end)
+	local screen = GeneratorPanel.create(
+		snapshotResult.value,
+		function(generatorId)
+			GeneratorController.claim(generatorId, onClose)
+		end,
+		function(generatorId)
+			GeneratorController.upgrade(generatorId, onClose)
+		end,
+		function()
+			GeneratorController.show(lastSelectedGeneratorId, lastStatusText, onClose)
+		end,
+		lastSelectedGeneratorId,
+		lastStatusText,
+		function()
+			UIController.unmountScreen("GeneratorPanel")
+			if onClose then
+				onClose()
+			end
+		end
+	)
 
 	UIController.mountScreen(screen)
 	return snapshotResult
 end
 
 function GeneratorController.claim(generatorId: string, onClose: (() -> ())?)
-	if isProcessing then return end
+	if isProcessing then
+		return
+	end
 	isProcessing = true
 	UIController.mountModal(StatePatterns.Loading(nil))
 
 	lastSelectedGeneratorId = generatorId
 	local result = NetworkController.requestClaimGenerator(generatorId)
 	lastStatusText = _statusFromResult("Claim", result)
-	
+
 	UIController.clearModal()
 	isProcessing = false
 
@@ -67,7 +84,9 @@ function GeneratorController.claim(generatorId: string, onClose: (() -> ())?)
 end
 
 function GeneratorController.upgrade(generatorId: string, onClose: (() -> ())?)
-	if isProcessing then return end
+	if isProcessing then
+		return
+	end
 	isProcessing = true
 	UIController.mountModal(StatePatterns.Loading(nil))
 
@@ -83,7 +102,9 @@ function GeneratorController.upgrade(generatorId: string, onClose: (() -> ())?)
 end
 
 function GeneratorController.showErrorState(generatorId: string, onClose: (() -> ())?)
-	if isProcessing then return end
+	if isProcessing then
+		return
+	end
 	isProcessing = true
 	UIController.mountModal(StatePatterns.Loading(nil))
 
