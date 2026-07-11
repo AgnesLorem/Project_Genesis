@@ -3,16 +3,13 @@
 	Location: src/client/views/SkillVfxConfig.luau
 --]]
 
+local RunService = game:GetService("RunService")
+
 --// Raw Requirings \\--
 --// Requirings \\--
 --// Variables \\--
 local SkillVfxConfig = {
-	Debug = true, -- Toggle detailed console log outputs
-
-	CameraAnchors = {
-		Player = Vector3.new(-3, -1.2, -8),
-		Enemy = Vector3.new(3, -1.2, -8),
-	},
+	Debug = RunService:IsStudio(),
 
 	ShakePresets = {
 		light = { intensity = 0.08, duration = 0.15 },

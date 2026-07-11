@@ -1,24 +1,17 @@
 --[[
 	VfxAssetRegistry
-	Location: src/client/views/VfxAssetRegistry.luau
+	Code-generated 2D combat effects. No entry depends on Workspace or camera state.
 --]]
 
---// Raw Requirings \\--
---// Requirings \\--
---// Variables \\--
 local VfxAssetRegistry = {
-	charge_light = "Workspace.VFX_Priority.Anime.Charge-01",
-	punch_impact = "Workspace.VFX_Priority.Anime.Punch-01",
-	slash_wind = "Workspace.VFX_Priority.Anime.Slashes-01",
-	slash_impact = "Workspace.VFX_Priority.Anime.Slash-Impact-01",
-	fire_bolt = "Workspace.VFX_Priority.Anime.Fire-01",
-	fire_explosion = "Workspace.VFX_Priority.Anime.Explosion-01",
-	plant_shield = "Workspace.VFX_Priority.Anime.Shield-01",
-	
-	-- Fallbacks
-	fallback_vfx = "Workspace.VFX.Circle",
+	charge_light = { color = Color3.fromRGB(120, 220, 255), shape = "ring" },
+	punch_impact = { color = Color3.fromRGB(255, 245, 210), shape = "burst" },
+	slash_wind = { color = Color3.fromRGB(175, 255, 190), shape = "slash" },
+	slash_impact = { color = Color3.fromRGB(220, 255, 225), shape = "burst" },
+	fire_bolt = { color = Color3.fromRGB(255, 115, 65), shape = "orb" },
+	fire_explosion = { color = Color3.fromRGB(255, 155, 55), shape = "burst" },
+	plant_shield = { color = Color3.fromRGB(105, 235, 145), shape = "shield" },
+	fallback_vfx = { color = Color3.fromRGB(255, 255, 255), shape = "ring" },
 }
-
---// Service \\--
 
 return VfxAssetRegistry

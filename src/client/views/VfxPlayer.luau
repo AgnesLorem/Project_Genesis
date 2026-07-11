@@ -1,260 +1,118 @@
 --[[
 	VfxPlayer
-	Location: src/client/views/VfxPlayer.luau
-	Plays and tweens 3D VFX parts relative to the camera viewport using VfxPool.
-	Converts 2D card bounds into camera-relative 3D positions using ScreenPointToRay.
-	Uses GuiService:GetGuiInset() and LockedToPart=true to ensure perfect alignment.
-	Implements the Idempotent Registry pattern for dynamic lifecycles.
+	Plays pooled 2D effects inside the combat UI.
 --]]
 
---// Raw Requirings \\--
---// Requirings \\--
-local SkillVfxConfig = require(script.Parent.SkillVfxConfig)
+local TweenService = game:GetService("TweenService")
+
 local VfxPool = require(script.Parent.VfxPool)
 
---// Variables \\--
 local VfxPlayer = {}
-local camera = workspace.CurrentCamera
 local activeRegistry = {}
 
---// Service \\--
-local TweenService = game:GetService("TweenService")
-local GuiService = game:GetService("GuiService")
-
--- Class representing a tracked VFX lifecycle instance
-local VfxInstance = {}
-VfxInstance.__index = VfxInstance
-
-function VfxInstance.new(clone: Instance, assetKey: string)
-	local self = setmetatable({
-		Instance = clone,
-		AssetKey = assetKey,
-		Connections = {},
-		Tasks = {},
-		IsDestroyed = false,
-	}, VfxInstance)
-	return self
+local function cardsAreValid(actorCard: GuiObject?, targetCard: GuiObject?): boolean
+	return actorCard ~= nil and targetCard ~= nil and actorCard.Parent ~= nil and targetCard.Parent ~= nil
 end
 
-function VfxInstance:TrackConnection(conn)
-	table.insert(self.Connections, conn)
+local function cardCenterInParent(card: GuiObject, parent: GuiObject): UDim2
+	local center = card.AbsolutePosition + card.AbsoluteSize / 2 - parent.AbsolutePosition
+	return UDim2.fromOffset(center.X, center.Y)
 end
 
-function VfxInstance:TrackTask(thread)
-	table.insert(self.Tasks, thread)
+local function scaleSize(size: UDim2, scale: number): UDim2
+	return UDim2.new(size.X.Scale * scale, size.X.Offset * scale, size.Y.Scale * scale, size.Y.Offset * scale)
 end
 
-function VfxInstance:Destroy()
-	if self.IsDestroyed then return end
-	self.IsDestroyed = true
-
-	-- Disconnect all connections
-	for _, conn in ipairs(self.Connections) do
-		if typeof(conn) == "RBXScriptConnection" and conn.Connected then
-			conn:Disconnect()
-		end
+local function releaseEntry(entry)
+	if entry.released then
+		return
 	end
-	table.clear(self.Connections)
-
-	-- Cancel all task threads
-	for _, thread in ipairs(self.Tasks) do
-		if typeof(thread) == "thread" and coroutine.status(thread) ~= "dead" then
-			pcall(task.cancel, thread)
-		end
+	entry.released = true
+	if entry.tween then
+		entry.tween:Cancel()
 	end
-	table.clear(self.Tasks)
-
-	-- Destroy the clone to prevent leaks
-	if self.Instance then
-		self.Instance:Destroy()
-		self.Instance = nil
-	end
+	activeRegistry[entry] = nil
+	VfxPool.Release(entry.instance)
 end
 
--- Recolor particle emitter color sequences
-local function applyRecolor(instance: Instance, color: Color3)
-	local seq = ColorSequence.new(color)
-	for _, desc in ipairs(instance:GetDescendants()) do
-		if desc:IsA("ParticleEmitter") then
-			desc.Color = seq
-		elseif desc:IsA("Light") then
-			desc.Color = color
-		end
-	end
-end
-
--- Adjust particle emitter rate and speed based on playback speed multiplier
-local function applyPlaybackSpeed(instance: Instance, speed: number)
-	for _, desc in ipairs(instance:GetDescendants()) do
-		if desc:IsA("ParticleEmitter") then
-			desc.Rate = desc.Rate * speed
-			local minSpeed = desc.Speed.Min * speed
-			local maxSpeed = desc.Speed.Max * speed
-			desc.Speed = NumberRange.new(minSpeed, maxSpeed)
-		end
-	end
-end
-
--- Lock particles to their parent part so they don't drift in world space
-local function applyLockedToPart(instance: Instance)
-	for _, desc in ipairs(instance:GetDescendants()) do
-		if desc:IsA("ParticleEmitter") then
-			desc.LockedToPart = true
-		end
-	end
-end
-
--- Helper to convert 2D card center to 3D world space immediately in front of the camera using ScreenPointToRay
-local function getCardWorldPosition(card: Frame, depth: number): Vector3
-	if not camera then
-		camera = workspace.CurrentCamera
-	end
-	
-	local center = card.AbsolutePosition + card.AbsoluteSize / 2
-	local inset = GuiService:GetGuiInset()
-	
-	-- Subtract top bar offset to get screen-space coordinates
-	local screenX = center.X - inset.X
-	local screenY = center.Y - inset.Y
-	
-	local ray = camera:ScreenPointToRay(screenX, screenY)
-	return ray.Origin + ray.Direction.Unit * depth
-end
-
--- Helper to calculate the 3D size in studs that corresponds to a 2D card's pixel size
-local function getCardWorldSize(card: Frame, depth: number): Vector3
-	if not camera then
-		camera = workspace.CurrentCamera
-	end
-	local fov = camera.FieldOfView
-	local viewportSize = camera.ViewportSize
-	
-	-- Height and width of the camera frustum at the given depth
-	local heightStuds = 2 * depth * math.tan(math.rad(fov) / 2)
-	local widthStuds = heightStuds * (viewportSize.X / viewportSize.Y)
-	
-	-- Conversion factor from pixels to studs
-	local studsPerPixelX = widthStuds / viewportSize.X
-	local studsPerPixelY = heightStuds / viewportSize.Y
-	
-	return Vector3.new(
-		card.AbsoluteSize.X * studsPerPixelX,
-		card.AbsoluteSize.Y * studsPerPixelY,
-		card.AbsoluteSize.X * studsPerPixelX
-	)
-end
-
--- Clear all active VFX (Idempotent Registry teardown)
 function VfxPlayer.clearAllActiveVfx()
-	for _, vfxInst in ipairs(activeRegistry) do
-		vfxInst:Destroy()
+	local entries = {}
+	for entry in pairs(activeRegistry) do
+		table.insert(entries, entry)
 	end
-	table.clear(activeRegistry)
+	for _, entry in ipairs(entries) do
+		releaseEntry(entry)
+	end
 end
 
--- Plays a single VFX step config projected onto 2D UI cards
-function VfxPlayer.playStep(stepConfig: any, actorCard: Frame, targetCard: Frame, projectileTime: number?)
-	if not camera then
-		camera = workspace.CurrentCamera
-	end
-
-	local assetKey = stepConfig.asset
-	local clone = VfxPool.Acquire(assetKey)
-	if not clone then
+function VfxPlayer.playStep(stepConfig: any, actorCard: GuiObject, targetCard: GuiObject, projectileTime: number?)
+	if not cardsAreValid(actorCard, targetCard) then
 		return
 	end
 
-	-- Create registry tracking instance
-	local vfxInst = VfxInstance.new(clone, assetKey)
-	table.insert(activeRegistry, vfxInst)
-
-	-- Retrieve configured depth (between 8 and 10 studs to avoid Clip Plane clipping)
-	local depth = 9.0 -- default depth in front of camera
-	if stepConfig.layer == "behind" then
-		depth = 10.0
-	elseif stepConfig.layer == "foreground" then
-		depth = 8.0
+	local instance = VfxPool.Acquire(stepConfig.asset)
+	if not instance or not instance:IsA("GuiObject") then
+		return
 	end
 
-	-- Lock particles to the part to prevent them from drifting when camera rotates
-	applyLockedToPart(clone)
-
-	-- Calculate dynamic size in studs to match the 2D card size on screen
-	local targetCardSize = getCardWorldSize(targetCard, depth)
-	local actorCardSize = getCardWorldSize(actorCard, depth)
-
-	-- Apply configuration modifiers
-	if clone:IsA("Part") then
-		local baseCardSize = (stepConfig.at == "cast") and actorCardSize or targetCardSize
-		clone.Size = baseCardSize * (stepConfig.scale or 1.0)
-	end
-	
-	if stepConfig.color then
-		applyRecolor(clone, stepConfig.color)
-	end
-
-	if stepConfig.playbackSpeed then
-		applyPlaybackSpeed(clone, stepConfig.playbackSpeed)
-	end
-
-	clone.Parent = workspace
-	
-	local cameraRotation = camera.CFrame - camera.CFrame.Position
+	local entry = { instance = instance, tween = nil, released = false }
+	activeRegistry[entry] = true
+	local parent = targetCard
+	local startPosition = UDim2.fromScale(0.5, 0.5)
+	local endPosition = startPosition
 
 	if stepConfig.at == "cast" then
-		if clone:IsA("Part") then
-			local worldPos = getCardWorldPosition(actorCard, depth)
-			clone.CFrame = CFrame.new(worldPos) * cameraRotation
-		end
-	elseif stepConfig.at == "impact" then
-		if clone:IsA("Part") then
-			local worldPos = getCardWorldPosition(targetCard, depth)
-			clone.CFrame = CFrame.new(worldPos) * cameraRotation
-		end
+		parent = actorCard
 	elseif stepConfig.at == "projectile" then
-		-- Tween from actor card position to target card position
-		local startPos = getCardWorldPosition(actorCard, depth)
-		local endPos = getCardWorldPosition(targetCard, depth)
-		
-		if clone:IsA("Part") then
-			clone.CFrame = CFrame.new(startPos) * cameraRotation
-			
-			local duration = projectileTime or 0.2
-			local info = TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-			local tween = TweenService:Create(clone, info, { CFrame = CFrame.new(endPos) * cameraRotation })
-			
-			-- Track the tween task
-			local tweenThread = task.spawn(function()
-				tween:Play()
-				tween.Completed:Wait()
-			end)
-			vfxInst:TrackTask(tweenThread)
+		local commonParent = actorCard.Parent
+		if not commonParent or commonParent ~= targetCard.Parent or not commonParent:IsA("GuiObject") then
+			releaseEntry(entry)
+			return
 		end
+		parent = commonParent
+		startPosition = cardCenterInParent(actorCard, commonParent)
+		endPosition = cardCenterInParent(targetCard, commonParent)
 	end
 
-	-- Safe cleanup task
-	local cleanupThread = task.spawn(function()
-		task.wait(0.5)
-		if vfxInst.IsDestroyed then return end
-		-- Disable emitters
-		for _, desc in ipairs(clone:GetDescendants()) do
-			if desc:IsA("ParticleEmitter") or desc:IsA("Beam") or desc:IsA("Trail") then
-				desc.Enabled = false
-			end
-		end
+	if not cardsAreValid(actorCard, targetCard) or not parent.Parent then
+		releaseEntry(entry)
+		return
+	end
 
-		task.wait(1.5)
-		if vfxInst.IsDestroyed then return end
-		
-		-- Remove from active registry
-		local idx = table.find(activeRegistry, vfxInst)
-		if idx then table.remove(activeRegistry, idx) end
-		
-		-- Release back to pool
-		VfxPool.Release(clone, assetKey)
+	instance.Position = startPosition
+	instance.Size = scaleSize(instance.Size, stepConfig.scale or 1)
+	if stepConfig.color then
+		instance.BackgroundColor3 = stepConfig.color
+		local stroke = instance:FindFirstChild("EffectStroke")
+		if stroke and stroke:IsA("UIStroke") then
+			stroke.Color = stepConfig.color:Lerp(Color3.new(1, 1, 1), 0.55)
+		end
+	end
+	instance.Parent = parent
+
+	local duration = stepConfig.at == "projectile" and (projectileTime or 0.2) or 0.35
+	duration /= math.max(stepConfig.playbackSpeed or 1, 0.1)
+	local goal = {
+		Position = endPosition,
+		Size = scaleSize(instance.Size, 1.45),
+		BackgroundTransparency = 1,
+		Rotation = instance.Rotation + 35,
+	}
+	local tween =
+		TweenService:Create(instance, TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), goal)
+	entry.tween = tween
+	tween.Completed:Once(function()
+		releaseEntry(entry)
 	end)
-	
-	vfxInst:TrackTask(cleanupThread)
+	tween:Play()
+
+	task.delay(duration + 0.25, function()
+		releaseEntry(entry)
+	end)
+end
+
+function VfxPlayer.getPoolStats()
+	return VfxPool.GetStats()
 end
 
 return VfxPlayer

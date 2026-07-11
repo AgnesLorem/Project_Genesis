@@ -16,7 +16,7 @@ local TweenService = game:GetService("TweenService")
 
 -- Shows a floating text overlay on the specified card
 function FloatingText.show(card: Frame, textType: string, amountOrText: any)
-	if not card then return end
+	if not card or not card.Parent then return end
 
 	local label = Instance.new("TextLabel")
 	label.Name = "FloatingTextLabel"

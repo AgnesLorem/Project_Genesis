@@ -7,6 +7,7 @@
 
 local Theme = require(script.Parent.Theme)
 local AnimationService = require(script.Parent.AnimationService)
+local VFXHelper = require(script.Parent.Parent.effects.VFXHelper)
 
 local UIComponents = {}
 
@@ -61,6 +62,7 @@ function UIComponents.createBaseButton(text: string): TextButton
 	
 	-- Hover animation (returns clean up function if needed)
 	AnimationService.hoverScale(button)
+	VFXHelper.buttonPress(button)
 	
 	return button
 end

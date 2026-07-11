@@ -1,104 +1,138 @@
 --[[
 	VfxPool
-	Location: src/client/views/VfxPool.luau
-	Object pool for 3D VFX assets to optimize memory and CPU performance.
+	Bounded pool for code-generated combat VFX.
 --]]
 
---// Raw Requirings \\--
---// Requirings \\--
 local VfxAssetRegistry = require(script.Parent.VfxAssetRegistry)
 
---// Variables \\--
 local VfxPool = {}
-local poolFolder: Folder = nil
-local activeCount = 0
 local MAX_TOTAL_VFX = 25
+local activeCount = 0
+local pooledCount = 0
 local pooledInstances: { [string]: { Instance } } = {}
+local activeInstances: { [Instance]: string } = {}
+local originalStates: { [Instance]: { [Instance]: { [string]: any } } } = {}
 
---// Service \\--
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RESET_PROPERTIES = {
+	Frame = { "Size", "Position", "Rotation", "BackgroundColor3", "BackgroundTransparency", "Visible" },
+	UIStroke = { "Color", "Thickness", "Transparency", "Enabled" },
+	ParticleEmitter = { "Rate", "Speed", "Color", "Size", "Transparency", "LightEmission", "Lifetime", "Enabled" },
+	Beam = { "Color", "Transparency", "LightEmission", "Enabled" },
+	Trail = { "Color", "Transparency", "LightEmission", "Lifetime", "Enabled" },
+}
 
--- Initialize pool folder in ReplicatedStorage
-local function getPoolFolder(): Folder
-	if not poolFolder then
-		poolFolder = Instance.new("Folder")
-		poolFolder.Name = "VfxPoolCache"
-		poolFolder.Parent = ReplicatedStorage
-	end
-	return poolFolder
-end
-
--- Safely resolves a dot-separated path string into a Roblox Instance
-local function resolvePath(path: string): Instance?
-	local parts = string.split(path, ".")
-	local current: Instance = game
-	for _, part in ipairs(parts) do
-		current = current:FindFirstChild(part)
-		if not current then
-			return nil
+local function captureState(root: Instance)
+	local state = {}
+	local descendants = root:GetDescendants()
+	table.insert(descendants, root)
+	for _, item in ipairs(descendants) do
+		local propertyNames = RESET_PROPERTIES[item.ClassName]
+		if propertyNames then
+			local properties = {}
+			for _, propertyName in ipairs(propertyNames) do
+				properties[propertyName] = item[propertyName]
+			end
+			state[item] = properties
 		end
 	end
-	return current
+	originalStates[root] = state
 end
 
--- Helper to enable/disable emitters, beams, and trails
-local function setVfxState(instance: Instance, enabled: boolean)
-	for _, desc in ipairs(instance:GetDescendants()) do
-		if desc:IsA("ParticleEmitter") or desc:IsA("Beam") or desc:IsA("Trail") then
-			desc.Enabled = enabled
+local function restoreState(root: Instance)
+	local state = originalStates[root]
+	if not state then
+		return
+	end
+	for item, properties in pairs(state) do
+		if item.Parent or item == root then
+			for propertyName, value in pairs(properties) do
+				item[propertyName] = value
+			end
 		end
 	end
 end
 
--- Acquires a VFX instance for the given asset key
+local function createEffect(assetKey: string): Frame
+	local config = VfxAssetRegistry[assetKey] or VfxAssetRegistry.fallback_vfx
+	local frame = Instance.new("Frame")
+	frame.Name = "CombatVfx_" .. assetKey
+	frame.AnchorPoint = Vector2.new(0.5, 0.5)
+	frame.BackgroundColor3 = config.color
+	frame.BackgroundTransparency = 0.18
+	frame.BorderSizePixel = 0
+	frame.Size = UDim2.fromOffset(54, 54)
+	frame.ZIndex = 40
+	frame:SetAttribute("VfxAssetKey", assetKey)
+
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = config.shape == "slash" and UDim.new(0, 5) or UDim.new(1, 0)
+	corner.Parent = frame
+
+	local stroke = Instance.new("UIStroke")
+	stroke.Name = "EffectStroke"
+	stroke.Color = config.color:Lerp(Color3.new(1, 1, 1), 0.55)
+	stroke.Thickness = config.shape == "shield" and 5 or 3
+	stroke.Transparency = 0.05
+	stroke.Parent = frame
+
+	if config.shape == "ring" or config.shape == "shield" then
+		frame.BackgroundTransparency = 0.75
+	elseif config.shape == "slash" then
+		frame.Size = UDim2.fromOffset(74, 16)
+		frame.Rotation = -25
+	elseif config.shape == "burst" then
+		frame.Rotation = 45
+	end
+
+	return frame
+end
+
 function VfxPool.Acquire(assetKey: string): Instance?
-	local path = VfxAssetRegistry[assetKey] or VfxAssetRegistry.fallback_vfx
-	local original = resolvePath(path)
-	
-	if not original then
-		warn(string.format("[VfxPool] Failed to resolve path for asset key '%s' (path: '%s')", tostring(assetKey), tostring(path)))
-		-- Try fallback
-		original = resolvePath(VfxAssetRegistry.fallback_vfx)
-		if not original then
-			error("[VfxPool] Critical error: Fallback VFX asset not found in Workspace!")
-		end
+	if activeCount >= MAX_TOTAL_VFX then
+		return nil
 	end
 
 	local cacheList = pooledInstances[assetKey]
-	if cacheList and #cacheList > 0 then
-		local instance = table.remove(cacheList)
-		setVfxState(instance, true)
-		activeCount += 1
-		return instance
+	local instance = cacheList and table.remove(cacheList) or nil
+	if instance then
+		pooledCount -= 1
+		restoreState(instance)
+	else
+		instance = createEffect(assetKey)
+		captureState(instance)
 	end
 
-	-- Under budget or fallback cloning
-	local instance = original:Clone()
-	setVfxState(instance, true)
+	activeInstances[instance] = assetKey
 	activeCount += 1
 	return instance
 end
 
--- Releases a VFX instance back to the pool
-function VfxPool.Release(instance: Instance, assetKey: string)
-	if not instance then return end
-	
-	activeCount = math.max(0, activeCount - 1)
-	setVfxState(instance, false)
+function VfxPool.Release(instance: Instance)
+	local assetKey = activeInstances[instance]
+	if not assetKey then
+		return
+	end
 
-	-- If we exceed the MAX_TOTAL_VFX budget, destroy the instance instead of caching it
+	activeInstances[instance] = nil
+	activeCount -= 1
+	restoreState(instance)
+	instance.Parent = nil
+
 	local cacheList = pooledInstances[assetKey]
 	if not cacheList then
 		cacheList = {}
 		pooledInstances[assetKey] = cacheList
 	end
+	table.insert(cacheList, instance)
+	pooledCount += 1
+end
 
-	if activeCount + #cacheList >= MAX_TOTAL_VFX then
-		instance:Destroy()
-	else
-		instance.Parent = getPoolFolder()
-		table.insert(cacheList, instance)
-	end
+function VfxPool.GetStats()
+	return {
+		activeCount = activeCount,
+		pooledCount = pooledCount,
+		maxTotalVfx = MAX_TOTAL_VFX,
+	}
 end
 
 return VfxPool

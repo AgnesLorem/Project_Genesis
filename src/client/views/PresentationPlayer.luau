@@ -42,9 +42,15 @@ local function isPlayerUnit(playerUnitIds: { string }, id: string): boolean
 	return false
 end
 
+local function cardsAreValid(actorCard: GuiObject?, targetCard: GuiObject?): boolean
+	return actorCard ~= nil and targetCard ~= nil and actorCard.Parent ~= nil and targetCard.Parent ~= nil
+end
+
 -- Plays a combat event blocking the thread until completion
 function PresentationPlayer.playEvent(event: any, playerUnitIds: { string }, enemyUnitIds: { string }, api: any)
-	if not isCombatActive then return end
+	if not isCombatActive then
+		return
+	end
 
 	local eventType = event.type
 	if eventType ~= "skill_use" and eventType ~= "fallback_attack" then
@@ -53,7 +59,7 @@ function PresentationPlayer.playEvent(event: any, playerUnitIds: { string }, ene
 
 	local data = event.data or {}
 	local skillId = (eventType == "skill_use") and data.skillId or "basic_attack"
-	
+
 	local actorSide = isPlayerUnit(playerUnitIds, data.actorId) and "Player" or "Enemy"
 	local targetSide = isPlayerUnit(playerUnitIds, data.targetId) and "Player" or "Enemy"
 
@@ -72,7 +78,14 @@ function PresentationPlayer.playEvent(event: any, playerUnitIds: { string }, ene
 	-- Load configuration
 	local config = SkillVfxConfig[skillId]
 	if not config then
-		warn(string.format("[PresentationPlayer] No VFX config for skillId '%s'. Falling back to basic_attack.", tostring(skillId)))
+		if SkillVfxConfig.Debug then
+			warn(
+				string.format(
+					"[PresentationPlayer] No VFX config for skillId '%s'. Falling back to basic_attack.",
+					tostring(skillId)
+				)
+			)
+		end
 		config = SkillVfxConfig.basic_attack
 	end
 
@@ -81,17 +94,31 @@ function PresentationPlayer.playEvent(event: any, playerUnitIds: { string }, ene
 	local settleTime = 0.4 -- Default settle/recovery time for impact VFX
 
 	if SkillVfxConfig.Debug then
-		print(string.format("[VFX DEBUG] [Turn %d] Skill: %s | Actor: %s (%s) | Target: %s (%s)", 
-			event.turn or 0, skillId, tostring(context.attacker), actorSide, tostring(context.target), targetSide))
+		print(
+			string.format(
+				"[VFX DEBUG] [Turn %d] Skill: %s | Actor: %s (%s) | Target: %s (%s)",
+				event.turn or 0,
+				skillId,
+				tostring(context.attacker),
+				actorSide,
+				tostring(context.target),
+				targetSide
+			)
+		)
 	end
 
 	-- Retrieve target and actor cards
 	local targetCard = (targetSide == "Enemy") and api.enemyCard or api.playerCard
 	local actorCard = (actorSide == "Enemy") and api.enemyCard or api.playerCard
+	if not cardsAreValid(actorCard, targetCard) then
+		return
+	end
 
 	-- Helper to execute steps for a specific phase
 	local function playPhase(phaseName: string)
-		if not isCombatActive then return end
+		if not isCombatActive or not cardsAreValid(actorCard, targetCard) then
+			return
+		end
 
 		if SkillVfxConfig.Debug then
 			print(string.format("[VFX DEBUG] Phase: %s", phaseName))
@@ -100,14 +127,18 @@ function PresentationPlayer.playEvent(event: any, playerUnitIds: { string }, ene
 		for _, step in ipairs(config.sequence or {}) do
 			if step.at == phaseName then
 				task.spawn(function()
-					if not isCombatActive then return end
+					if not isCombatActive or not cardsAreValid(actorCard, targetCard) then
+						return
+					end
 
 					-- Apply delay relative to phase start
 					if step.offset and step.offset > 0 then
 						task.wait(step.offset)
 					end
 
-					if not isCombatActive then return end
+					if not isCombatActive or not cardsAreValid(actorCard, targetCard) then
+						return
+					end
 
 					-- Play Sound
 					if step.sound then
@@ -154,11 +185,24 @@ function PresentationPlayer.playEvent(event: any, playerUnitIds: { string }, ene
 
 	-- Log turn text in combat screen
 	if eventType == "skill_use" then
-		api.appendLog(string.format("[Turn %d] %s used %s on %s.", 
-			event.turn or 0, tostring(context.attacker), tostring(context.skillId), tostring(context.target)))
+		api.appendLog(
+			string.format(
+				"[Turn %d] %s used %s on %s.",
+				event.turn or 0,
+				tostring(context.attacker),
+				tostring(context.skillId),
+				tostring(context.target)
+			)
+		)
 	else
-		api.appendLog(string.format("[Turn %d] %s attacked %s.", 
-			event.turn or 0, tostring(context.attacker), tostring(context.target)))
+		api.appendLog(
+			string.format(
+				"[Turn %d] %s attacked %s.",
+				event.turn or 0,
+				tostring(context.attacker),
+				tostring(context.target)
+			)
+		)
 	end
 
 	-- Execute sequenced phases
@@ -166,7 +210,9 @@ function PresentationPlayer.playEvent(event: any, playerUnitIds: { string }, ene
 	if castTime > 0 then
 		local startWait = os.clock()
 		while os.clock() - startWait < castTime do
-			if not isCombatActive then return end
+			if not isCombatActive then
+				return
+			end
 			task.wait()
 		end
 	end
@@ -175,7 +221,9 @@ function PresentationPlayer.playEvent(event: any, playerUnitIds: { string }, ene
 	if projectileTime > 0 then
 		local startWait = os.clock()
 		while os.clock() - startWait < projectileTime do
-			if not isCombatActive then return end
+			if not isCombatActive then
+				return
+			end
 			task.wait()
 		end
 	end
@@ -183,7 +231,9 @@ function PresentationPlayer.playEvent(event: any, playerUnitIds: { string }, ene
 	playPhase("impact")
 	local startWait = os.clock()
 	while os.clock() - startWait < settleTime do
-		if not isCombatActive then return end
+		if not isCombatActive then
+			return
+		end
 		task.wait()
 	end
 end

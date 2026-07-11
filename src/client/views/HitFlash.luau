@@ -16,7 +16,7 @@ local TweenService = game:GetService("TweenService")
 
 -- Performs a hit flash overlay on the specified card
 function HitFlash.flash(card: Frame)
-	if not card then return end
+	if not card or not card.Parent then return end
 
 	local flashFrame = Instance.new("Frame")
 	flashFrame.Name = "HitFlashOverlay"
