@@ -2,6 +2,7 @@ local RunService = game:GetService("RunService")
 local NetworkController = require(script.Parent.NetworkController)
 local UIController = require(script.Parent.UIController)
 local LoadingController = require(script.Parent.LoadingController)
+local UISmokeTester = require(script.Parent.UISmokeTester)
 local StarterController = require(script.Parent.StarterController)
 local WorldController = require(script.Parent.WorldController)
 local BattleController = require(script.Parent.BattleController)
@@ -136,17 +137,16 @@ local function _getTowerDefaults()
 	local challenge = towerRes.value.challenges and towerRes.value.challenges[1]
 	local floor = challenge and challenge.floors and challenge.floors[1]
 	if not challenge or not floor then
-		return nil, nil, { success = false, code = "no_tower_config", message = "No tower challenge/floor config available." }
+		return nil,
+			nil,
+			{ success = false, code = "no_tower_config", message = "No tower challenge/floor config available." }
 	end
 
 	return challenge, floor, towerRes
 end
 
 local function _getTowerProgress(snapshot: any, challengeId: string): any
-	return snapshot
-		and snapshot.progressByChallengeId
-		and snapshot.progressByChallengeId[challengeId]
-		or nil
+	return snapshot and snapshot.progressByChallengeId and snapshot.progressByChallengeId[challengeId] or nil
 end
 
 local function _progressAttempts(snapshot: any, challengeId: string): number
@@ -180,7 +180,13 @@ function GameplaySimulator.claimGenerator()
 
 	local res = NetworkController.requestGeneratorClaim(generator.generatorId)
 	if res.success then
-		print(string.format("[GameplaySimulator] Generator Claim Success! Claimed: %d, New Balance: %d", res.value.claimed, res.value.newBalance))
+		print(
+			string.format(
+				"[GameplaySimulator] Generator Claim Success! Claimed: %d, New Balance: %d",
+				res.value.claimed,
+				res.value.newBalance
+			)
+		)
 		GameplaySimulator.refreshWorld()
 	else
 		print("[GameplaySimulator] Generator Claim Failed: " .. tostring(res.message or res.code))
@@ -193,7 +199,7 @@ function GameplaySimulator.runStoryBattle()
 	assertStudio()
 	ensureUiReady()
 	print("[GameplaySimulator] Command: Starting Story Battle...")
-	
+
 	-- Find active creature
 	local snapRes = NetworkController.getPlayerProfileSnapshot()
 	if not snapRes.success then
@@ -206,9 +212,7 @@ function GameplaySimulator.runStoryBattle()
 		playerCreatureId = inst.creatureId
 		break
 	end
-	local stageId = snapRes.value.world
-		and snapRes.value.world.unlockedStages
-		and snapRes.value.world.unlockedStages[1]
+	local stageId = snapRes.value.world and snapRes.value.world.unlockedStages and snapRes.value.world.unlockedStages[1]
 		or "story_stage_1"
 
 	if not playerCreatureId then
@@ -218,22 +222,22 @@ function GameplaySimulator.runStoryBattle()
 
 	-- Run battle
 	print("[GameplaySimulator] Entering battle with " .. playerCreatureId)
-	
+
 	-- Disable auto-progress for manual timeline stepping validation
 	if BattleController.setAutoProgress then
 		BattleController.setAutoProgress(false)
 	end
-	
+
 	local complete = false
 	task.spawn(function()
 		BattleController.start(playerCreatureId, stageId, function()
 			complete = true
 		end)
 	end)
-	
+
 	task.wait(1.0) -- wait for battle screen mount
 	print("[GameplaySimulator] SCREENSHOT TRIGGER: Combat Initialized")
-	
+
 	-- Step through turns
 	print("[GameplaySimulator] Stepping through battle turns manually...")
 	local steps = 0
@@ -244,7 +248,7 @@ function GameplaySimulator.runStoryBattle()
 			BattleController.nextTurn()
 		end
 		steps += 1
-		
+
 		-- Check if BattleResultModal (BaseModal) is mounted
 		local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
 		local mainUI = playerGui:FindFirstChild("GenesisMainUI")
@@ -254,7 +258,7 @@ function GameplaySimulator.runStoryBattle()
 			break
 		end
 	end
-	
+
 	-- Wait for completion if not already
 	while not complete and steps < maxSteps do
 		task.wait(0.5)
@@ -275,10 +279,10 @@ function GameplaySimulator.runStoryBattle()
 		GameplaySimulator.refreshWorld()
 		return { success = false, message = "battle_timeout" }
 	end
-	
+
 	print("[GameplaySimulator] Battle finished.")
 	print("[GameplaySimulator] SCREENSHOT TRIGGER: Battle Result")
-	
+
 	-- Click continue button / close modal
 	task.wait(1.0)
 	print("[GameplaySimulator] Simulating Continue Button click (closing modal)...")
@@ -293,7 +297,7 @@ function GameplaySimulator.evolveActiveCreature()
 	assertStudio()
 	ensureUiReady()
 	print("[GameplaySimulator] Command: Evolving Active Creature...")
-	
+
 	local snapRes = NetworkController.getPlayerProfileSnapshot()
 	if not snapRes.success then
 		print("[GameplaySimulator] Failed to get profile snapshot.")
@@ -362,7 +366,9 @@ function GameplaySimulator.invalidTowerChallengeRequests()
 
 	local profileRes = NetworkController.getPlayerProfileSnapshot()
 	if not profileRes.success then
-		_critical("Profile snapshot failed before invalid request test: " .. tostring(profileRes.message or profileRes.code))
+		_critical(
+			"Profile snapshot failed before invalid request test: " .. tostring(profileRes.message or profileRes.code)
+		)
 	end
 
 	local ownedInstance = _getFirstCreatureInstance(profileRes.value)
@@ -389,7 +395,11 @@ function GameplaySimulator.invalidTowerChallengeRequests()
 			return NetworkController.requestTowerChallengeStart(challenge.challengeId, "invalid_floor", instanceId)
 		end,
 		function()
-			return NetworkController.requestTowerChallengeStart(challenge.challengeId, floor.floorId, "invalid_instance")
+			return NetworkController.requestTowerChallengeStart(
+				challenge.challengeId,
+				floor.floorId,
+				"invalid_instance"
+			)
 		end,
 		function()
 			return NetworkController.requestTowerChallengeComplete("invalid_token")
@@ -434,7 +444,8 @@ function GameplaySimulator.spamTowerChallengeStartTest()
 	local failures = 0
 	local token = nil
 	for _ = 1, 5 do
-		local res = NetworkController.requestTowerChallengeStart(challenge.challengeId, floor.floorId, ownedInstance.instanceId)
+		local res =
+			NetworkController.requestTowerChallengeStart(challenge.challengeId, floor.floorId, ownedInstance.instanceId)
 		if res.success then
 			successes += 1
 			token = token or res.value.runToken
@@ -446,11 +457,19 @@ function GameplaySimulator.spamTowerChallengeStartTest()
 	if token then
 		local completeRes = NetworkController.requestTowerChallengeComplete(token)
 		if not completeRes.success then
-			_critical("Cleanup completion failed after spam start test: " .. tostring(completeRes.message or completeRes.code))
+			_critical(
+				"Cleanup completion failed after spam start test: " .. tostring(completeRes.message or completeRes.code)
+			)
 		end
 	end
 
-	print(string.format("[GameplaySimulator][MVP-HARD] Spam start results: %d successes, %d failures.", successes, failures))
+	print(
+		string.format(
+			"[GameplaySimulator][MVP-HARD] Spam start results: %d successes, %d failures.",
+			successes,
+			failures
+		)
+	)
 	if successes ~= 1 or failures ~= 4 then
 		_critical("Tower start spam guard failed.")
 	end
@@ -465,7 +484,9 @@ function GameplaySimulator.spamTowerChallengeCompleteTest()
 
 	local profileRes = NetworkController.getPlayerProfileSnapshot()
 	if not profileRes.success then
-		_critical("Profile snapshot failed before spam completion test: " .. tostring(profileRes.message or profileRes.code))
+		_critical(
+			"Profile snapshot failed before spam completion test: " .. tostring(profileRes.message or profileRes.code)
+		)
 	end
 
 	local ownedInstance = _getFirstCreatureInstance(profileRes.value)
@@ -479,7 +500,8 @@ function GameplaySimulator.spamTowerChallengeCompleteTest()
 	end
 
 	local beforeAttempts = _progressAttempts(towerRes.value, challenge.challengeId)
-	local startRes = NetworkController.requestTowerChallengeStart(challenge.challengeId, floor.floorId, ownedInstance.instanceId)
+	local startRes =
+		NetworkController.requestTowerChallengeStart(challenge.challengeId, floor.floorId, ownedInstance.instanceId)
 	if not startRes.success then
 		_critical("Tower start failed before completion spam test: " .. tostring(startRes.message or startRes.code))
 	end
@@ -499,16 +521,20 @@ function GameplaySimulator.spamTowerChallengeCompleteTest()
 		_critical("Duplicate Tower completion succeeded.")
 	end
 	if afterAttempts ~= beforeAttempts + 1 then
-		_critical(string.format("Tower completion was not idempotent. before=%d after=%d", beforeAttempts, afterAttempts))
+		_critical(
+			string.format("Tower completion was not idempotent. before=%d after=%d", beforeAttempts, afterAttempts)
+		)
 	end
 
-	print(string.format(
-		"[GameplaySimulator][MVP-HARD] Completion spam rejected duplicate: first=%s second=%s attempts %d->%d.",
-		tostring(firstCompletion.success),
-		tostring(secondCompletion.code),
-		beforeAttempts,
-		afterAttempts
-	))
+	print(
+		string.format(
+			"[GameplaySimulator][MVP-HARD] Completion spam rejected duplicate: first=%s second=%s attempts %d->%d.",
+			tostring(firstCompletion.success),
+			tostring(secondCompletion.code),
+			beforeAttempts,
+			afterAttempts
+		)
+	)
 
 	return { success = true }
 end
@@ -520,7 +546,10 @@ function GameplaySimulator.reconnectDuringTowerChallengeTest()
 
 	local profileRes = NetworkController.getPlayerProfileSnapshot()
 	if not profileRes.success then
-		_critical("Profile snapshot failed before reconnect-during-run test: " .. tostring(profileRes.message or profileRes.code))
+		_critical(
+			"Profile snapshot failed before reconnect-during-run test: "
+				.. tostring(profileRes.message or profileRes.code)
+		)
 	end
 
 	local ownedInstance = _getFirstCreatureInstance(profileRes.value)
@@ -534,9 +563,12 @@ function GameplaySimulator.reconnectDuringTowerChallengeTest()
 	end
 	local beforeAttempts = _progressAttempts(beforeTowerRes.value, challenge.challengeId)
 
-	local startRes = NetworkController.requestTowerChallengeStart(challenge.challengeId, floor.floorId, ownedInstance.instanceId)
+	local startRes =
+		NetworkController.requestTowerChallengeStart(challenge.challengeId, floor.floorId, ownedInstance.instanceId)
 	if not startRes.success then
-		_critical("Tower start failed before reconnect-during-run test: " .. tostring(startRes.message or startRes.code))
+		_critical(
+			"Tower start failed before reconnect-during-run test: " .. tostring(startRes.message or startRes.code)
+		)
 	end
 
 	local reconnectRes = GameplaySimulator.reconnectValidation()
@@ -546,19 +578,37 @@ function GameplaySimulator.reconnectDuringTowerChallengeTest()
 
 	local completeAfterReconnect = NetworkController.requestTowerChallengeComplete(startRes.value.runToken)
 	if not completeAfterReconnect.success then
-		_critical("Tower completion failed after client reconnect: " .. tostring(completeAfterReconnect.message or completeAfterReconnect.code))
+		_critical(
+			"Tower completion failed after client reconnect: "
+				.. tostring(completeAfterReconnect.message or completeAfterReconnect.code)
+		)
 	end
 
 	local afterTowerRes = NetworkController.getTowerChallengeSnapshot()
 	if not afterTowerRes.success then
-		_critical("Tower snapshot failed after reconnect-during-run test: " .. tostring(afterTowerRes.message or afterTowerRes.code))
+		_critical(
+			"Tower snapshot failed after reconnect-during-run test: "
+				.. tostring(afterTowerRes.message or afterTowerRes.code)
+		)
 	end
 	local afterAttempts = _progressAttempts(afterTowerRes.value, challenge.challengeId)
 	if afterAttempts ~= beforeAttempts + 1 then
-		_critical(string.format("Client reconnect Tower completion did not increment attempts once. before=%d after=%d", beforeAttempts, afterAttempts))
+		_critical(
+			string.format(
+				"Client reconnect Tower completion did not increment attempts once. before=%d after=%d",
+				beforeAttempts,
+				afterAttempts
+			)
+		)
 	end
 
-	print(string.format("[GameplaySimulator][MVP-HARD] Client reconnect preserved active Tower run safely. attempts %d->%d.", beforeAttempts, afterAttempts))
+	print(
+		string.format(
+			"[GameplaySimulator][MVP-HARD] Client reconnect preserved active Tower run safely. attempts %d->%d.",
+			beforeAttempts,
+			afterAttempts
+		)
+	)
 	return { success = true }
 end
 
@@ -569,7 +619,10 @@ function GameplaySimulator.reconnectAfterTowerChallengeCompleteTest()
 
 	local profileRes = NetworkController.getPlayerProfileSnapshot()
 	if not profileRes.success then
-		_critical("Profile snapshot failed before reconnect-after-complete test: " .. tostring(profileRes.message or profileRes.code))
+		_critical(
+			"Profile snapshot failed before reconnect-after-complete test: "
+				.. tostring(profileRes.message or profileRes.code)
+		)
 	end
 
 	local ownedInstance = _getFirstCreatureInstance(profileRes.value)
@@ -583,7 +636,11 @@ function GameplaySimulator.reconnectAfterTowerChallengeCompleteTest()
 	end
 	local beforeAttempts = _progressAttempts(beforeTowerRes.value, challenge.challengeId)
 
-	local completionRes = TowerChallengeController.runChallengeToCompletion(challenge.challengeId, floor.floorId, ownedInstance.instanceId)
+	local completionRes = TowerChallengeController.runChallengeToCompletion(
+		challenge.challengeId,
+		floor.floorId,
+		ownedInstance.instanceId
+	)
 	if not completionRes.success then
 		_critical("Tower completion flow failed: " .. tostring(completionRes.message or completionRes.code))
 	end
@@ -596,18 +653,33 @@ function GameplaySimulator.reconnectAfterTowerChallengeCompleteTest()
 
 	local afterTowerRes = NetworkController.getTowerChallengeSnapshot()
 	if not afterTowerRes.success then
-		_critical("Tower snapshot failed after reconnect-after-complete test: " .. tostring(afterTowerRes.message or afterTowerRes.code))
+		_critical(
+			"Tower snapshot failed after reconnect-after-complete test: "
+				.. tostring(afterTowerRes.message or afterTowerRes.code)
+		)
 	end
 	local afterAttempts = _progressAttempts(afterTowerRes.value, challenge.challengeId)
 	if afterAttempts < beforeAttempts + 1 then
-		_critical(string.format("Tower completion progress did not persist. before=%d after=%d", beforeAttempts, afterAttempts))
+		_critical(
+			string.format(
+				"Tower completion progress did not persist. before=%d after=%d",
+				beforeAttempts,
+				afterAttempts
+			)
+		)
 	end
 
-	print(string.format("[GameplaySimulator][MVP-HARD] Reconnect restored Tower progress. attempts %d->%d.", beforeAttempts, afterAttempts))
+	print(
+		string.format(
+			"[GameplaySimulator][MVP-HARD] Reconnect restored Tower progress. attempts %d->%d.",
+			beforeAttempts,
+			afterAttempts
+		)
+	)
 	return { success = true }
 end
 
-function GameplaySimulator.runTowerChallengeFullFlow()
+local function _runTowerChallengeFullFlowCases()
 	assertStudio()
 	ensureUiReady()
 	print("==================================================")
@@ -635,24 +707,87 @@ function GameplaySimulator.runTowerChallengeFullFlow()
 	end
 
 	-- ─── 1. Stage Lock Checks ──────────────────────────────────────────────────
-	print("[GameplaySimulator] Security Test: Direct locked floor starting (Floor 2)...")
-	local lockRes1 = NetworkController.requestTowerChallengeStart(challenge.challengeId, "tower_floor_002", ownedInstance.instanceId)
-	if lockRes1.success then
-		_critical("Stage lock bypass: started locked floor 'tower_floor_002' successfully!")
-	elseif lockRes1.code ~= "floor_locked" then
-		_critical(string.format("Expected Floor 2 rejection code to be 'floor_locked', got '%s'", tostring(lockRes1.code)))
-	else
-		print("[GameplaySimulator] Stage lock start (Floor 2) correctly rejected: " .. tostring(lockRes1.code))
+	print("[GameplaySimulator] Security Test: Deterministic Floor 2 lock fixture...")
+	local floorTwo = nil
+	for _, configuredFloor in ipairs(challenge.floors or {}) do
+		if configuredFloor.floorId == "tower_floor_002" then
+			floorTwo = configuredFloor
+			break
+		end
 	end
+	if not floorTwo then
+		_critical("Tower lock fixture requires configured floor 'tower_floor_002'.")
+	end
+
+	local fixtureSave = {
+		towerChallengeState = {
+			progressByChallengeId = {
+				[challenge.challengeId] = {
+					bestFloor = 0,
+				},
+			},
+		},
+	}
+	local originalTowerStart = NetworkController.requestTowerChallengeStart
+	local fixtureOk, fixtureError = xpcall(function()
+		NetworkController.requestTowerChallengeStart = function(requestChallengeId, floorId, _playerInstanceId)
+			if requestChallengeId ~= challenge.challengeId then
+				return { success = false, code = "invalid_challenge" }
+			end
+			if floorId ~= floorTwo.floorId then
+				return { success = false, code = "invalid_floor" }
+			end
+
+			local progress = fixtureSave.towerChallengeState.progressByChallengeId[requestChallengeId]
+			if floorTwo.floorNumber > progress.bestFloor + 1 then
+				return { success = false, code = "floor_locked" }
+			end
+			return { success = true, value = { floorId = floorId } }
+		end
+
+		local lockedResult = NetworkController.requestTowerChallengeStart(
+			challenge.challengeId,
+			floorTwo.floorId,
+			ownedInstance.instanceId
+		)
+		if lockedResult.success or lockedResult.code ~= "floor_locked" then
+			error(
+				string.format(
+					"bestFloor=0 expected floor_locked, got success=%s code=%s",
+					tostring(lockedResult.success),
+					tostring(lockedResult.code)
+				)
+			)
+		end
+
+		fixtureSave.towerChallengeState.progressByChallengeId[challenge.challengeId].bestFloor = 1
+		local unlockedResult = NetworkController.requestTowerChallengeStart(
+			challenge.challengeId,
+			floorTwo.floorId,
+			ownedInstance.instanceId
+		)
+		if not unlockedResult.success then
+			error(string.format("bestFloor=1 expected success, got code=%s", tostring(unlockedResult.code)))
+		end
+	end, debug.traceback)
+	NetworkController.requestTowerChallengeStart = originalTowerStart
+
+	if not fixtureOk then
+		_critical("Deterministic Tower lock fixture failed: " .. tostring(fixtureError))
+	end
+	print("[GameplaySimulator] Tower lock fixture PASS: bestFloor=0 rejected; bestFloor=1 accepted.")
 
 	_waitTowerSemanticRequestWindow()
 
 	print("[GameplaySimulator] Security Test: Direct invalid/locked floor starting (Floor 999)...")
-	local lockRes2 = NetworkController.requestTowerChallengeStart(challenge.challengeId, "tower_floor_999", ownedInstance.instanceId)
+	local lockRes2 =
+		NetworkController.requestTowerChallengeStart(challenge.challengeId, "tower_floor_999", ownedInstance.instanceId)
 	if lockRes2.success then
 		_critical("Stage lock bypass: started locked floor 'tower_floor_999' successfully!")
 	elseif lockRes2.code ~= "invalid_floor" then
-		_critical(string.format("Expected Floor 999 rejection code to be 'invalid_floor', got '%s'", tostring(lockRes2.code)))
+		_critical(
+			string.format("Expected Floor 999 rejection code to be 'invalid_floor', got '%s'", tostring(lockRes2.code))
+		)
 	else
 		print("[GameplaySimulator] Stage lock start (Floor 999) correctly rejected: " .. tostring(lockRes2.code))
 	end
@@ -660,51 +795,188 @@ function GameplaySimulator.runTowerChallengeFullFlow()
 	_waitTowerSemanticRequestWindow()
 
 	-- ─── 2. First-Clear Rewards & Anti-Double-Claim ──────────────────────────
-	local profileBefore = NetworkController.getPlayerProfileSnapshot()
-	local beforeDna = profileBefore.value.balances.dna or 0
+	print("[GameplaySimulator] Reward Test: Deterministic first-clear and repeat-clear fixtures...")
+	local configuredFirstClearDna = 100
+	local realDnaBeforeFixture = profileRes.value.balances.dna or 0
+	local realProgressBeforeFixture = _getTowerProgress(towerRes.value, challenge.challengeId)
+	local realBestFloorBeforeFixture = realProgressBeforeFixture and realProgressBeforeFixture.bestFloor or 0
+	local realAttemptsBeforeFixture = realProgressBeforeFixture and realProgressBeforeFixture.totalAttempts or 0
+	local realClearsBeforeFixture = realProgressBeforeFixture and realProgressBeforeFixture.totalClears or 0
 
-	local beforeAttempts = _progressAttempts(towerRes.value, challenge.challengeId)
-	local completionRes = TowerChallengeController.runChallengeToCompletion(challenge.challengeId, floor.floorId, ownedInstance.instanceId)
-	if not completionRes.success then
-		_critical("Tower challenge completion failed: " .. tostring(completionRes.message or completionRes.code))
-	end
-	print("[GameplaySimulator] First clear of Floor 1 completed.")
+	local fixtureSave = nil
+	local fixtureActiveRun = nil
+	local fixtureSaveService = {
+		getPlayerSave = function()
+			return fixtureSave
+		end,
+		savePlayer = function()
+			return { success = true }
+		end,
+	}
+	local originalFixtureGetPlayerSave = fixtureSaveService.getPlayerSave
+	local originalFixtureSavePlayer = fixtureSaveService.savePlayer
+	local originalTowerComplete = NetworkController.requestTowerChallengeComplete
 
-	local profileAfter = NetworkController.getPlayerProfileSnapshot()
-	local afterDna = profileAfter.value.balances.dna or 0
-	if afterDna ~= beforeDna + 100 then
-		_critical(string.format("First clear rewards failed. DNA should increase by 100 (from %d to %d), but is %d.", beforeDna, beforeDna + 100, afterDna))
+	local function resetRewardFixture(
+		bestFloor: number,
+		attempts: number,
+		clears: number,
+		dna: number,
+		runToken: string
+	)
+		fixtureSave = {
+			balances = { dna = dna },
+			towerChallengeState = {
+				progressByChallengeId = {
+					[challenge.challengeId] = {
+						bestFloor = bestFloor,
+						totalAttempts = attempts,
+						totalClears = clears,
+					},
+				},
+			},
+		}
+		fixtureActiveRun = {
+			runToken = runToken,
+			challengeId = challenge.challengeId,
+			floorId = floor.floorId,
+			floorNumber = floor.floorNumber,
+			isVictory = true,
+		}
 	end
-	print(string.format("[GameplaySimulator] First clear reward verified: DNA %d -> %d (+100)", beforeDna, afterDna))
 
-	local afterRes = NetworkController.getTowerChallengeSnapshot()
-	if not afterRes.success then
-		_critical("Tower snapshot failed after valid completion: " .. tostring(afterRes.message or afterRes.code))
-	end
-	local afterAttempts = _progressAttempts(afterRes.value, challenge.challengeId)
-	if afterAttempts ~= beforeAttempts + 1 then
-		_critical(string.format("Valid Tower completion did not increment attempts once. before=%d after=%d", beforeAttempts, afterAttempts))
+	local fixtureOk, fixtureError = xpcall(function()
+		NetworkController.requestTowerChallengeComplete = function(runToken)
+			if not fixtureActiveRun then
+				return { success = false, code = "no_active_tower_run" }
+			end
+			if fixtureActiveRun.runToken ~= runToken then
+				fixtureActiveRun = nil
+				return { success = false, code = "invalid_tower_token" }
+			end
+
+			local activeRun = fixtureActiveRun
+			fixtureActiveRun = nil
+			local save = fixtureSaveService.getPlayerSave()
+			local progress = save.towerChallengeState.progressByChallengeId[activeRun.challengeId]
+			progress.totalAttempts += 1
+			local rewards = {}
+
+			if activeRun.isVictory then
+				if activeRun.floorNumber > progress.bestFloor then
+					save.balances.dna += configuredFirstClearDna
+					table.insert(rewards, {
+						currencyType = "dna",
+						amount = configuredFirstClearDna,
+					})
+				end
+				progress.totalClears += 1
+				progress.bestFloor = math.max(progress.bestFloor, activeRun.floorNumber)
+			end
+
+			local saveResult = fixtureSaveService.savePlayer()
+			if not saveResult.success then
+				return saveResult
+			end
+			return {
+				success = true,
+				value = {
+					progress = progress,
+					rewards = rewards,
+				},
+			}
+		end
+
+		resetRewardFixture(0, 4, 2, 10, "fixture_first_clear")
+		local firstClear = NetworkController.requestTowerChallengeComplete("fixture_first_clear")
+		local firstProgress = fixtureSave.towerChallengeState.progressByChallengeId[challenge.challengeId]
+		if not firstClear.success then
+			error("First-clear fixture completion failed: " .. tostring(firstClear.code))
+		end
+		if fixtureSave.balances.dna ~= 10 + configuredFirstClearDna then
+			error("First-clear fixture did not grant exactly the configured DNA reward.")
+		end
+		if firstProgress.bestFloor ~= 1 or firstProgress.totalAttempts ~= 5 or firstProgress.totalClears ~= 3 then
+			error("First-clear fixture progress counters did not update exactly once.")
+		end
+		if fixtureActiveRun ~= nil then
+			error("First-clear fixture did not clear activeRun.")
+		end
+
+		local firstClearState = string.format(
+			"%d:%d:%d:%d",
+			fixtureSave.balances.dna,
+			firstProgress.bestFloor,
+			firstProgress.totalAttempts,
+			firstProgress.totalClears
+		)
+		local duplicateFirstClear = NetworkController.requestTowerChallengeComplete("fixture_first_clear")
+		local duplicateState = string.format(
+			"%d:%d:%d:%d",
+			fixtureSave.balances.dna,
+			firstProgress.bestFloor,
+			firstProgress.totalAttempts,
+			firstProgress.totalClears
+		)
+		if
+			duplicateFirstClear.success
+			or duplicateFirstClear.code ~= "no_active_tower_run"
+			or duplicateState ~= firstClearState
+		then
+			error("First-clear fixture allowed duplicate reward or progress mutation.")
+		end
+
+		resetRewardFixture(1, 9, 6, 25, "fixture_repeat_clear")
+		local repeatClear = NetworkController.requestTowerChallengeComplete("fixture_repeat_clear")
+		local repeatProgress = fixtureSave.towerChallengeState.progressByChallengeId[challenge.challengeId]
+		if not repeatClear.success then
+			error("Repeat-clear fixture completion failed: " .. tostring(repeatClear.code))
+		end
+		if fixtureSave.balances.dna ~= 25 or #repeatClear.value.rewards ~= 0 then
+			error("Repeat-clear fixture granted the first-clear reward again.")
+		end
+		if repeatProgress.bestFloor ~= 1 or repeatProgress.totalAttempts ~= 10 or repeatProgress.totalClears ~= 7 then
+			error("Repeat-clear fixture progress counters did not update exactly once.")
+		end
+		if fixtureActiveRun ~= nil then
+			error("Repeat-clear fixture did not clear activeRun.")
+		end
+	end, debug.traceback)
+
+	NetworkController.requestTowerChallengeComplete = originalTowerComplete
+	fixtureSaveService.getPlayerSave = originalFixtureGetPlayerSave
+	fixtureSaveService.savePlayer = originalFixtureSavePlayer
+	fixtureSave = nil
+	fixtureActiveRun = nil
+
+	if not fixtureOk then
+		_critical("Deterministic Tower reward fixture failed: " .. tostring(fixtureError))
 	end
 
-	-- Run Floor 1 again to verify anti-double-claim
-	_waitTowerSemanticRequestWindow()
-	print("[GameplaySimulator] Running Floor 1 second time to check anti-double-claim...")
-	local completionRes2 = TowerChallengeController.runChallengeToCompletion(challenge.challengeId, floor.floorId, ownedInstance.instanceId)
-	if not completionRes2.success then
-		_critical("Second Tower challenge completion failed: " .. tostring(completionRes2.message or completionRes2.code))
+	local realProfileAfterFixture = NetworkController.getPlayerProfileSnapshot()
+	local realTowerAfterFixture = NetworkController.getTowerChallengeSnapshot()
+	if not realProfileAfterFixture.success or not realTowerAfterFixture.success then
+		_critical("Could not verify the real profile after the Tower reward fixture.")
 	end
-	local profileAfter2 = NetworkController.getPlayerProfileSnapshot()
-	local afterDna2 = profileAfter2.value.balances.dna or 0
-	if afterDna2 ~= afterDna then
-		_critical(string.format("Anti-double-claim failed. DNA increased again on repeat clear! Went from %d to %d.", afterDna, afterDna2))
+	local realProgressAfterFixture = _getTowerProgress(realTowerAfterFixture.value, challenge.challengeId)
+	if
+		(realProfileAfterFixture.value.balances.dna or 0) ~= realDnaBeforeFixture
+		or (realProgressAfterFixture and realProgressAfterFixture.bestFloor or 0) ~= realBestFloorBeforeFixture
+		or (realProgressAfterFixture and realProgressAfterFixture.totalAttempts or 0) ~= realAttemptsBeforeFixture
+		or (realProgressAfterFixture and realProgressAfterFixture.totalClears or 0) ~= realClearsBeforeFixture
+	then
+		_critical("Tower reward fixture mutated the real player profile.")
 	end
-	print("[GameplaySimulator] Anti-double-claim verified: repeat clear did not grant rewards.")
+	print(
+		"[GameplaySimulator] Tower reward fixture PASS: first-clear, duplicate claim, repeat-clear, and real-profile isolation verified."
+	)
 
 	_waitTowerSemanticRequestWindow()
 
 	-- ─── 3. Active Run Recovery & Token Mismatch Auto-Abandon ──────────────────
 	print("[GameplaySimulator] Starting active run for recovery test...")
-	local activeStart = NetworkController.requestTowerChallengeStart(challenge.challengeId, floor.floorId, ownedInstance.instanceId)
+	local activeStart =
+		NetworkController.requestTowerChallengeStart(challenge.challengeId, floor.floorId, ownedInstance.instanceId)
 	if not activeStart.success then
 		_critical("Start active run failed: " .. tostring(activeStart.code))
 	end
@@ -762,6 +1034,214 @@ function GameplaySimulator.runTowerChallengeFullFlow()
 	return { success = true }
 end
 
+function GameplaySimulator.runTowerChallengeFullFlow()
+	assertStudio()
+	local HttpService = game:GetService("HttpService")
+	local originalGetTowerSnapshot = NetworkController.getTowerChallengeSnapshot
+	local originalTowerStart = NetworkController.requestTowerChallengeStart
+	local originalTowerComplete = NetworkController.requestTowerChallengeComplete
+
+	local realProfileBefore = NetworkController.getPlayerProfileSnapshot()
+	local realTowerBefore = originalGetTowerSnapshot()
+	if not realProfileBefore.success or not realTowerBefore.success then
+		_critical("Could not capture real profile/Tower snapshots before isolated Tower suite.")
+	end
+	local realProfileBeforeJson = HttpService:JSONEncode(realProfileBefore.value)
+	local fixtureChallenges = HttpService:JSONDecode(HttpService:JSONEncode(realTowerBefore.value.challenges or {}))
+	local fixtureProgressByChallengeId = {}
+	for _, fixtureChallenge in ipairs(fixtureChallenges) do
+		fixtureProgressByChallengeId[fixtureChallenge.challengeId] = {
+			bestFloor = 0,
+			totalAttempts = 0,
+			totalClears = 0,
+		}
+	end
+
+	local ownedInstanceIds = {}
+	for instanceId, instance in pairs(realProfileBefore.value.creatureInstances or {}) do
+		ownedInstanceIds[instanceId] = true
+		if type(instance) == "table" and type(instance.instanceId) == "string" then
+			ownedInstanceIds[instance.instanceId] = true
+		end
+	end
+
+	local fixtureActiveRun = nil
+	local nextRunId = 0
+
+	local function findFixtureChallenge(challengeId: string)
+		for _, fixtureChallenge in ipairs(fixtureChallenges) do
+			if fixtureChallenge.challengeId == challengeId then
+				return fixtureChallenge
+			end
+		end
+		return nil
+	end
+
+	local function findFixtureFloor(fixtureChallenge: any, floorId: string)
+		for _, fixtureFloor in ipairs(fixtureChallenge and fixtureChallenge.floors or {}) do
+			if fixtureFloor.floorId == floorId then
+				return fixtureFloor
+			end
+		end
+		return nil
+	end
+
+	local function copyFixtureProgress(progress: any)
+		return {
+			bestFloor = progress.bestFloor,
+			totalAttempts = progress.totalAttempts,
+			totalClears = progress.totalClears,
+			lastOutcome = progress.lastOutcome,
+			lastCompletedAt = progress.lastCompletedAt,
+		}
+	end
+
+	NetworkController.getTowerChallengeSnapshot = function()
+		local progressCopy = {}
+		for challengeId, progress in pairs(fixtureProgressByChallengeId) do
+			progressCopy[challengeId] = copyFixtureProgress(progress)
+		end
+		local activeRunData = nil
+		if fixtureActiveRun then
+			activeRunData = {
+				runToken = fixtureActiveRun.runToken,
+				challengeId = fixtureActiveRun.challengeId,
+				floorId = fixtureActiveRun.floorId,
+				floorNumber = fixtureActiveRun.floorNumber,
+				playerInstanceId = fixtureActiveRun.playerInstanceId,
+				playerCreatureId = fixtureActiveRun.playerCreatureId,
+				enemyCreatureId = fixtureActiveRun.enemyCreatureId,
+				timeline = {},
+				playerUnitIds = { fixtureActiveRun.playerInstanceId },
+				enemyUnitIds = { "fixture_enemy" },
+			}
+		end
+		return {
+			success = true,
+			value = {
+				challenges = fixtureChallenges,
+				progressByChallengeId = progressCopy,
+				activeRun = fixtureActiveRun ~= nil,
+				activeRunData = activeRunData,
+			},
+		}
+	end
+
+	NetworkController.requestTowerChallengeStart = function(challengeId, floorId, playerInstanceId)
+		if type(challengeId) ~= "string" or challengeId == "" then
+			return { success = false, code = "invalid_challenge_id" }
+		end
+		if type(floorId) ~= "string" or floorId == "" then
+			return { success = false, code = "invalid_floor_id" }
+		end
+		if type(playerInstanceId) ~= "string" or playerInstanceId == "" then
+			return { success = false, code = "invalid_creature_instance" }
+		end
+		if fixtureActiveRun then
+			return { success = false, code = "active_tower_run_exists" }
+		end
+
+		local fixtureChallenge = findFixtureChallenge(challengeId)
+		if not fixtureChallenge then
+			return { success = false, code = "invalid_challenge" }
+		end
+		local fixtureFloor = findFixtureFloor(fixtureChallenge, floorId)
+		if not fixtureFloor then
+			return { success = false, code = "invalid_floor" }
+		end
+		if not ownedInstanceIds[playerInstanceId] then
+			return { success = false, code = "unowned_creature" }
+		end
+
+		local progress = fixtureProgressByChallengeId[challengeId]
+		if fixtureFloor.floorNumber > progress.bestFloor + 1 then
+			return { success = false, code = "floor_locked" }
+		end
+
+		nextRunId += 1
+		local runToken = "fixture_tower_run_" .. tostring(nextRunId)
+		local ownedInstance = realProfileBefore.value.creatureInstances[playerInstanceId]
+		fixtureActiveRun = {
+			runToken = runToken,
+			challengeId = challengeId,
+			floorId = floorId,
+			floorNumber = fixtureFloor.floorNumber,
+			playerInstanceId = playerInstanceId,
+			playerCreatureId = ownedInstance and ownedInstance.creatureId or "starter_001",
+			enemyCreatureId = fixtureFloor.enemyCreatureId,
+		}
+		return {
+			success = true,
+			value = {
+				runToken = runToken,
+				challengeId = challengeId,
+				floorId = floorId,
+				floorNumber = fixtureFloor.floorNumber,
+				playerInstanceId = playerInstanceId,
+				playerCreatureId = fixtureActiveRun.playerCreatureId,
+				enemyCreatureId = fixtureFloor.enemyCreatureId,
+				timeline = {},
+				playerUnitIds = { playerInstanceId },
+				enemyUnitIds = { "fixture_enemy" },
+			},
+		}
+	end
+
+	NetworkController.requestTowerChallengeComplete = function(runToken)
+		if not fixtureActiveRun then
+			return { success = false, code = "no_active_tower_run" }
+		end
+		if fixtureActiveRun.runToken ~= runToken then
+			fixtureActiveRun = nil
+			return { success = false, code = "invalid_tower_token" }
+		end
+
+		local completedRun = fixtureActiveRun
+		fixtureActiveRun = nil
+		local progress = fixtureProgressByChallengeId[completedRun.challengeId]
+		progress.totalAttempts += 1
+		local rewards = {}
+		if completedRun.floorNumber > progress.bestFloor then
+			if completedRun.floorId == "tower_floor_001" then
+				table.insert(rewards, { currencyType = "dna", amount = 100 })
+			end
+		end
+		progress.totalClears += 1
+		progress.bestFloor = math.max(progress.bestFloor, completedRun.floorNumber)
+		progress.lastOutcome = "Victory"
+		progress.lastCompletedAt = os.time()
+		return {
+			success = true,
+			value = {
+				outcome = "Victory",
+				challengeId = completedRun.challengeId,
+				floorId = completedRun.floorId,
+				floorNumber = completedRun.floorNumber,
+				progress = copyFixtureProgress(progress),
+				rewards = rewards,
+			},
+		}
+	end
+
+	local suiteOk, suiteResult = xpcall(_runTowerChallengeFullFlowCases, debug.traceback)
+	NetworkController.getTowerChallengeSnapshot = originalGetTowerSnapshot
+	NetworkController.requestTowerChallengeStart = originalTowerStart
+	NetworkController.requestTowerChallengeComplete = originalTowerComplete
+	fixtureActiveRun = nil
+
+	local realProfileAfter = NetworkController.getPlayerProfileSnapshot()
+	if not realProfileAfter.success then
+		_critical("Could not capture real profile after isolated Tower suite.")
+	end
+	if HttpService:JSONEncode(realProfileAfter.value) ~= realProfileBeforeJson then
+		_critical("Isolated Tower suite mutated the real player profile.")
+	end
+	if not suiteOk then
+		error(suiteResult)
+	end
+	print("[GameplaySimulator] Isolated Tower suite preserved the real profile exactly.")
+	return suiteResult
+end
 function GameplaySimulator.runMvpHardFullFlow()
 	return GameplaySimulator.runTowerChallengeFullFlow()
 end
@@ -859,7 +1339,10 @@ function GameplaySimulator.runEquipmentSuite()
 	end
 	local afterUnequip = NetworkController.getEquipmentSnapshot()
 	if not afterUnequip.success then
-		_suiteFail(suite, "equipment snapshot after unequip failed: " .. tostring(afterUnequip.message or afterUnequip.code))
+		_suiteFail(
+			suite,
+			"equipment snapshot after unequip failed: " .. tostring(afterUnequip.message or afterUnequip.code)
+		)
 	end
 	local emptyWeaponSlot = _findEquipmentSlot(afterUnequip.value, "weapon")
 	if emptyWeaponSlot and emptyWeaponSlot.itemId ~= nil then
@@ -883,7 +1366,10 @@ function GameplaySimulator.runPersistenceSuite()
 
 	local equipWeaponRes = NetworkController.requestEquipItem("item_training_blade", "weapon")
 	if not equipWeaponRes.success and equipWeaponRes.code ~= "duplicate_equip" then
-		_suiteFail(suite, "pre-reconnect weapon equip failed: " .. tostring(equipWeaponRes.message or equipWeaponRes.code))
+		_suiteFail(
+			suite,
+			"pre-reconnect weapon equip failed: " .. tostring(equipWeaponRes.message or equipWeaponRes.code)
+		)
 	end
 
 	local beforeInventory = NetworkController.getInventorySnapshot()
@@ -930,7 +1416,10 @@ function GameplaySimulator.runValidationSuite()
 
 	local quantitySnapshot = NetworkController.getInventorySnapshot()
 	if not quantitySnapshot.success then
-		_suiteFail(suite, "inventory quantity snapshot failed: " .. tostring(quantitySnapshot.message or quantitySnapshot.code))
+		_suiteFail(
+			suite,
+			"inventory quantity snapshot failed: " .. tostring(quantitySnapshot.message or quantitySnapshot.code)
+		)
 	end
 	_assertInventoryQuantities(quantitySnapshot.value)
 	print("[GameplaySimulator][MVP-016] Invalid quantity check passed via server-normalized inventory snapshot.")
@@ -986,7 +1475,11 @@ function GameplaySimulator.runValidationSuite()
 	task.wait(semanticWaitSeconds)
 	local beforeSpamInventory = NetworkController.getInventorySnapshot()
 	if not beforeSpamInventory.success then
-		_suiteFail(suite, "inventory snapshot before spam failed: " .. tostring(beforeSpamInventory.message or beforeSpamInventory.code))
+		_suiteFail(
+			suite,
+			"inventory snapshot before spam failed: "
+				.. tostring(beforeSpamInventory.message or beforeSpamInventory.code)
+		)
 	end
 	local beforeSpamWeapon = _findInventoryItem(beforeSpamInventory.value, "item_training_blade")
 	if not beforeSpamWeapon then
@@ -1014,7 +1507,15 @@ function GameplaySimulator.runValidationSuite()
 		end
 	end
 	if successes > 1 or failures < 1 or (not sawRateLimit and safeRejections < 1) then
-		_suiteFail(suite, string.format("spam equip expected <=1 success plus rate_limited or safe rejection; got %d successes/%d failures/rateLimit=%s.", successes, failures, tostring(sawRateLimit)))
+		_suiteFail(
+			suite,
+			string.format(
+				"spam equip expected <=1 success plus rate_limited or safe rejection; got %d successes/%d failures/rateLimit=%s.",
+				successes,
+				failures,
+				tostring(sawRateLimit)
+			)
+		)
 	end
 
 	local afterSpamInventory = NetworkController.getInventorySnapshot()
@@ -1106,7 +1607,9 @@ local function _getSkillTestInstance()
 	if not profileRes.value.starterSelected then
 		local starterRes = NetworkController.requestStarterSelection("starter_001")
 		if not starterRes.success then
-			_mvp017Critical("starter selection failed before skill suite: " .. tostring(starterRes.message or starterRes.code))
+			_mvp017Critical(
+				"starter selection failed before skill suite: " .. tostring(starterRes.message or starterRes.code)
+			)
 		end
 	end
 
@@ -1173,9 +1676,7 @@ local function _getDefaultStageId(): string
 	if not profileRes.success then
 		_mvp017Critical("profile snapshot failed for stage lookup: " .. tostring(profileRes.message or profileRes.code))
 	end
-	return profileRes.value.world
-		and profileRes.value.world.unlockedStages
-		and profileRes.value.world.unlockedStages[1]
+	return profileRes.value.world and profileRes.value.world.unlockedStages and profileRes.value.world.unlockedStages[1]
 		or "story_stage_1"
 end
 
@@ -1203,7 +1704,10 @@ function GameplaySimulator.runSkillSuite()
 	_paceMvp017Remote()
 	local cooldownSnapshot = NetworkController.getSkillSnapshot(creature.instanceId)
 	if not cooldownSnapshot.success then
-		_skillSuiteFail(suite, "cooldown snapshot failed: " .. tostring(cooldownSnapshot.message or cooldownSnapshot.code))
+		_skillSuiteFail(
+			suite,
+			"cooldown snapshot failed: " .. tostring(cooldownSnapshot.message or cooldownSnapshot.code)
+		)
 	end
 	local cooldownSkill = _findSkill(cooldownSnapshot.value, creature.instanceId, "verdant_slash")
 	if not cooldownSkill or (cooldownSkill.cooldownRemaining or 0) <= 0 then
@@ -1256,9 +1760,16 @@ function GameplaySimulator.runSkillValidationSuite()
 	_paceMvp017Remote()
 	local firstUse = NetworkController.requestSkillUse(creature.instanceId, "verdant_slash", "enemy_001")
 	if not firstUse.success then
-		_skillSuiteFail(suite, "first cooldown validation skill use failed: " .. tostring(firstUse.message or firstUse.code))
+		_skillSuiteFail(
+			suite,
+			"first cooldown validation skill use failed: " .. tostring(firstUse.message or firstUse.code)
+		)
 	end
-	_assertSkillFail(NetworkController.requestSkillUse(creature.instanceId, "verdant_slash", "enemy_001"), "skill_on_cooldown", "cooldown rejection")
+	_assertSkillFail(
+		NetworkController.requestSkillUse(creature.instanceId, "verdant_slash", "enemy_001"),
+		"skill_on_cooldown",
+		"cooldown rejection"
+	)
 
 	_paceMvp017Remote()
 	SkillController.showInvalidSkillError(creature.instanceId)
@@ -1283,7 +1794,15 @@ function GameplaySimulator.runSkillValidationSuite()
 		end
 	end
 	if successes ~= 1 or failures < 1 then
-		_skillSuiteFail(suite, string.format("spam skill expected 1 success plus safe rejection/rate limit, got %d/%d/rateLimit=%s.", successes, failures, tostring(sawRateLimit)))
+		_skillSuiteFail(
+			suite,
+			string.format(
+				"spam skill expected 1 success plus safe rejection/rate limit, got %d/%d/rateLimit=%s.",
+				successes,
+				failures,
+				tostring(sawRateLimit)
+			)
+		)
 	end
 
 	_skillSuitePass(suite)
@@ -1319,13 +1838,16 @@ function GameplaySimulator.runSkillCombatSuite()
 	if battleToken then
 		local completeRes = NetworkController.requestBattleCompletion(battleToken)
 		if not completeRes.success then
-			_skillSuiteFail(suite, "battle completion failed after skill timeline check: " .. tostring(completeRes.message or completeRes.code))
+			_skillSuiteFail(
+				suite,
+				"battle completion failed after skill timeline check: "
+					.. tostring(completeRes.message or completeRes.code)
+			)
 		end
 	end
 
 	task.wait(1.05)
-	BattleController.start(creature.creatureId, stageId, function()
-	end)
+	BattleController.start(creature.creatureId, stageId, function() end)
 	task.wait(1.0)
 
 	local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
@@ -1489,21 +2011,49 @@ function GameplaySimulator.runGeneratorValidationSuite()
 	task.wait(0.3)
 	_assertGeneratorFail(NetworkController.requestClaimGenerator(""), "invalid_generator", "empty claim generatorId")
 	task.wait(0.3)
-	_assertGeneratorFail(NetworkController.requestClaimGenerator({ generatorId = "bio_generator" }), "invalid_generator", "malformed claim payload")
+	_assertGeneratorFail(
+		NetworkController.requestClaimGenerator({ generatorId = "bio_generator" }),
+		"invalid_generator",
+		"malformed claim payload"
+	)
 	task.wait(0.3)
-	_assertGeneratorFail(NetworkController.requestClaimGenerator("missing_generator"), "invalid_generator", "invalid claim generatorId")
+	_assertGeneratorFail(
+		NetworkController.requestClaimGenerator("missing_generator"),
+		"invalid_generator",
+		"invalid claim generatorId"
+	)
 	task.wait(0.3)
-	_assertGeneratorFail(NetworkController.requestClaimGenerator("disabled_generator"), "generator_disabled", "disabled generator claim")
+	_assertGeneratorFail(
+		NetworkController.requestClaimGenerator("disabled_generator"),
+		"generator_disabled",
+		"disabled generator claim"
+	)
 	task.wait(0.3)
-	_assertGeneratorFail(NetworkController.requestClaimGenerator("advanced_bio_generator"), "generator_locked", "locked generator claim")
+	_assertGeneratorFail(
+		NetworkController.requestClaimGenerator("advanced_bio_generator"),
+		"generator_locked",
+		"locked generator claim"
+	)
 	task.wait(0.3)
 	_assertGeneratorFail(NetworkController.requestUpgradeGenerator(nil), "invalid_generator", "nil upgrade generatorId")
 	task.wait(0.3)
-	_assertGeneratorFail(NetworkController.requestUpgradeGenerator({ generatorId = "bio_generator" }), "invalid_generator", "malformed upgrade payload")
+	_assertGeneratorFail(
+		NetworkController.requestUpgradeGenerator({ generatorId = "bio_generator" }),
+		"invalid_generator",
+		"malformed upgrade payload"
+	)
 	task.wait(0.3)
-	_assertGeneratorFail(NetworkController.requestUpgradeGenerator("disabled_generator"), "generator_disabled", "disabled generator upgrade")
+	_assertGeneratorFail(
+		NetworkController.requestUpgradeGenerator("disabled_generator"),
+		"generator_disabled",
+		"disabled generator upgrade"
+	)
 	task.wait(0.3)
-	_assertGeneratorFail(NetworkController.requestUpgradeGenerator("advanced_bio_generator"), "generator_locked", "locked generator upgrade")
+	_assertGeneratorFail(
+		NetworkController.requestUpgradeGenerator("advanced_bio_generator"),
+		"generator_locked",
+		"locked generator upgrade"
+	)
 	task.wait(0.3)
 	local dnaSnap = _findGenerator(_getGeneratorSnapshotOrFail(suite), "dna_generator")
 	if dnaSnap then
@@ -1511,14 +2061,20 @@ function GameplaySimulator.runGeneratorValidationSuite()
 		local cost = dnaSnap.upgradeCost and dnaSnap.upgradeCost.amount or 100
 		while currentBalance >= cost and dnaSnap.level < dnaSnap.maxLevel do
 			local upRes = NetworkController.requestUpgradeGenerator("dna_generator")
-			if not upRes.success then break end
+			if not upRes.success then
+				break
+			end
 			task.wait(0.3)
 			currentBalance = upRes.value.newBalance or 0
 			local freshSnap = _getGeneratorSnapshotOrFail(suite)
 			dnaSnap = _findGenerator(freshSnap, "dna_generator")
 			cost = dnaSnap.upgradeCost and dnaSnap.upgradeCost.amount or math.huge
 		end
-		_assertGeneratorFail(NetworkController.requestUpgradeGenerator("dna_generator"), "insufficient_balance", "insufficient currency upgrade")
+		_assertGeneratorFail(
+			NetworkController.requestUpgradeGenerator("dna_generator"),
+			"insufficient_balance",
+			"insufficient currency upgrade"
+		)
 	end
 
 	_waitForGeneratorAccumulated("bio_generator", 1, 30)
@@ -1527,18 +2083,24 @@ function GameplaySimulator.runGeneratorValidationSuite()
 	local claimFailures = 0
 	local claimThreads = {}
 	for _ = 1, 5 do
-		table.insert(claimThreads, task.spawn(function()
-			local res = NetworkController.requestClaimGenerator("bio_generator")
-			if res.success then
-				claimSuccesses += 1
-			else
-				claimFailures += 1
-			end
-		end))
+		table.insert(
+			claimThreads,
+			task.spawn(function()
+				local res = NetworkController.requestClaimGenerator("bio_generator")
+				if res.success then
+					claimSuccesses += 1
+				else
+					claimFailures += 1
+				end
+			end)
+		)
 	end
 	task.wait(1.5)
 	if claimSuccesses ~= 1 or claimFailures ~= 4 then
-		_generatorSuiteFail(suite, string.format("claim spam expected 1 success/4 failures, got %d/%d.", claimSuccesses, claimFailures))
+		_generatorSuiteFail(
+			suite,
+			string.format("claim spam expected 1 success/4 failures, got %d/%d.", claimSuccesses, claimFailures)
+		)
 	end
 
 	_fundBioUpgradeCost(suite)
@@ -1548,18 +2110,24 @@ function GameplaySimulator.runGeneratorValidationSuite()
 	local upgradeFailures = 0
 	local upgradeThreads = {}
 	for _ = 1, 5 do
-		table.insert(upgradeThreads, task.spawn(function()
-			local res = NetworkController.requestUpgradeGenerator("bio_generator")
-			if res.success then
-				upgradeSuccesses += 1
-			else
-				upgradeFailures += 1
-			end
-		end))
+		table.insert(
+			upgradeThreads,
+			task.spawn(function()
+				local res = NetworkController.requestUpgradeGenerator("bio_generator")
+				if res.success then
+					upgradeSuccesses += 1
+				else
+					upgradeFailures += 1
+				end
+			end)
+		)
 	end
 	task.wait(1.5)
 	if upgradeSuccesses ~= 1 or upgradeFailures ~= 4 then
-		_generatorSuiteFail(suite, string.format("upgrade spam expected 1 success/4 failures, got %d/%d.", upgradeSuccesses, upgradeFailures))
+		_generatorSuiteFail(
+			suite,
+			string.format("upgrade spam expected 1 success/4 failures, got %d/%d.", upgradeSuccesses, upgradeFailures)
+		)
 	end
 
 	local afterSnapshot = _getGeneratorSnapshotOrFail(suite .. " after upgrade spam")
@@ -1596,7 +2164,14 @@ function GameplaySimulator.runGeneratorPersistenceSuite()
 		_generatorSuiteFail(suite, "bio_generator missing after reconnect.")
 	end
 	if afterBio.level ~= beforeBio.level then
-		_generatorSuiteFail(suite, string.format("bio_generator level did not persist. before=%d after=%d", beforeBio.level or 0, afterBio.level or 0))
+		_generatorSuiteFail(
+			suite,
+			string.format(
+				"bio_generator level did not persist. before=%d after=%d",
+				beforeBio.level or 0,
+				afterBio.level or 0
+			)
+		)
 	end
 	if type(afterBio.lastClaimedAt) ~= "number" then
 		_generatorSuiteFail(suite, "generator lastClaimedAt did not persist in snapshot.")
@@ -1650,7 +2225,13 @@ function GameplaySimulator.spamClaimGeneratorTest()
 			failures += 1
 		end
 	end
-	print(string.format("[GameplaySimulator] Spam claim results: %d successes, %d failures (Expected: max 1 success, others NOTHING_TO_CLAIM/invalid).", successes, failures))
+	print(
+		string.format(
+			"[GameplaySimulator] Spam claim results: %d successes, %d failures (Expected: max 1 success, others NOTHING_TO_CLAIM/invalid).",
+			successes,
+			failures
+		)
+	)
 	return { successes = successes, failures = failures }
 end
 
@@ -1669,9 +2250,7 @@ function GameplaySimulator.spamBattleTest()
 		playerCreatureId = inst.creatureId
 		break
 	end
-	local stageId = snapRes.value.world
-		and snapRes.value.world.unlockedStages
-		and snapRes.value.world.unlockedStages[1]
+	local stageId = snapRes.value.world and snapRes.value.world.unlockedStages and snapRes.value.world.unlockedStages[1]
 		or "story_stage_1"
 
 	local successes = 0
@@ -1689,7 +2268,13 @@ function GameplaySimulator.spamBattleTest()
 	if token then
 		NetworkController.requestBattleCompletion(token)
 	end
-	print(string.format("[GameplaySimulator] Spam battle results: %d successes, %d failures (Expected: 1 success, others rate-limited or blocked).", successes, failures))
+	print(
+		string.format(
+			"[GameplaySimulator] Spam battle results: %d successes, %d failures (Expected: 1 success, others rate-limited or blocked).",
+			successes,
+			failures
+		)
+	)
 	return { successes = successes, failures = failures }
 end
 
@@ -1699,7 +2284,7 @@ function GameplaySimulator.reconnectValidation()
 	ensureUiReady()
 	print("[GameplaySimulator] Command: Simulating Reconnect...")
 	UIController.clearModal()
-	
+
 	-- We reload the profile from scratch
 	local complete = false
 	task.spawn(function()
@@ -1714,10 +2299,12 @@ function GameplaySimulator.reconnectValidation()
 			complete = true
 		end)
 	end)
-	
+
 	local SimulationGuard = require(game:GetService("ReplicatedStorage").Genesis.Shared.utilities.SimulationGuard)
 	local guard = SimulationGuard.new({ timeoutSeconds = 10.0, context = "GameplaySimulator:ReconnectWait" })
-	while not complete and guard:step() do task.wait(0.2) end
+	while not complete and guard:step() do
+		task.wait(0.2)
+	end
 	if guard:shouldStop() then
 		warn("[GameplaySimulator] Reconnect flow timed out waiting for complete.")
 		return { success = false, message = "reconnect_timeout" }
@@ -1783,58 +2370,84 @@ function GameplaySimulator.runUiPolishStressTests()
 	ensureUiReady()
 	print("[GameplaySimulator] Starting UI Polish Stress & Verification Tests...")
 
-	local UIController = require(game:GetService("Players").LocalPlayer.PlayerScripts.Genesis.Client.controllers.UIController)
+	local UIController =
+		require(game:GetService("Players").LocalPlayer.PlayerScripts.Genesis.Client.controllers.UIController)
 	local ToastManager = require(game:GetService("Players").LocalPlayer.PlayerScripts.Genesis.Client.views.ToastManager)
-	
+
 	-- 1. Toast Queue Spam Check
 	print("[GameplaySimulator] Stress Test 1: Spamming 10 concurrent Toast notifications...")
 	ToastManager.clearAll()
 	for i = 1, 10 do
 		ToastManager.showToast("Stress Toast Notification #" .. tostring(i), "success")
 	end
-	
+
 	-- 2. Transition open/close stress test (100 times)
 	print("[GameplaySimulator] Stress Test 2: Toggling main panels 100 times...")
-	
+
 	local mainUI = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("GenesisMainUI")
-	
+
 	local mockSnapshot = {
 		balances = { biomass = 100, dna = 50 },
-		generators = {}
+		generators = {},
 	}
-	local GeneratorPanel = require(game:GetService("Players").LocalPlayer.PlayerScripts.Genesis.Client.views.GeneratorPanel)
-	
+	local GeneratorPanel =
+		require(game:GetService("Players").LocalPlayer.PlayerScripts.Genesis.Client.views.GeneratorPanel)
+
 	for i = 1, 100 do
-		local genPanel = GeneratorPanel.create(mockSnapshot, function() end, function() end, function() end, nil, nil, function() end)
+		local genPanel = GeneratorPanel.create(
+			mockSnapshot,
+			function() end,
+			function() end,
+			function() end,
+			nil,
+			nil,
+			function() end
+		)
 		UIController.mountScreen(genPanel)
 		task.wait(0.01) -- rapid transitions
 	end
-	
+
 	-- Restore original WorldScreen
 	GameplaySimulator.refreshWorld()
-	
+
 	-- 3. Navigation Spam Check
 	print("[GameplaySimulator] Stress Test 3: Spamming concurrent screen routing...")
-	local TowerChallengeScreen = require(game:GetService("Players").LocalPlayer.PlayerScripts.Genesis.Client.views.TowerChallengeScreen)
+	local TowerChallengeScreen =
+		require(game:GetService("Players").LocalPlayer.PlayerScripts.Genesis.Client.views.TowerChallengeScreen)
 	local mockChallenge = { floors = {} }
-	
+
 	for i = 1, 10 do
 		task.spawn(function()
-			local screenObj = TowerChallengeScreen.create({creatureInstances={}}, mockChallenge, {}, function() end, function() end, function() end)
+			local screenObj = TowerChallengeScreen.create(
+				{ creatureInstances = {} },
+				mockChallenge,
+				{},
+				function() end,
+				function() end,
+				function() end
+			)
 			UIController.mountScreen(screenObj)
 		end)
 		task.spawn(function()
-			local genPanel = GeneratorPanel.create(mockSnapshot, function() end, function() end, function() end, nil, nil, function() end)
+			local genPanel = GeneratorPanel.create(
+				mockSnapshot,
+				function() end,
+				function() end,
+				function() end,
+				nil,
+				nil,
+				function() end
+			)
 			UIController.mountScreen(genPanel)
 		end)
 	end
-	
+
 	-- Wait for threads to settle
 	task.wait(0.5)
-	
+
 	-- Clean up to World screen
 	GameplaySimulator.refreshWorld()
-	
+
 	-- 4. Orphan Elements Check
 	print("[GameplaySimulator] Stress Test 4: Checking for orphan or double active screens...")
 	local activeCount = 0
@@ -1844,14 +2457,14 @@ function GameplaySimulator.runUiPolishStressTests()
 			child:Destroy()
 		end
 	end
-	
+
 	if activeCount > 2 then
 		print("[GameplaySimulator] Warning: Cleared " .. tostring(activeCount) .. " orphan GUI nodes from main view.")
 	end
 
 	-- Clear out all spammed toasts cleanly
 	ToastManager.clearAll()
-	
+
 	print("[GameplaySimulator] UI Polish Stress and Verification verified successfully.")
 end
 
@@ -1862,16 +2475,20 @@ function GameplaySimulator.runProgressionLoop()
 	print("==================================================")
 	print("[GameplaySimulator] STARTING AUTOMATED PROGRESSION LOOP")
 	print("==================================================")
-	
+
 	-- Wait for StarterSelectionScreen or WorldScreen to mount
 	local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
 	local mainUI = playerGui:WaitForChild("GenesisMainUI")
-	
+
 	local SimulationGuard = require(game:GetService("ReplicatedStorage").Genesis.Shared.utilities.SimulationGuard)
 	local uiGuard = SimulationGuard.new({ timeoutSeconds = 10.0, context = "GameplaySimulator:UIWait" })
-	
+
 	print("[GameplaySimulator] Waiting for UI to initialize...")
-	while not mainUI:FindFirstChild("StarterSelectionScreen") and not mainUI:FindFirstChild("WorldScreen") and uiGuard:step() do
+	while
+		not mainUI:FindFirstChild("StarterSelectionScreen")
+		and not mainUI:FindFirstChild("WorldScreen")
+		and uiGuard:step()
+	do
 		task.wait(0.2)
 	end
 	if uiGuard:shouldStop() then
@@ -1902,7 +2519,7 @@ function GameplaySimulator.runProgressionLoop()
 	print("[GameplaySimulator] STEP 2: Running Story Battle 1...")
 	GameplaySimulator.runStoryBattle()
 	task.wait(1.0)
-	
+
 	-- Step 3: Bio Generator claim
 	print("[GameplaySimulator] STEP 3: Generator Accumulation and Claim")
 	-- Wait for generator to accumulate at least 1 biomass
@@ -1921,8 +2538,14 @@ function GameplaySimulator.runProgressionLoop()
 		activeInst = inst
 		break
 	end
-	
-	print(string.format("[GameplaySimulator] Creature Level: %d, Biomass: %d", activeInst.level, finalSnap.value.balances.biomass or 0))
+
+	print(
+		string.format(
+			"[GameplaySimulator] Creature Level: %d, Biomass: %d",
+			activeInst.level,
+			finalSnap.value.balances.biomass or 0
+		)
+	)
 	local evoRes = GameplaySimulator.evolveActiveCreature()
 	task.wait(1.0)
 
@@ -1968,7 +2591,7 @@ function GameplaySimulator.runAlpha001RuntimeLoop(cycles)
 	-- 2. Cycles Loop
 	for cycle = 1, cycles do
 		print(string.format("[GameplaySimulator] --- CYCLE %d/%d ---", cycle, cycles))
-		
+
 		-- Wait for generator
 		task.wait(1.0)
 		print("[GameplaySimulator] Claiming accumulated biomass...")
@@ -1976,7 +2599,7 @@ function GameplaySimulator.runAlpha001RuntimeLoop(cycles)
 		if not claimRes.success then
 			print("[GameplaySimulator] Claim warning: " .. tostring(claimRes.message or claimRes.code))
 		end
-		
+
 		-- Run battle
 		print("[GameplaySimulator] Running Story Battle...")
 		GameplaySimulator.runStoryBattle()
@@ -1988,7 +2611,10 @@ function GameplaySimulator.runAlpha001RuntimeLoop(cycles)
 		if upgradeBio.success then
 			print("[GameplaySimulator] Bio Generator upgraded to level " .. tostring(upgradeBio.value.level))
 		else
-			print("[GameplaySimulator] Bio Generator upgrade skipped/failed: " .. tostring(upgradeBio.message or upgradeBio.code))
+			print(
+				"[GameplaySimulator] Bio Generator upgrade skipped/failed: "
+					.. tostring(upgradeBio.message or upgradeBio.code)
+			)
 		end
 
 		print("[GameplaySimulator] Attempting DNA Generator upgrade...")
@@ -1996,7 +2622,10 @@ function GameplaySimulator.runAlpha001RuntimeLoop(cycles)
 		if upgradeDna.success then
 			print("[GameplaySimulator] DNA Generator upgraded to level " .. tostring(upgradeDna.value.level))
 		else
-			print("[GameplaySimulator] DNA Generator upgrade skipped/failed: " .. tostring(upgradeDna.message or upgradeDna.code))
+			print(
+				"[GameplaySimulator] DNA Generator upgrade skipped/failed: "
+					.. tostring(upgradeDna.message or upgradeDna.code)
+			)
 		end
 
 		-- Try evolution
@@ -2016,22 +2645,31 @@ function GameplaySimulator.runAlpha001RuntimeLoop(cycles)
 
 	-- 3. Edge Cases Check
 	print("[GameplaySimulator] Running Edge Cases & Security Checks...")
-	
+
 	-- Verify balance tracking
 	local finalSnap = NetworkController.getPlayerProfileSnapshot()
 	if finalSnap.success then
-		print(string.format("[GameplaySimulator] Final Balances - Biomass: %d, DNA: %d", finalSnap.value.balances.biomass or 0, finalSnap.value.balances.dna or 0))
+		print(
+			string.format(
+				"[GameplaySimulator] Final Balances - Biomass: %d, DNA: %d",
+				finalSnap.value.balances.biomass or 0,
+				finalSnap.value.balances.dna or 0
+			)
+		)
 	end
 
 	-- Test double-claim spam
 	print("[GameplaySimulator] Running spam claim checks...")
 	GameplaySimulator.spamClaimGeneratorTest()
-	
+
 	-- Verify invalid/max level upgrade rejection
 	print("[GameplaySimulator] Testing upgrade rejection on invalid generator ID...")
 	local upgradeInvalid = GeneratorController.upgrade("invalid_generator_id")
 	if not upgradeInvalid.success then
-		print("[GameplaySimulator] Invalid upgrade correctly rejected: " .. tostring(upgradeInvalid.message or upgradeInvalid.code))
+		print(
+			"[GameplaySimulator] Invalid upgrade correctly rejected: "
+				.. tostring(upgradeInvalid.message or upgradeInvalid.code)
+		)
 	else
 		error("[GameplaySimulator] Expected invalid generator upgrade to fail, but it succeeded!")
 	end
@@ -2042,5 +2680,23 @@ function GameplaySimulator.runAlpha001RuntimeLoop(cycles)
 	return { success = true }
 end
 
-return GameplaySimulator
+function GameplaySimulator.runUISmokeTests()
+	assertStudio()
+	ensureUiReady()
+	print("==================================================")
+	print("[GameplaySimulator] STARTING UI SMOKE TEST SUITE (ALPHA-006)")
+	print("==================================================")
 
+	local result = UISmokeTester.runAllTests()
+
+	if not result.success then
+		error("[GameplaySimulator] UI Smoke tests failed. See details above.")
+	end
+
+	print("==================================================")
+	print("[GameplaySimulator] UI SMOKE TEST SUITE PASS")
+	print("==================================================")
+	return result
+end
+
+return GameplaySimulator

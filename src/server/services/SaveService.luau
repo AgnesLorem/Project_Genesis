@@ -22,27 +22,27 @@
 	trực tiếp SaveKeyBuilder.buildPlayerKey(userId).
 --]]
 
-local Players    = game:GetService("Players")
+local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
 local DataStoreWrapper = require(script.Parent.Parent.persistence.DataStoreWrapper)
-local SaveKeyBuilder   = require(script.Parent.Parent.persistence.SaveKeyBuilder)
+local SaveKeyBuilder = require(script.Parent.Parent.persistence.SaveKeyBuilder)
 local MigrationManager = require(script.Parent.Parent.persistence.MigrationManager)
-local Result           = require(game:GetService("ReplicatedStorage").Genesis.Shared.utilities.Result)
+local Result = require(game:GetService("ReplicatedStorage").Genesis.Shared.utilities.Result)
 
 local SaveService = {}
 
 -- ─── Config ───────────────────────────────────────────────────────────────────
-local AUTOSAVE_INTERVAL_SECONDS        = 60
-local STUDIO_FALLBACK_USER_ID          = 2000000020
-local BIND_TO_CLOSE_TIMEOUT_SECONDS    = 25
+local AUTOSAVE_INTERVAL_SECONDS = 60
+local STUDIO_FALLBACK_USER_ID = 1000000001
+local BIND_TO_CLOSE_TIMEOUT_SECONDS = 25
 
 -- ─── Session State ────────────────────────────────────────────────────────────
-local savesByUserId:      { [number]: any }     = {}
-local dirtyByUserId:      { [number]: boolean } = {}
-local loadFailedByUserId: { [number]: string }  = {}
-local loadingByUserId:    { [number]: boolean } = {}
-local initialized  = false
+local savesByUserId: { [number]: any } = {}
+local dirtyByUserId: { [number]: boolean } = {}
+local loadFailedByUserId: { [number]: string } = {}
+local loadingByUserId: { [number]: boolean } = {}
+local initialized = false
 local shuttingDown = false
 
 -- ─── Internal Helpers ─────────────────────────────────────────────────────────
@@ -96,13 +96,13 @@ local function _loadUserId(userId: number)
 		local guard = SimulationGuard.new({
 			maxSteps = 10000,
 			timeoutSeconds = 5.0,
-			context = "SaveService:wait_for_load"
+			context = "SaveService:wait_for_load",
 		})
-		
+
 		while loadingByUserId[userId] and guard:step() do
 			task.wait()
 		end
-		
+
 		if guard:shouldStop() then
 			guard:logDiagnostic({ userId = userId })
 			return Result.fail("load_timeout", "Tiến trình chờ nạp dữ liệu bị treo.")
@@ -138,10 +138,12 @@ local function _loadUserId(userId: number)
 		loadFailedByUserId[userId] = category
 
 		if category == DataStoreWrapper.ERROR_CATEGORIES.SESSION_LOCKED then
-			warn(string.format(
-				"[SaveService] UserId %d đang bị lock bởi server khác. Từ chối load để bảo vệ dữ liệu.",
-				userId
-			))
+			warn(
+				string.format(
+					"[SaveService] UserId %d đang bị lock bởi server khác. Từ chối load để bảo vệ dữ liệu.",
+					userId
+				)
+			)
 		else
 			warn(string.format("[SaveService] Load thất bại cho userId %d. Category: %s", userId, category))
 		end
@@ -153,12 +155,15 @@ local function _loadUserId(userId: number)
 	if loadResult.data == nil then
 		local defaultSave = _createDefaultSave()
 		savesByUserId[userId] = defaultSave
-		dirtyByUserId[userId] = true   -- Đánh dấu dirty để lưu template lần đầu.
+		dirtyByUserId[userId] = true -- Đánh dấu dirty để lưu template lần đầu.
 		loadFailedByUserId[userId] = nil
-		print(string.format(
-			"[SaveService] Tạo save mới (schema v%d) cho userId %d.",
-			MigrationManager.getCurrentVersion(), userId
-		))
+		print(
+			string.format(
+				"[SaveService] Tạo save mới (schema v%d) cho userId %d.",
+				MigrationManager.getCurrentVersion(),
+				userId
+			)
+		)
 		return finishLoad(Result.ok(defaultSave))
 	end
 
@@ -171,10 +176,13 @@ local function _loadUserId(userId: number)
 		-- Migration lỗi → từ chối nạp session, không trả về data hỏng.
 		local errMsg = tostring(migratedOrError)
 		loadFailedByUserId[userId] = "migration_failed"
-		warn(string.format(
-			"[SaveService] Migration thất bại cho userId %d — KHÔNG nạp session. Lỗi: %s",
-			userId, errMsg
-		))
+		warn(
+			string.format(
+				"[SaveService] Migration thất bại cho userId %d — KHÔNG nạp session. Lỗi: %s",
+				userId,
+				errMsg
+			)
+		)
 		return finishLoad(Result.fail("migration_failed", errMsg))
 	end
 
@@ -183,10 +191,13 @@ local function _loadUserId(userId: number)
 	dirtyByUserId[userId] = false
 	loadFailedByUserId[userId] = nil
 
-	print(string.format(
-		"[SaveService] Đã tải và migrate save (schema v%d) cho userId %d.",
-		save.saveVersion or 0, userId
-	))
+	print(
+		string.format(
+			"[SaveService] Đã tải và migrate save (schema v%d) cho userId %d.",
+			save.saveVersion or 0,
+			userId
+		)
+	)
 	return finishLoad(Result.ok(save))
 end
 
@@ -252,7 +263,7 @@ function SaveService.savePlayer(player: any)
 
 	local saveResult = DataStoreWrapper.save(SaveKeyBuilder.getStoreName(), key, save)
 	if not saveResult.ok then
-		dirtyByUserId[userId] = true  -- Giữ dirty để autosave thử lại.
+		dirtyByUserId[userId] = true -- Giữ dirty để autosave thử lại.
 		return Result.fail("save_failed", saveResult.errorCategory or "unknown_error")
 	end
 
@@ -285,26 +296,26 @@ function SaveService.unloadPlayer(player: any)
 		local key = SaveKeyBuilder.buildPlayerKey(userId)
 		if key then
 			-- saveAndRelease: lưu data + xoá SESSION_FIELD trong một atomic operation.
-			local releaseResult = DataStoreWrapper.saveAndRelease(
-				SaveKeyBuilder.getStoreName(),
-				key,
-				savesByUserId[userId]
-			)
+			local releaseResult =
+				DataStoreWrapper.saveAndRelease(SaveKeyBuilder.getStoreName(), key, savesByUserId[userId])
 			if not releaseResult.ok then
-				warn(string.format(
-					"[SaveService] saveAndRelease thất bại cho userId %d. Category: %s",
-					userId, releaseResult.errorCategory or "unknown"
-				))
+				warn(
+					string.format(
+						"[SaveService] saveAndRelease thất bại cho userId %d. Category: %s",
+						userId,
+						releaseResult.errorCategory or "unknown"
+					)
+				)
 			else
 				print(string.format("[SaveService] Đã lưu và nhả lock cho userId %d.", userId))
 			end
 		end
 	end
 
-	savesByUserId[userId]      = nil
-	dirtyByUserId[userId]      = nil
+	savesByUserId[userId] = nil
+	dirtyByUserId[userId] = nil
 	loadFailedByUserId[userId] = nil
-	loadingByUserId[userId]    = nil
+	loadingByUserId[userId] = nil
 
 	return Result.ok(nil)
 end
@@ -314,15 +325,17 @@ function SaveService.wipePlayerSave(player: any)
 	if not userId then
 		return Result.fail("invalid_user_id", "Không thể wipe mà không có UserId hợp lệ.")
 	end
-	savesByUserId[userId]      = _createDefaultSave()
-	dirtyByUserId[userId]      = true
+	savesByUserId[userId] = _createDefaultSave()
+	dirtyByUserId[userId] = true
 	loadFailedByUserId[userId] = nil
-	loadingByUserId[userId]    = nil
+	loadingByUserId[userId] = nil
 	return Result.ok(nil)
 end
 
 function SaveService.init()
-	if initialized then return end
+	if initialized then
+		return
+	end
 	initialized = true
 
 	Players.PlayerAdded:Connect(function(player)
@@ -351,10 +364,7 @@ function SaveService.init()
 
 		local remaining = DataStoreWrapper.getPendingSaveCount()
 		if remaining > 0 then
-			warn(string.format(
-				"[SaveService] BindToClose timeout — %d lệnh lưu chưa hoàn thành!",
-				remaining
-			))
+			warn(string.format("[SaveService] BindToClose timeout — %d lệnh lưu chưa hoàn thành!", remaining))
 		else
 			print("[SaveService] Tất cả lệnh lưu hoàn thành. Server tắt an sau.")
 		end
